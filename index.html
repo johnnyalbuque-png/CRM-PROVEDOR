@@ -466,6 +466,81 @@
     .import-info { font-size: 13px; color: #64748b; margin: 0 24px 16px; }
     .import-info strong { color: #2563eb; }
 
+    /* ── Login ── */
+    .login-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #1e293b;
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-overlay.open { display: flex; }
+    .login-box {
+      background: #fff;
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    }
+    .login-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+    .login-logo span { font-size: 18px; font-weight: 700; color: #0f172a; }
+    .login-box h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+    .login-box p  { font-size: 13px; color: #64748b; margin-bottom: 24px; }
+    .login-error  { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .login-error.visible { display: block; }
+
+    /* ── Admin panel ── */
+    .admin-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #f1f5f9;
+      z-index: 400;
+      overflow-y: auto;
+    }
+    .admin-overlay.open { display: block; }
+    .admin-header {
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .admin-body { max-width: 860px; margin: 32px auto; padding: 0 24px; display: flex; flex-direction: column; gap: 20px; }
+    .admin-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 24px; }
+    .admin-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .admin-card-header h3 { font-size: 15px; font-weight: 700; }
+    .users-table { width: 100%; border-collapse: collapse; }
+    .users-table th { background: #f8fafc; padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: #64748b; border-bottom: 1px solid #e2e8f0; }
+    .users-table td { padding: 12px 14px; font-size: 14px; border-bottom: 1px solid #f1f5f9; }
+    .users-table tr:last-child td { border-bottom: none; }
+    .badge-perfil-admin { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+    .badge-perfil-user  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+    .badge-ativo   { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+    .badge-inativo { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;  padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+    .user-avatar { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: #eff6ff; color: #2563eb; font-size: 13px; font-weight: 700; }
+
+    /* user menu header */
+    .user-menu-wrap { position: relative; }
+    .user-menu-btn  { display: flex; align-items: center; gap: 8px; background: none; border: none; cursor: pointer; padding: 6px 10px; border-radius: 8px; transition: background .15s; }
+    .user-menu-btn:hover { background: #f1f5f9; }
+    .user-menu-btn span { font-size: 13px; font-weight: 500; color: #374151; }
+    .user-menu-dropdown { display: none; position: absolute; right: 0; top: calc(100% + 4px); background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.10); min-width: 180px; z-index: 50; overflow: hidden; }
+    .user-menu-dropdown.open { display: block; }
+    .user-menu-item { display: flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: 14px; color: #374151; cursor: pointer; border: none; background: none; width: 100%; text-align: left; transition: background .15s; }
+    .user-menu-item:hover { background: #f8fafc; }
+    .user-menu-item.danger { color: #dc2626; }
+    .user-menu-item.danger:hover { background: #fef2f2; }
+    .user-menu-divider { height: 1px; background: #e2e8f0; margin: 4px 0; }
+
     @media (max-width: 640px) {
       .main { padding: 16px; }
       .toolbar { flex-direction: column; align-items: stretch; }
@@ -478,17 +553,123 @@
 </head>
 <body>
 
+<!-- Login -->
+<div class="login-overlay open" id="loginOverlay">
+  <div class="login-box">
+    <div class="login-logo">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#2563eb"/><path d="M8 22l5-8 4 5 3-4 4 7H8z" fill="white" opacity="0.9"/><circle cx="22" cy="10" r="3" fill="white"/></svg>
+      <span>CRM Provedor</span>
+    </div>
+    <h2>Bem-vindo de volta</h2>
+    <p>Entre com seu usuário e senha para acessar.</p>
+    <div class="login-error" id="loginError">Usuário ou senha incorretos.</div>
+    <form id="loginForm" novalidate>
+      <div class="form-group" style="margin-bottom:14px">
+        <label for="loginUser">Usuário</label>
+        <input type="text" id="loginUser" placeholder="seu.usuario" autocomplete="username" />
+      </div>
+      <div class="form-group" style="margin-bottom:24px">
+        <label for="loginPass">Senha</label>
+        <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center">Entrar</button>
+    </form>
+  </div>
+</div>
+
+<!-- Admin panel -->
+<div class="admin-overlay" id="adminOverlay">
+  <div class="admin-header">
+    <button class="detail-back" id="adminBackBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      Voltar
+    </button>
+    <span style="font-size:17px;font-weight:700;flex:1">Área Administrativa</span>
+  </div>
+  <div class="admin-body">
+    <div class="admin-card">
+      <div class="admin-card-header">
+        <h3>Usuários do sistema</h3>
+        <button class="btn btn-primary" id="openNewUserBtn">+ Novo Usuário</button>
+      </div>
+      <table class="users-table" id="usersTable">
+        <thead><tr><th>Usuário</th><th>Nome</th><th>Perfil</th><th>Status</th><th>Criado em</th><th>Ações</th></tr></thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal novo usuário -->
+<div class="modal-overlay" id="newUserOverlay">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2 id="newUserTitle">Novo Usuário</h2>
+      <button class="modal-close" id="closeNewUserBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <form id="newUserForm" novalidate>
+      <input type="hidden" id="editUserId" />
+      <div class="form-row">
+        <div class="form-group">
+          <label for="newUserNome">Nome completo <span class="required">*</span></label>
+          <input type="text" id="newUserNome" placeholder="João Silva" />
+          <span class="field-error" id="newUserNomeError"></span>
+        </div>
+        <div class="form-group">
+          <label for="newUserLogin">Usuário <span class="required">*</span></label>
+          <input type="text" id="newUserLogin" placeholder="joao.silva" />
+          <span class="field-error" id="newUserLoginError"></span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="newUserSenha">Senha <span class="required" id="senhaRequired">*</span></label>
+          <input type="password" id="newUserSenha" placeholder="Mínimo 6 caracteres" />
+          <span class="field-error" id="newUserSenhaError"></span>
+        </div>
+        <div class="form-group">
+          <label for="newUserPerfil">Perfil <span class="required">*</span></label>
+          <select id="newUserPerfil">
+            <option value="user">Usuário</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="cancelNewUserBtn">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="saveUserBtn">Criar Usuário</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <header class="header">
   <div class="header-inner">
     <div class="logo">
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <rect width="32" height="32" rx="8" fill="#2563eb"/>
-        <path d="M8 22l5-8 4 5 3-4 4 7H8z" fill="white" opacity="0.9"/>
-        <circle cx="22" cy="10" r="3" fill="white"/>
-      </svg>
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#2563eb"/><path d="M8 22l5-8 4 5 3-4 4 7H8z" fill="white" opacity="0.9"/><circle cx="22" cy="10" r="3" fill="white"/></svg>
       CRM Provedor
     </div>
-    <span class="stat-badge" id="totalLeads">0 leads</span>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="stat-badge" id="totalLeads">0 leads</span>
+      <div class="user-menu-wrap">
+        <button class="user-menu-btn" id="userMenuBtn">
+          <span class="user-avatar" id="userAvatar">A</span>
+          <span id="userMenuName">Admin</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="user-menu-dropdown" id="userMenuDropdown">
+          <button class="user-menu-item" id="menuAdminBtn" style="display:none">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            Área Administrativa
+          </button>
+          <div class="user-menu-divider" id="menuDivider" style="display:none"></div>
+          <button class="user-menu-item danger" id="logoutBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sair
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </header>
 
@@ -763,6 +944,9 @@
 <script>
 'use strict';
 
+// ── Auth ───────────────────────────────────────────────────────────────────
+const USERS_KEY   = 'crm_users';
+const SESSION_KEY = 'crm_session';
 const STORAGE_KEY = 'crm_leads';
 
 let leads = loadLeads();
@@ -1178,7 +1362,160 @@ document.getElementById('exportBtn').addEventListener('click', function() {
   URL.revokeObjectURL(url);
 });
 
-render();
+// ── Auth & Users ───────────────────────────────────────────────────────────
+async function hashPass(pass) {
+  var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass + 'crm-isp-2025'));
+  return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+}
+function loadUsers() { try { return JSON.parse(localStorage.getItem('crm_users')) || []; } catch { return []; } }
+function saveUsers(u) { localStorage.setItem('crm_users', JSON.stringify(u)); }
+function getSession() { try { return JSON.parse(sessionStorage.getItem('crm_session')); } catch { return null; } }
+function setSession(u) { sessionStorage.setItem('crm_session', JSON.stringify(u)); }
+function clearSession() { sessionStorage.removeItem('crm_session'); }
+
+async function ensureDefaultAdmin() {
+  var users = loadUsers();
+  if (users.length === 0) {
+    var hash = await hashPass('admin123');
+    saveUsers([{ id: 'u0', nome: 'Administrador', login: 'admin', senhaHash: hash, perfil: 'admin', ativo: true, criadoEm: Date.now() }]);
+  }
+}
+
+function initApp(session) {
+  document.getElementById('userMenuName').textContent = session.nome.split(' ')[0];
+  document.getElementById('userAvatar').textContent   = session.nome[0].toUpperCase();
+  if (session.perfil === 'admin') {
+    document.getElementById('menuAdminBtn').style.display = 'flex';
+    document.getElementById('menuDivider').style.display  = 'block';
+  }
+  document.getElementById('loginOverlay').classList.remove('open');
+  render();
+}
+
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  var login = document.getElementById('loginUser').value.trim();
+  var pass  = document.getElementById('loginPass').value;
+  var hash  = await hashPass(pass);
+  var user  = loadUsers().find(function(u){ return u.login === login && u.senhaHash === hash && u.ativo; });
+  if (!user) { document.getElementById('loginError').classList.add('visible'); return; }
+  document.getElementById('loginError').classList.remove('visible');
+  setSession({ id: user.id, nome: user.nome, login: user.login, perfil: user.perfil });
+  initApp(getSession());
+});
+
+document.getElementById('logoutBtn').addEventListener('click', function() {
+  clearSession();
+  document.getElementById('userMenuDropdown').classList.remove('open');
+  document.getElementById('loginOverlay').classList.add('open');
+  document.getElementById('loginForm').reset();
+});
+
+document.getElementById('userMenuBtn').addEventListener('click', function(e) {
+  e.stopPropagation();
+  document.getElementById('userMenuDropdown').classList.toggle('open');
+});
+document.addEventListener('click', function() {
+  document.getElementById('userMenuDropdown').classList.remove('open');
+});
+
+// ── Admin panel ────────────────────────────────────────────────────────────
+document.getElementById('menuAdminBtn').addEventListener('click', function() {
+  document.getElementById('userMenuDropdown').classList.remove('open');
+  renderUsers();
+  document.getElementById('adminOverlay').classList.add('open');
+});
+document.getElementById('adminBackBtn').addEventListener('click', function() {
+  document.getElementById('adminOverlay').classList.remove('open');
+});
+
+function renderUsers() {
+  var users = loadUsers();
+  var session = getSession();
+  document.getElementById('usersBody').innerHTML = users.map(function(u) {
+    var isSelf = session && u.id === session.id;
+    return '<tr>' +
+      '<td><code style="font-size:13px">' + esc(u.login) + '</code>' + (isSelf ? ' <span style="font-size:11px;color:#94a3b8">(você)</span>' : '') + '</td>' +
+      '<td><div style="display:flex;align-items:center;gap:8px"><span class="user-avatar">' + u.nome[0].toUpperCase() + '</span>' + esc(u.nome) + '</div></td>' +
+      '<td><span class="badge-perfil-' + u.perfil + '">' + (u.perfil === 'admin' ? 'Administrador' : 'Usuário') + '</span></td>' +
+      '<td><span class="' + (u.ativo ? 'badge-ativo' : 'badge-inativo') + '">' + (u.ativo ? 'Ativo' : 'Inativo') + '</span></td>' +
+      '<td class="cell-data">' + new Date(u.criadoEm).toLocaleDateString('pt-BR') + '</td>' +
+      '<td><div class="action-btns">' +
+        '<button class="btn-icon" onclick="editUser(\'' + u.id + '\')" title="Editar">✏️</button>' +
+        (!isSelf ? '<button class="btn-icon" onclick="toggleUser(\'' + u.id + '\')" title="' + (u.ativo ? 'Desativar' : 'Ativar') + '">' + (u.ativo ? '🔒' : '🔓') + '</button>' : '') +
+      '</div></td></tr>';
+  }).join('');
+}
+
+document.getElementById('openNewUserBtn').addEventListener('click', function() {
+  document.getElementById('newUserTitle').textContent  = 'Novo Usuário';
+  document.getElementById('saveUserBtn').textContent   = 'Criar Usuário';
+  document.getElementById('editUserId').value          = '';
+  document.getElementById('senhaRequired').textContent = '*';
+  document.getElementById('newUserForm').reset();
+  document.getElementById('newUserOverlay').classList.add('open');
+});
+document.getElementById('closeNewUserBtn').addEventListener('click', closeNewUser);
+document.getElementById('cancelNewUserBtn').addEventListener('click', closeNewUser);
+function closeNewUser() { document.getElementById('newUserOverlay').classList.remove('open'); }
+
+function editUser(id) {
+  var u = loadUsers().find(function(x){ return x.id === id; });
+  if (!u) return;
+  document.getElementById('newUserTitle').textContent  = 'Editar Usuário';
+  document.getElementById('saveUserBtn').textContent   = 'Salvar';
+  document.getElementById('editUserId').value          = id;
+  document.getElementById('newUserNome').value         = u.nome;
+  document.getElementById('newUserLogin').value        = u.login;
+  document.getElementById('newUserPerfil').value       = u.perfil;
+  document.getElementById('newUserSenha').value        = '';
+  document.getElementById('senhaRequired').textContent = '(opcional)';
+  document.getElementById('newUserOverlay').classList.add('open');
+}
+
+function toggleUser(id) {
+  var users = loadUsers();
+  var u = users.find(function(x){ return x.id === id; });
+  if (u) { u.ativo = !u.ativo; saveUsers(users); renderUsers(); }
+}
+
+document.getElementById('newUserForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  var nome   = document.getElementById('newUserNome').value.trim();
+  var login  = document.getElementById('newUserLogin').value.trim();
+  var senha  = document.getElementById('newUserSenha').value;
+  var perfil = document.getElementById('newUserPerfil').value;
+  var editId = document.getElementById('editUserId').value;
+  var ok = true;
+  document.getElementById('newUserNomeError').textContent  = '';
+  document.getElementById('newUserLoginError').textContent = '';
+  document.getElementById('newUserSenhaError').textContent = '';
+  if (!nome)  { document.getElementById('newUserNomeError').textContent  = 'Obrigatório'; ok = false; }
+  if (!login) { document.getElementById('newUserLoginError').textContent = 'Obrigatório'; ok = false; }
+  if (!editId && !senha) { document.getElementById('newUserSenhaError').textContent = 'Obrigatório'; ok = false; }
+  if (senha && senha.length < 6) { document.getElementById('newUserSenhaError').textContent = 'Mínimo 6 caracteres'; ok = false; }
+  if (!ok) return;
+  var users = loadUsers();
+  if (users.find(function(u){ return u.login === login && u.id !== editId; })) {
+    document.getElementById('newUserLoginError').textContent = 'Usuário já existe'; return;
+  }
+  if (editId) {
+    var u = users.find(function(x){ return x.id === editId; });
+    if (u) { u.nome = nome; u.login = login; u.perfil = perfil; if (senha) u.senhaHash = await hashPass(senha); }
+  } else {
+    users.push({ id: generateId(), nome: nome, login: login, senhaHash: await hashPass(senha), perfil: perfil, ativo: true, criadoEm: Date.now() });
+  }
+  saveUsers(users);
+  renderUsers();
+  closeNewUser();
+});
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+ensureDefaultAdmin().then(function() {
+  var session = getSession();
+  if (session) initApp(session);
+  // login overlay já está open por padrão
+});
 </script>
 </body>
 </html>
