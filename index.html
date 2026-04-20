@@ -164,6 +164,19 @@
     .status-fechado     { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
     .status-perdido     { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
 
+    /* Porte badge */
+    .badge-porte {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .porte-pequeno { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .porte-medio   { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+    .porte-grande  { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .cell-local    { font-size: 13px; color: #475569; }
+
     /* Table */
     .table-wrap {
       background: #fff;
@@ -391,7 +404,8 @@
           <th data-sort="status" class="sortable">Status <span class="sort-icon">↕</span></th>
           <th>E-mail</th>
           <th>WhatsApp</th>
-          <th data-sort="estado" class="sortable">Estado <span class="sort-icon">↕</span></th>
+          <th data-sort="cidade" class="sortable">Cidade / Estado <span class="sort-icon">↕</span></th>
+          <th data-sort="porte" class="sortable">Porte <span class="sort-icon">↕</span></th>
           <th>Ações</th>
         </tr>
       </thead>
@@ -459,6 +473,21 @@
         <div class="form-group">
           <label for="whatsapp">WhatsApp</label>
           <input type="tel" id="whatsapp" placeholder="(11) 99999-9999" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="cidade">Cidade</label>
+          <input type="text" id="cidade" placeholder="Ex: São Paulo" />
+        </div>
+        <div class="form-group">
+          <label for="porte">Porte do Provedor</label>
+          <select id="porte">
+            <option value="">Selecione…</option>
+            <option value="Pequeno">Pequeno (até 1k assinantes)</option>
+            <option value="Médio">Médio (1k – 20k assinantes)</option>
+            <option value="Grande">Grande (20k+ assinantes)</option>
+          </select>
         </div>
       </div>
       <div class="form-row">
@@ -584,7 +613,8 @@ function render() {
       '<td><span class="' + statusClass(l.status) + '">' + esc(l.status || 'Novo') + '</span></td>' +
       '<td class="cell-email">' + (l.email ? '<a href="mailto:' + esc(l.email) + '">' + esc(l.email) + '</a>' : '—') + '</td>' +
       '<td class="cell-whatsapp">' + (wa ? '<a href="https://wa.me/55' + wa + '" target="_blank" rel="noopener">📱 ' + esc(l.whatsapp) + '</a>' : '—') + '</td>' +
-      '<td><span class="badge-estado">' + esc(l.estado) + '</span></td>' +
+      '<td class="cell-local">' + (l.cidade ? esc(l.cidade) + ' / ' : '') + esc(l.estado) + '</td>' +
+      '<td>' + (l.porte ? '<span class="badge-porte porte-' + l.porte.toLowerCase().replace('é','e') + '">' + esc(l.porte) + '</span>' : '—') + '</td>' +
       '<td><div class="action-btns">' +
         '<button class="btn-icon" onclick="openEdit(\'' + l.id + '\')" title="Editar">✏️</button>' +
         '<button class="btn-icon delete" onclick="openDelete(\'' + l.id + '\')" title="Excluir">🗑️</button>' +
@@ -631,7 +661,9 @@ function openEdit(id) {
   document.getElementById('cargo').value    = lead.cargo;
   document.getElementById('email').value    = lead.email;
   document.getElementById('whatsapp').value = lead.whatsapp || '';
+  document.getElementById('cidade').value   = lead.cidade || '';
   document.getElementById('estado').value   = lead.estado;
+  document.getElementById('porte').value    = lead.porte || '';
   modalTitle.textContent = 'Editar Lead';
   saveBtn.textContent = 'Atualizar Lead';
   openModal();
@@ -683,7 +715,9 @@ leadForm.addEventListener('submit', function(e) {
     cargo:    document.getElementById('cargo').value.trim(),
     email:    document.getElementById('email').value.trim(),
     whatsapp: document.getElementById('whatsapp').value.trim(),
+    cidade:   document.getElementById('cidade').value.trim(),
     estado:   document.getElementById('estado').value,
+    porte:    document.getElementById('porte').value,
   };
   if (!validate(data)) return;
   var id = document.getElementById('leadId').value;
