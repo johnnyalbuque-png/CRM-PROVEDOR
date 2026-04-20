@@ -148,6 +148,22 @@
     .btn-danger { background: #dc2626; color: #fff; }
     .btn-danger:hover { background: #b91c1c; }
 
+    /* Status badges */
+    .badge-status {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .status-novo        { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .status-contatado   { background: #fefce8; color: #a16207; border: 1px solid #fde68a; }
+    .status-interessado { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+    .status-proposta    { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+    .status-fechado     { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .status-perdido     { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+
     /* Table */
     .table-wrap {
       background: #fff;
@@ -331,6 +347,15 @@
       <input type="text" id="searchInput" class="search-input" placeholder="Buscar por empresa, cargo, e-mail…" />
     </div>
     <div class="toolbar-actions">
+      <select id="filterStatus" class="select-filter">
+        <option value="">Todos os status</option>
+        <option value="Novo">Novo</option>
+        <option value="Contatado">Contatado</option>
+        <option value="Interessado">Interessado</option>
+        <option value="Proposta">Proposta</option>
+        <option value="Fechado">Fechado</option>
+        <option value="Perdido">Perdido</option>
+      </select>
       <select id="filterEstado" class="select-filter">
         <option value="">Todos os estados</option>
         <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
@@ -363,6 +388,7 @@
         <tr>
           <th data-sort="empresa" class="sortable">Empresa <span class="sort-icon">↕</span></th>
           <th data-sort="cargo" class="sortable">Cargo <span class="sort-icon">↕</span></th>
+          <th data-sort="status" class="sortable">Status <span class="sort-icon">↕</span></th>
           <th>E-mail</th>
           <th>WhatsApp</th>
           <th data-sort="estado" class="sortable">Estado <span class="sort-icon">↕</span></th>
@@ -397,6 +423,21 @@
     </div>
     <form id="leadForm" novalidate>
       <input type="hidden" id="leadId" />
+      <div class="form-row">
+        <div class="form-group">
+          <label for="status">Status <span class="required">*</span></label>
+          <select id="status">
+            <option value="Novo">Novo</option>
+            <option value="Contatado">Contatado</option>
+            <option value="Interessado">Interessado</option>
+            <option value="Proposta">Proposta</option>
+            <option value="Fechado">Fechado</option>
+            <option value="Perdido">Perdido</option>
+          </select>
+          <span class="field-error" id="statusError"></span>
+        </div>
+        <div class="form-group"></div>
+      </div>
       <div class="form-row">
         <div class="form-group">
           <label for="empresa">Empresa <span class="required">*</span></label>
@@ -486,6 +527,7 @@ const leadsBody    = document.getElementById('leadsBody');
 const emptyState   = document.getElementById('emptyState');
 const totalLeads   = document.getElementById('totalLeads');
 const searchInput  = document.getElementById('searchInput');
+const filterStatus = document.getElementById('filterStatus');
 const filterEstado = document.getElementById('filterEstado');
 const modalOverlay = document.getElementById('modalOverlay');
 const deleteOverlay= document.getElementById('deleteOverlay');
@@ -493,15 +535,22 @@ const leadForm     = document.getElementById('leadForm');
 const modalTitle   = document.getElementById('modalTitle');
 const saveBtn      = document.getElementById('saveBtn');
 
+function statusClass(s) {
+  var map = { 'Novo':'novo','Contatado':'contatado','Interessado':'interessado','Proposta':'proposta','Fechado':'fechado','Perdido':'perdido' };
+  return 'badge-status status-' + (map[s] || 'novo');
+}
+
 function getVisible() {
-  const q     = searchInput.value.trim().toLowerCase();
-  const state = filterEstado.value;
+  const q      = searchInput.value.trim().toLowerCase();
+  const state  = filterEstado.value;
+  const status = filterStatus.value;
   return leads
     .filter(l => {
-      const matchQ = !q || [l.empresa, l.cargo, l.email, l.whatsapp]
+      const matchQ      = !q || [l.empresa, l.cargo, l.email, l.whatsapp]
         .some(v => v && v.toLowerCase().includes(q));
-      const matchState = !state || l.estado === state;
-      return matchQ && matchState;
+      const matchState  = !state  || l.estado === state;
+      const matchStatus = !status || l.status === status;
+      return matchQ && matchState && matchStatus;
     })
     .sort((a, b) => {
       const va = (a[sortField] || '').toLowerCase();
@@ -532,6 +581,7 @@ function render() {
     return '<tr>' +
       '<td class="cell-empresa">' + esc(l.empresa) + '</td>' +
       '<td>' + esc(l.cargo) + '</td>' +
+      '<td><span class="' + statusClass(l.status) + '">' + esc(l.status || 'Novo') + '</span></td>' +
       '<td class="cell-email">' + (l.email ? '<a href="mailto:' + esc(l.email) + '">' + esc(l.email) + '</a>' : '—') + '</td>' +
       '<td class="cell-whatsapp">' + (wa ? '<a href="https://wa.me/55' + wa + '" target="_blank" rel="noopener">📱 ' + esc(l.whatsapp) + '</a>' : '—') + '</td>' +
       '<td><span class="badge-estado">' + esc(l.estado) + '</span></td>' +
@@ -576,6 +626,7 @@ function openEdit(id) {
   const lead = leads.find(function(l){ return l.id === id; });
   if (!lead) return;
   document.getElementById('leadId').value   = lead.id;
+  document.getElementById('status').value   = lead.status || 'Novo';
   document.getElementById('empresa').value  = lead.empresa;
   document.getElementById('cargo').value    = lead.cargo;
   document.getElementById('email').value    = lead.email;
@@ -627,6 +678,7 @@ leadForm.addEventListener('submit', function(e) {
   e.preventDefault();
   clearErrors();
   var data = {
+    status:   document.getElementById('status').value,
     empresa:  document.getElementById('empresa').value.trim(),
     cargo:    document.getElementById('cargo').value.trim(),
     email:    document.getElementById('email').value.trim(),
@@ -661,6 +713,7 @@ document.getElementById('cancelDeleteBtn').addEventListener('click', function() 
 
 // Busca e filtro
 searchInput.addEventListener('input', render);
+filterStatus.addEventListener('change', render);
 filterEstado.addEventListener('change', render);
 
 // Botões
