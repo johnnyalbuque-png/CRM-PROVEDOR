@@ -299,9 +299,26 @@
     /* Form */
     form { padding: 0 24px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .form-row-full { display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 14px; }
     .form-group { display: flex; flex-direction: column; gap: 5px; }
     .form-group label { font-size: 13px; font-weight: 500; color: #374151; }
     .required { color: #dc2626; }
+    .form-group textarea {
+      padding: 9px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #0f172a;
+      outline: none;
+      resize: vertical;
+      min-height: 80px;
+      font-family: inherit;
+      transition: border-color .15s, box-shadow .15s;
+      background: #fff;
+    }
+    .form-group textarea:focus { border-color: #2563eb; box-shadow: 0 0 0 3px #dbeafe; }
+    .cell-data { font-size: 12px; color: #94a3b8; white-space: nowrap; }
+    .cell-nota { font-size: 13px; color: #475569; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .form-group input,
     .form-group select {
       padding: 9px 12px;
@@ -406,6 +423,8 @@
           <th>WhatsApp</th>
           <th data-sort="cidade" class="sortable">Cidade / Estado <span class="sort-icon">↕</span></th>
           <th data-sort="porte" class="sortable">Porte <span class="sort-icon">↕</span></th>
+          <th>Anotação</th>
+          <th data-sort="createdAt" class="sortable">Cadastro <span class="sort-icon">↕</span></th>
           <th>Ações</th>
         </tr>
       </thead>
@@ -506,6 +525,12 @@
           <span class="field-error" id="estadoError"></span>
         </div>
         <div class="form-group"></div>
+      </div>
+      <div class="form-row-full">
+        <div class="form-group">
+          <label for="anotacao">Anotações</label>
+          <textarea id="anotacao" placeholder="Observações sobre o lead, histórico de contato, interesses…"></textarea>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost" id="cancelBtn">Cancelar</button>
@@ -615,6 +640,8 @@ function render() {
       '<td class="cell-whatsapp">' + (wa ? '<a href="https://wa.me/55' + wa + '" target="_blank" rel="noopener">📱 ' + esc(l.whatsapp) + '</a>' : '—') + '</td>' +
       '<td class="cell-local">' + (l.cidade ? esc(l.cidade) + ' / ' : '') + esc(l.estado) + '</td>' +
       '<td>' + (l.porte ? '<span class="badge-porte porte-' + l.porte.toLowerCase().replace('é','e') + '">' + esc(l.porte) + '</span>' : '—') + '</td>' +
+      '<td class="cell-nota" title="' + esc(l.anotacao || '') + '">' + (l.anotacao ? esc(l.anotacao) : '—') + '</td>' +
+      '<td class="cell-data">' + (l.createdAt ? new Date(l.createdAt).toLocaleDateString('pt-BR') : '—') + '</td>' +
       '<td><div class="action-btns">' +
         '<button class="btn-icon" onclick="openEdit(\'' + l.id + '\')" title="Editar">✏️</button>' +
         '<button class="btn-icon delete" onclick="openDelete(\'' + l.id + '\')" title="Excluir">🗑️</button>' +
@@ -664,6 +691,7 @@ function openEdit(id) {
   document.getElementById('cidade').value   = lead.cidade || '';
   document.getElementById('estado').value   = lead.estado;
   document.getElementById('porte').value    = lead.porte || '';
+  document.getElementById('anotacao').value = lead.anotacao || '';
   modalTitle.textContent = 'Editar Lead';
   saveBtn.textContent = 'Atualizar Lead';
   openModal();
@@ -718,6 +746,7 @@ leadForm.addEventListener('submit', function(e) {
     cidade:   document.getElementById('cidade').value.trim(),
     estado:   document.getElementById('estado').value,
     porte:    document.getElementById('porte').value,
+    anotacao: document.getElementById('anotacao').value.trim(),
   };
   if (!validate(data)) return;
   var id = document.getElementById('leadId').value;
