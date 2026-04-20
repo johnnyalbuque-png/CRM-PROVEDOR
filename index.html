@@ -182,7 +182,7 @@
       background: #fff;
       border-radius: 12px;
       border: 1px solid #e2e8f0;
-      overflow: hidden;
+      overflow-x: auto;
       box-shadow: 0 1px 3px rgba(0,0,0,.08);
     }
     .leads-table { width: 100%; border-collapse: collapse; }
@@ -641,7 +641,7 @@ function render() {
       '<td class="cell-local">' + (l.cidade ? esc(l.cidade) + ' / ' : '') + esc(l.estado) + '</td>' +
       '<td>' + (l.porte ? '<span class="badge-porte porte-' + l.porte.toLowerCase().replace('é','e') + '">' + esc(l.porte) + '</span>' : '—') + '</td>' +
       '<td class="cell-nota" title="' + esc(l.anotacao || '') + '">' + (l.anotacao ? esc(l.anotacao) : '—') + '</td>' +
-      '<td class="cell-data">' + (l.createdAt ? new Date(l.createdAt).toLocaleDateString('pt-BR') : '—') + '</td>' +
+      '<td class="cell-data">' + new Date(l.createdAt || Date.now()).toLocaleDateString('pt-BR') + '</td>' +
       '<td><div class="action-btns">' +
         '<button class="btn-icon" onclick="openEdit(\'' + l.id + '\')" title="Editar">✏️</button>' +
         '<button class="btn-icon delete" onclick="openDelete(\'' + l.id + '\')" title="Excluir">🗑️</button>' +
