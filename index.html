@@ -4,163 +4,706 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CRM Provedor — Leads</title>
-  <link rel="stylesheet" href="style.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --danger: #dc2626;
+      --danger-hover: #b91c1c;
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --radius: 10px;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+      --shadow-md: 0 4px 16px rgba(0,0,0,.10);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* Header */
+    .header {
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 17px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .logo svg { flex-shrink: 0; }
+    .stat-badge {
+      background: #eff6ff;
+      color: #2563eb;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid #bfdbfe;
+    }
+
+    /* Main */
+    .main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 220px;
+    }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #64748b;
+      pointer-events: none;
+    }
+    .search-input {
+      width: 100%;
+      padding: 9px 14px 9px 38px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: #fff;
+      font-size: 14px;
+      color: #0f172a;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .search-input:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px #dbeafe;
+    }
+    .toolbar-actions { display: flex; gap: 8px; align-items: center; }
+    .select-filter {
+      padding: 9px 14px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: #fff;
+      font-size: 14px;
+      color: #0f172a;
+      outline: none;
+      cursor: pointer;
+    }
+    .select-filter:focus { border-color: #2563eb; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: background .15s;
+      white-space: nowrap;
+    }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-outline { background: #fff; color: #0f172a; border: 1px solid #e2e8f0; }
+    .btn-outline:hover { background: #f8fafc; }
+    .btn-ghost { background: transparent; color: #64748b; }
+    .btn-ghost:hover { background: #f1f5f9; }
+    .btn-danger { background: #dc2626; color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+
+    /* Table */
+    .table-wrap {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+    .leads-table { width: 100%; border-collapse: collapse; }
+    .leads-table thead tr { background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+    .leads-table th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748b;
+      user-select: none;
+    }
+    .leads-table th.sortable { cursor: pointer; }
+    .leads-table th.sortable:hover { color: #2563eb; }
+    .sort-icon { opacity: 0.4; font-size: 11px; }
+    .leads-table tbody tr { border-bottom: 1px solid #e2e8f0; transition: background .1s; }
+    .leads-table tbody tr:last-child { border-bottom: none; }
+    .leads-table tbody tr:hover { background: #f8fafc; }
+    .leads-table td { padding: 14px 16px; font-size: 14px; }
+    .cell-empresa { font-weight: 600; }
+    .cell-email a { color: #2563eb; text-decoration: none; }
+    .cell-email a:hover { text-decoration: underline; }
+    .cell-whatsapp a { color: #16a34a; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+    .cell-whatsapp a:hover { text-decoration: underline; }
+    .badge-estado {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #eff6ff;
+      color: #2563eb;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid #bfdbfe;
+    }
+    .action-btns { display: flex; gap: 6px; }
+    .btn-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 7px;
+      border: none;
+      cursor: pointer;
+      transition: background .15s;
+      color: #64748b;
+      background: transparent;
+    }
+    .btn-icon:hover { background: #f1f5f9; color: #0f172a; }
+    .btn-icon.delete:hover { background: #fef2f2; color: #dc2626; }
+
+    /* Empty state */
+    .empty-state {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 60px 24px;
+      color: #64748b;
+    }
+    .empty-state p { font-size: 16px; font-weight: 500; color: #475569; }
+    .empty-state span { font-size: 13px; }
+    .empty-state.visible { display: flex; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.45);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.10);
+      width: 100%;
+      max-width: 560px;
+      animation: slideUp .2s ease;
+    }
+    .modal-sm { max-width: 420px; padding: 24px; }
+    .delete-msg { color: #64748b; margin: 8px 0 20px; line-height: 1.6; font-size: 14px; }
+    @keyframes slideUp {
+      from { transform: translateY(12px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px 0;
+      margin-bottom: 20px;
+    }
+    .modal-header h2 { font-size: 17px; font-weight: 700; }
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #64748b;
+      padding: 4px;
+      border-radius: 6px;
+      display: flex;
+      transition: background .15s;
+    }
+    .modal-close:hover { background: #f1f5f9; color: #0f172a; }
+
+    /* Form */
+    form { padding: 0 24px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 13px; font-weight: 500; color: #374151; }
+    .required { color: #dc2626; }
+    .form-group input,
+    .form-group select {
+      padding: 9px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #0f172a;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+      background: #fff;
+    }
+    .form-group input:focus,
+    .form-group select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px #dbeafe; }
+    .form-group input.error,
+    .form-group select.error { border-color: #dc2626; }
+    .field-error { font-size: 12px; color: #dc2626; min-height: 16px; }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 20px 24px 24px;
+    }
+
+    @media (max-width: 640px) {
+      .main { padding: 16px; }
+      .toolbar { flex-direction: column; align-items: stretch; }
+      .toolbar-actions { justify-content: flex-end; }
+      .form-row { grid-template-columns: 1fr; }
+      .leads-table th:nth-child(4),
+      .leads-table td:nth-child(4) { display: none; }
+    }
+  </style>
 </head>
 <body>
-  <header class="header">
-    <div class="header-inner">
-      <div class="logo">
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <rect width="32" height="32" rx="8" fill="#2563eb"/>
-          <path d="M8 22l5-8 4 5 3-4 4 7H8z" fill="white" opacity="0.9"/>
-          <circle cx="22" cy="10" r="3" fill="white"/>
-        </svg>
-        <span>CRM Provedor</span>
-      </div>
-      <div class="header-stats">
-        <span class="stat-badge" id="totalLeads">0 leads</span>
-      </div>
-    </div>
-  </header>
 
-  <main class="main">
-    <!-- Toolbar -->
-    <div class="toolbar">
-      <div class="search-wrap">
-        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <input type="text" id="searchInput" class="search-input" placeholder="Buscar por empresa, cargo, e-mail…" />
-      </div>
-      <div class="toolbar-actions">
-        <select id="filterEstado" class="select-filter">
-          <option value="">Todos os estados</option>
-          <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
-          <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
-          <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
-          <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
-          <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
-          <option>RS</option><option>RO</option><option>RR</option><option>SC</option>
-          <option>SP</option><option>SE</option><option>TO</option>
-        </select>
-        <button class="btn btn-outline" id="exportBtn">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          Exportar CSV
-        </button>
-        <button class="btn btn-primary" id="openModalBtn">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          Novo Lead
-        </button>
-      </div>
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="#2563eb"/>
+        <path d="M8 22l5-8 4 5 3-4 4 7H8z" fill="white" opacity="0.9"/>
+        <circle cx="22" cy="10" r="3" fill="white"/>
+      </svg>
+      CRM Provedor
     </div>
+    <span class="stat-badge" id="totalLeads">0 leads</span>
+  </div>
+</header>
 
-    <!-- Table -->
-    <div class="table-wrap">
-      <table class="leads-table" id="leadsTable">
-        <thead>
-          <tr>
-            <th data-sort="empresa" class="sortable">Empresa <span class="sort-icon">↕</span></th>
-            <th data-sort="cargo" class="sortable">Cargo <span class="sort-icon">↕</span></th>
-            <th data-sort="email">E-mail</th>
-            <th>WhatsApp</th>
-            <th data-sort="estado" class="sortable">Estado <span class="sort-icon">↕</span></th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="leadsBody"></tbody>
-      </table>
-      <div class="empty-state" id="emptyState">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-        </svg>
-        <p>Nenhum lead encontrado</p>
-        <span>Clique em <strong>Novo Lead</strong> para começar</span>
-      </div>
+<main class="main">
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" id="searchInput" class="search-input" placeholder="Buscar por empresa, cargo, e-mail…" />
     </div>
-  </main>
-
-  <!-- Modal -->
-  <div class="modal-overlay" id="modalOverlay">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <div class="modal-header">
-        <h2 id="modalTitle">Novo Lead</h2>
-        <button class="modal-close" id="closeModalBtn" aria-label="Fechar">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-      <form id="leadForm" novalidate>
-        <input type="hidden" id="leadId" />
-        <div class="form-row">
-          <div class="form-group">
-            <label for="empresa">Empresa <span class="required">*</span></label>
-            <input type="text" id="empresa" placeholder="Nome da empresa" required />
-            <span class="field-error" id="empresaError"></span>
-          </div>
-          <div class="form-group">
-            <label for="cargo">Cargo <span class="required">*</span></label>
-            <input type="text" id="cargo" placeholder="Ex: Gerente de TI" required />
-            <span class="field-error" id="cargoError"></span>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="email">E-mail <span class="required">*</span></label>
-            <input type="email" id="email" placeholder="contato@empresa.com" required />
-            <span class="field-error" id="emailError"></span>
-          </div>
-          <div class="form-group">
-            <label for="whatsapp">WhatsApp</label>
-            <input type="tel" id="whatsapp" placeholder="(11) 99999-9999" />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group half">
-            <label for="estado">Estado <span class="required">*</span></label>
-            <select id="estado" required>
-              <option value="">Selecione…</option>
-              <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
-              <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
-              <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
-              <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
-              <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
-              <option>RS</option><option>RO</option><option>RR</option><option>SC</option>
-              <option>SP</option><option>SE</option><option>TO</option>
-            </select>
-            <span class="field-error" id="estadoError"></span>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-ghost" id="cancelBtn">Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="saveBtn">Salvar Lead</button>
-        </div>
-      </form>
+    <div class="toolbar-actions">
+      <select id="filterEstado" class="select-filter">
+        <option value="">Todos os estados</option>
+        <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
+        <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
+        <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
+        <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
+        <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+        <option>RS</option><option>RO</option><option>RR</option><option>SC</option>
+        <option>SP</option><option>SE</option><option>TO</option>
+      </select>
+      <button class="btn btn-outline" id="exportBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Exportar CSV
+      </button>
+      <button class="btn btn-primary" id="openModalBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Novo Lead
+      </button>
     </div>
   </div>
 
-  <!-- Delete confirm modal -->
-  <div class="modal-overlay" id="deleteOverlay">
-    <div class="modal modal-sm" role="dialog">
-      <div class="modal-header">
-        <h2>Confirmar exclusão</h2>
+  <div class="table-wrap">
+    <table class="leads-table" id="leadsTable">
+      <thead>
+        <tr>
+          <th data-sort="empresa" class="sortable">Empresa <span class="sort-icon">↕</span></th>
+          <th data-sort="cargo" class="sortable">Cargo <span class="sort-icon">↕</span></th>
+          <th>E-mail</th>
+          <th>WhatsApp</th>
+          <th data-sort="estado" class="sortable">Estado <span class="sort-icon">↕</span></th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="leadsBody"></tbody>
+    </table>
+    <div class="empty-state visible" id="emptyState">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      <p>Nenhum lead encontrado</p>
+      <span>Clique em <strong>Novo Lead</strong> para começar</span>
+    </div>
+  </div>
+</main>
+
+<!-- Modal novo/editar lead -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">Novo Lead</h2>
+      <button class="modal-close" id="closeModalBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <form id="leadForm" novalidate>
+      <input type="hidden" id="leadId" />
+      <div class="form-row">
+        <div class="form-group">
+          <label for="empresa">Empresa <span class="required">*</span></label>
+          <input type="text" id="empresa" placeholder="Nome da empresa" />
+          <span class="field-error" id="empresaError"></span>
+        </div>
+        <div class="form-group">
+          <label for="cargo">Cargo <span class="required">*</span></label>
+          <input type="text" id="cargo" placeholder="Ex: Gerente de TI" />
+          <span class="field-error" id="cargoError"></span>
+        </div>
       </div>
-      <p class="delete-msg">Tem certeza que deseja remover o lead <strong id="deleteLeadName"></strong>? Esta ação não pode ser desfeita.</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="email">E-mail <span class="required">*</span></label>
+          <input type="email" id="email" placeholder="contato@empresa.com" />
+          <span class="field-error" id="emailError"></span>
+        </div>
+        <div class="form-group">
+          <label for="whatsapp">WhatsApp</label>
+          <input type="tel" id="whatsapp" placeholder="(11) 99999-9999" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="estado">Estado <span class="required">*</span></label>
+          <select id="estado">
+            <option value="">Selecione…</option>
+            <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
+            <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
+            <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
+            <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
+            <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+            <option>RS</option><option>RO</option><option>RR</option><option>SC</option>
+            <option>SP</option><option>SE</option><option>TO</option>
+          </select>
+          <span class="field-error" id="estadoError"></span>
+        </div>
+        <div class="form-group"></div>
+      </div>
       <div class="modal-footer">
-        <button class="btn btn-ghost" id="cancelDeleteBtn">Cancelar</button>
-        <button class="btn btn-danger" id="confirmDeleteBtn">Excluir</button>
+        <button type="button" class="btn btn-ghost" id="cancelBtn">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="saveBtn">Salvar Lead</button>
       </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal confirmar exclusão -->
+<div class="modal-overlay" id="deleteOverlay">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2>Confirmar exclusão</h2>
+    </div>
+    <p class="delete-msg">Tem certeza que deseja remover o lead <strong id="deleteLeadName"></strong>? Esta ação não pode ser desfeita.</p>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancelDeleteBtn">Cancelar</button>
+      <button class="btn btn-danger" id="confirmDeleteBtn">Excluir</button>
     </div>
   </div>
+</div>
 
-  <script src="app.js"></script>
+<script>
+'use strict';
+
+const STORAGE_KEY = 'crm_leads';
+
+let leads = loadLeads();
+let sortField = 'empresa';
+let sortDir = 'asc';
+let pendingDeleteId = null;
+
+function loadLeads() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveLeads() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
+}
+
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+const leadsBody    = document.getElementById('leadsBody');
+const emptyState   = document.getElementById('emptyState');
+const totalLeads   = document.getElementById('totalLeads');
+const searchInput  = document.getElementById('searchInput');
+const filterEstado = document.getElementById('filterEstado');
+const modalOverlay = document.getElementById('modalOverlay');
+const deleteOverlay= document.getElementById('deleteOverlay');
+const leadForm     = document.getElementById('leadForm');
+const modalTitle   = document.getElementById('modalTitle');
+const saveBtn      = document.getElementById('saveBtn');
+
+function getVisible() {
+  const q     = searchInput.value.trim().toLowerCase();
+  const state = filterEstado.value;
+  return leads
+    .filter(l => {
+      const matchQ = !q || [l.empresa, l.cargo, l.email, l.whatsapp]
+        .some(v => v && v.toLowerCase().includes(q));
+      const matchState = !state || l.estado === state;
+      return matchQ && matchState;
+    })
+    .sort((a, b) => {
+      const va = (a[sortField] || '').toLowerCase();
+      const vb = (b[sortField] || '').toLowerCase();
+      return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+}
+
+function esc(str) {
+  return String(str || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function render() {
+  const visible = getVisible();
+  totalLeads.textContent = leads.length + ' lead' + (leads.length !== 1 ? 's' : '');
+
+  if (visible.length === 0) {
+    leadsBody.innerHTML = '';
+    emptyState.classList.add('visible');
+    return;
+  }
+  emptyState.classList.remove('visible');
+
+  leadsBody.innerHTML = visible.map(l => {
+    const wa = l.whatsapp ? l.whatsapp.replace(/\D/g,'') : '';
+    return '<tr>' +
+      '<td class="cell-empresa">' + esc(l.empresa) + '</td>' +
+      '<td>' + esc(l.cargo) + '</td>' +
+      '<td class="cell-email">' + (l.email ? '<a href="mailto:' + esc(l.email) + '">' + esc(l.email) + '</a>' : '—') + '</td>' +
+      '<td class="cell-whatsapp">' + (wa ? '<a href="https://wa.me/55' + wa + '" target="_blank" rel="noopener">📱 ' + esc(l.whatsapp) + '</a>' : '—') + '</td>' +
+      '<td><span class="badge-estado">' + esc(l.estado) + '</span></td>' +
+      '<td><div class="action-btns">' +
+        '<button class="btn-icon" onclick="openEdit(\'' + l.id + '\')" title="Editar">✏️</button>' +
+        '<button class="btn-icon delete" onclick="openDelete(\'' + l.id + '\')" title="Excluir">🗑️</button>' +
+      '</div></td>' +
+    '</tr>';
+  }).join('');
+}
+
+// Ordenação
+document.querySelectorAll('th[data-sort]').forEach(function(th) {
+  th.addEventListener('click', function() {
+    const field = th.dataset.sort;
+    if (sortField === field) {
+      sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortField = field;
+      sortDir = 'asc';
+    }
+    render();
+  });
+});
+
+// Modal abrir/fechar
+function openModal() {
+  modalOverlay.classList.add('open');
+  setTimeout(function(){ document.getElementById('empresa').focus(); }, 100);
+}
+
+function closeModal() {
+  modalOverlay.classList.remove('open');
+  leadForm.reset();
+  document.getElementById('leadId').value = '';
+  clearErrors();
+  modalTitle.textContent = 'Novo Lead';
+  saveBtn.textContent = 'Salvar Lead';
+}
+
+function openEdit(id) {
+  const lead = leads.find(function(l){ return l.id === id; });
+  if (!lead) return;
+  document.getElementById('leadId').value   = lead.id;
+  document.getElementById('empresa').value  = lead.empresa;
+  document.getElementById('cargo').value    = lead.cargo;
+  document.getElementById('email').value    = lead.email;
+  document.getElementById('whatsapp').value = lead.whatsapp || '';
+  document.getElementById('estado').value   = lead.estado;
+  modalTitle.textContent = 'Editar Lead';
+  saveBtn.textContent = 'Atualizar Lead';
+  openModal();
+}
+
+function openDelete(id) {
+  const lead = leads.find(function(l){ return l.id === id; });
+  if (!lead) return;
+  pendingDeleteId = id;
+  document.getElementById('deleteLeadName').textContent = lead.empresa;
+  deleteOverlay.classList.add('open');
+}
+
+// Validação
+function clearErrors() {
+  ['empresa','cargo','email','estado'].forEach(function(f) {
+    var el = document.getElementById(f);
+    var err = document.getElementById(f + 'Error');
+    if (el) el.classList.remove('error');
+    if (err) err.textContent = '';
+  });
+}
+
+function validate(data) {
+  var ok = true;
+  function set(field, msg) {
+    document.getElementById(field).classList.add('error');
+    document.getElementById(field + 'Error').textContent = msg;
+    ok = false;
+  }
+  if (!data.empresa.trim()) set('empresa', 'Campo obrigatório');
+  if (!data.cargo.trim())   set('cargo',   'Campo obrigatório');
+  if (!data.email.trim()) {
+    set('email', 'Campo obrigatório');
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+    set('email', 'E-mail inválido');
+  }
+  if (!data.estado) set('estado', 'Selecione um estado');
+  return ok;
+}
+
+// Submit
+leadForm.addEventListener('submit', function(e) {
+  e.preventDefault();
+  clearErrors();
+  var data = {
+    empresa:  document.getElementById('empresa').value.trim(),
+    cargo:    document.getElementById('cargo').value.trim(),
+    email:    document.getElementById('email').value.trim(),
+    whatsapp: document.getElementById('whatsapp').value.trim(),
+    estado:   document.getElementById('estado').value,
+  };
+  if (!validate(data)) return;
+  var id = document.getElementById('leadId').value;
+  if (id) {
+    var idx = leads.findIndex(function(l){ return l.id === id; });
+    if (idx !== -1) leads[idx] = Object.assign({}, leads[idx], data);
+  } else {
+    leads.push(Object.assign({ id: generateId(), createdAt: Date.now() }, data));
+  }
+  saveLeads();
+  render();
+  closeModal();
+});
+
+// Delete
+document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+  leads = leads.filter(function(l){ return l.id !== pendingDeleteId; });
+  pendingDeleteId = null;
+  saveLeads();
+  render();
+  deleteOverlay.classList.remove('open');
+});
+document.getElementById('cancelDeleteBtn').addEventListener('click', function() {
+  pendingDeleteId = null;
+  deleteOverlay.classList.remove('open');
+});
+
+// Busca e filtro
+searchInput.addEventListener('input', render);
+filterEstado.addEventListener('change', render);
+
+// Botões
+document.getElementById('openModalBtn').addEventListener('click', openModal);
+document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+document.getElementById('cancelBtn').addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', function(e) { if (e.target === modalOverlay) closeModal(); });
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { closeModal(); deleteOverlay.classList.remove('open'); }
+});
+
+// Máscara WhatsApp
+document.getElementById('whatsapp').addEventListener('input', function() {
+  var v = this.value.replace(/\D/g,'').slice(0,11);
+  if (v.length > 6)      v = '(' + v.slice(0,2) + ') ' + v.slice(2,7) + '-' + v.slice(7);
+  else if (v.length > 2) v = '(' + v.slice(0,2) + ') ' + v.slice(2);
+  else if (v.length > 0) v = '(' + v;
+  this.value = v;
+});
+
+// Exportar CSV
+document.getElementById('exportBtn').addEventListener('click', function() {
+  var visible = getVisible();
+  if (visible.length === 0) { alert('Nenhum lead para exportar.'); return; }
+  var header = ['Empresa','Cargo','E-mail','WhatsApp','Estado'];
+  var rows = visible.map(function(l) {
+    return [l.empresa, l.cargo, l.email, l.whatsapp||'', l.estado]
+      .map(function(v){ return '"' + String(v).replace(/"/g,'""') + '"'; })
+      .join(',');
+  });
+  var csv = [header.join(',')].concat(rows).join('\n');
+  var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'leads_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
+render();
+</script>
 </body>
 </html>
