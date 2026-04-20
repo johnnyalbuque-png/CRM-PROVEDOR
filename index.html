@@ -236,6 +236,104 @@
     .btn-icon:hover { background: #f1f5f9; color: #0f172a; }
     .btn-icon.delete:hover { background: #fef2f2; color: #dc2626; }
 
+    /* Link empresa */
+    .link-empresa {
+      color: #0f172a;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      border-bottom: 1px dashed #94a3b8;
+      transition: color .15s, border-color .15s;
+    }
+    .link-empresa:hover { color: #2563eb; border-color: #2563eb; }
+
+    /* Detail overlay (fullscreen) */
+    .detail-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #f1f5f9;
+      z-index: 300;
+      overflow-y: auto;
+    }
+    .detail-overlay.open { display: block; }
+    .detail-header {
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .detail-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #64748b;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 6px 10px;
+      border-radius: 8px;
+      transition: background .15s, color .15s;
+    }
+    .detail-back:hover { background: #f1f5f9; color: #0f172a; }
+    .detail-title { font-size: 17px; font-weight: 700; color: #0f172a; flex: 1; }
+    .detail-body {
+      max-width: 760px;
+      margin: 32px auto;
+      padding: 0 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .detail-card {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      padding: 24px;
+    }
+    .detail-card h3 {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+      margin-bottom: 16px;
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .detail-field label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #94a3b8;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .detail-field span {
+      font-size: 15px;
+      color: #0f172a;
+      font-weight: 500;
+    }
+    .detail-field a { color: #2563eb; text-decoration: none; }
+    .detail-field a:hover { text-decoration: underline; }
+    .detail-nota {
+      font-size: 14px;
+      color: #475569;
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+    .detail-nota-vazia { font-size: 14px; color: #cbd5e1; font-style: italic; }
+
     /* Empty state */
     .empty-state {
       display: none;
@@ -422,7 +520,6 @@
           <th data-sort="empresa" class="sortable">Empresa <span class="sort-icon">↕</span></th>
           <th data-sort="cargo" class="sortable">Cargo <span class="sort-icon">↕</span></th>
           <th data-sort="status" class="sortable">Status <span class="sort-icon">↕</span></th>
-          <th>E-mail</th>
           <th>WhatsApp</th>
           <th data-sort="cidade" class="sortable">Cidade / Estado <span class="sort-icon">↕</span></th>
           <th data-sort="porte" class="sortable">Porte <span class="sort-icon">↕</span></th>
@@ -543,6 +640,40 @@
   </div>
 </div>
 
+<!-- Página de detalhes do lead -->
+<div class="detail-overlay" id="detailOverlay">
+  <div class="detail-header">
+    <button class="detail-back" id="detailBackBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Voltar
+    </button>
+    <span class="detail-title" id="detailEmpresa"></span>
+    <button class="btn btn-primary" id="detailEditBtn">✏️ Editar</button>
+  </div>
+  <div class="detail-body">
+    <div class="detail-card">
+      <h3>Informações do Lead</h3>
+      <div class="detail-grid">
+        <div class="detail-field"><label>Empresa</label><span id="dEmpresa"></span></div>
+        <div class="detail-field"><label>Cargo</label><span id="dCargo"></span></div>
+        <div class="detail-field"><label>Status</label><span id="dStatus"></span></div>
+        <div class="detail-field"><label>Porte</label><span id="dPorte"></span></div>
+        <div class="detail-field"><label>E-mail</label><span id="dEmail"></span></div>
+        <div class="detail-field"><label>WhatsApp</label><span id="dWhatsapp"></span></div>
+        <div class="detail-field"><label>Cidade</label><span id="dCidade"></span></div>
+        <div class="detail-field"><label>Estado</label><span id="dEstado"></span></div>
+        <div class="detail-field"><label>Data de Cadastro</label><span id="dCadastro"></span></div>
+      </div>
+    </div>
+    <div class="detail-card">
+      <h3>Anotações</h3>
+      <div id="dAnotacao"></div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal confirmar exclusão -->
 <div class="modal-overlay" id="deleteOverlay">
   <div class="modal modal-sm">
@@ -636,10 +767,9 @@ function render() {
   leadsBody.innerHTML = visible.map(l => {
     const wa = l.whatsapp ? l.whatsapp.replace(/\D/g,'') : '';
     return '<tr>' +
-      '<td class="cell-empresa">' + esc(l.empresa) + '</td>' +
+      '<td class="cell-empresa"><span class="link-empresa" onclick="openDetail(\'' + l.id + '\')">' + esc(l.empresa) + '</span></td>' +
       '<td>' + esc(l.cargo) + '</td>' +
       '<td><span class="' + statusClass(l.status) + '">' + esc(l.status || 'Novo') + '</span></td>' +
-      '<td class="cell-email">' + (l.email ? '<a href="mailto:' + esc(l.email) + '">' + esc(l.email) + '</a>' : '—') + '</td>' +
       '<td class="cell-whatsapp">' + (wa ? '<a href="https://wa.me/55' + wa + '" target="_blank" rel="noopener">📱 ' + esc(l.whatsapp) + '</a>' : '—') + '</td>' +
       '<td class="cell-local">' + (l.cidade ? esc(l.cidade) + ' / ' : '') + esc(l.estado) + '</td>' +
       '<td>' + (l.porte ? '<span class="badge-porte porte-' + l.porte.toLowerCase().replace('é','e') + '">' + esc(l.porte) + '</span>' : '—') + '</td>' +
@@ -698,6 +828,31 @@ function openEdit(id) {
   modalTitle.textContent = 'Editar Lead';
   saveBtn.textContent = 'Atualizar Lead';
   openModal();
+}
+
+function openDetail(id) {
+  var l = leads.find(function(x){ return x.id === id; });
+  if (!l) return;
+  document.getElementById('detailEmpresa').textContent = l.empresa;
+  document.getElementById('dEmpresa').textContent   = l.empresa;
+  document.getElementById('dCargo').textContent     = l.cargo;
+  document.getElementById('dStatus').innerHTML      = '<span class="' + statusClass(l.status) + '">' + esc(l.status || 'Novo') + '</span>';
+  document.getElementById('dPorte').textContent     = l.porte || '—';
+  document.getElementById('dEmail').innerHTML       = l.email ? '<a href="mailto:' + esc(l.email) + '">' + esc(l.email) + '</a>' : '—';
+  document.getElementById('dWhatsapp').innerHTML    = l.whatsapp ? '<a href="https://wa.me/55' + l.whatsapp.replace(/\D/g,'') + '" target="_blank">📱 ' + esc(l.whatsapp) + '</a>' : '—';
+  document.getElementById('dCidade').textContent   = l.cidade || '—';
+  document.getElementById('dEstado').textContent   = l.estado || '—';
+  document.getElementById('dCadastro').textContent = new Date(l.createdAt || Date.now()).toLocaleDateString('pt-BR');
+  var notaEl = document.getElementById('dAnotacao');
+  notaEl.innerHTML = l.anotacao
+    ? '<p class="detail-nota">' + esc(l.anotacao) + '</p>'
+    : '<p class="detail-nota-vazia">Nenhuma anotação registrada.</p>';
+  document.getElementById('detailEditBtn').onclick = function(){ closeDetail(); openEdit(id); };
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detailOverlay').classList.remove('open');
 }
 
 function openDelete(id) {
@@ -783,6 +938,7 @@ filterStatus.addEventListener('change', render);
 filterEstado.addEventListener('change', render);
 
 // Botões
+document.getElementById('detailBackBtn').addEventListener('click', closeDetail);
 document.getElementById('openModalBtn').addEventListener('click', openModal);
 document.getElementById('closeModalBtn').addEventListener('click', closeModal);
 document.getElementById('cancelBtn').addEventListener('click', closeModal);
