@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CRM Provedor — Leads</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -443,6 +444,28 @@
       padding: 20px 24px 24px;
     }
 
+    /* Import modal */
+    .import-drop {
+      border: 2px dashed #e2e8f0;
+      border-radius: 10px;
+      padding: 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+      margin: 0 24px 20px;
+    }
+    .import-drop:hover, .import-drop.drag { border-color: #2563eb; background: #eff6ff; }
+    .import-drop svg { display: block; margin: 0 auto 10px; }
+    .import-drop p { font-size: 14px; color: #475569; margin-bottom: 4px; }
+    .import-drop span { font-size: 12px; color: #94a3b8; }
+    .import-preview { margin: 0 24px 20px; }
+    .import-preview h4 { font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 10px; }
+    .preview-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .preview-table th { background: #f8fafc; padding: 8px 10px; text-align: left; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0; }
+    .preview-table td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; color: #374151; }
+    .import-info { font-size: 13px; color: #64748b; margin: 0 24px 16px; }
+    .import-info strong { color: #2563eb; }
+
     @media (max-width: 640px) {
       .main { padding: 16px; }
       .toolbar { flex-direction: column; align-items: stretch; }
@@ -497,6 +520,14 @@
         <option>RS</option><option>RO</option><option>RR</option><option>SC</option>
         <option>SP</option><option>SE</option><option>TO</option>
       </select>
+      <input type="file" id="importFile" accept=".csv,.xlsx,.xls" style="display:none" />
+      <button class="btn btn-outline" id="importBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        Importar
+      </button>
       <button class="btn btn-outline" id="exportBtn">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -677,6 +708,40 @@
     <div class="detail-card">
       <h3>Anotações</h3>
       <div id="dAnotacao"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal importar planilha -->
+<div class="modal-overlay" id="importOverlay">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <h2>Importar Leads da Planilha</h2>
+      <button class="modal-close" id="closeImportBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div id="importDropZone" class="import-drop">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+      </svg>
+      <p>Clique ou arraste sua planilha aqui</p>
+      <span>Aceita .csv, .xlsx e .xls — colunas: Nome, Cargo, WhatsApp, Quantidade de Clientes, E-mail</span>
+    </div>
+    <div id="importPreviewArea" style="display:none">
+      <p class="import-info" id="importInfo"></p>
+      <div class="import-preview">
+        <h4>Prévia (primeiras 5 linhas)</h4>
+        <div style="overflow-x:auto"><table class="preview-table" id="previewTable"></table></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancelImportBtn">Cancelar</button>
+      <button class="btn btn-primary" id="confirmImportBtn" style="display:none">Importar Leads</button>
     </div>
   </div>
 </div>
@@ -964,6 +1029,131 @@ document.getElementById('whatsapp').addEventListener('input', function() {
   else if (v.length > 2) v = '(' + v.slice(0,2) + ') ' + v.slice(2);
   else if (v.length > 0) v = '(' + v;
   this.value = v;
+});
+
+// ── Importar planilha ──────────────────────────────────────────────────────
+var parsedImportRows = [];
+
+function porteFromQtd(qtd) {
+  var n = parseInt(String(qtd).replace(/\D/g,'')) || 0;
+  if (n <= 1000)  return 'Pequeno';
+  if (n <= 20000) return 'Médio';
+  return 'Grande';
+}
+
+function normalizeCol(col) {
+  return String(col || '').toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+function mapRow(row) {
+  var mapped = {};
+  Object.keys(row).forEach(function(k) {
+    var n = normalizeCol(k);
+    var v = String(row[k] || '').trim();
+    if (/^nome|^name|^contato/.test(n))                         mapped.nome = v;
+    else if (/^cargo|^role|^posicao|^funcao/.test(n))           mapped.cargo = v;
+    else if (/^whatsapp|^celular|^telefone|^fone|^phone/.test(n)) mapped.whatsapp = v;
+    else if (/^quant|^clientes|^assinantes|^qtd/.test(n))      mapped.qtdClientes = v;
+    else if (/^e?mail|^e-mail/.test(n))                         mapped.email = v;
+  });
+  return mapped;
+}
+
+function processFile(file) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var data = new Uint8Array(e.target.result);
+    var wb   = XLSX.read(data, { type: 'array' });
+    var ws   = wb.Sheets[wb.SheetNames[0]];
+    var rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+    parsedImportRows = rows.map(mapRow).filter(function(r) {
+      return r.nome || r.cargo || r.email || r.whatsapp;
+    });
+
+    if (parsedImportRows.length === 0) {
+      alert('Nenhum dado encontrado. Verifique se as colunas estão corretas.');
+      return;
+    }
+
+    // Prévia
+    var preview = parsedImportRows.slice(0, 5);
+    var thead = '<tr><th>Nome</th><th>Cargo</th><th>WhatsApp</th><th>Qtd Clientes</th><th>E-mail</th></tr>';
+    var tbody = preview.map(function(r) {
+      return '<tr><td>' + esc(r.nome||'—') + '</td><td>' + esc(r.cargo||'—') + '</td><td>' +
+        esc(r.whatsapp||'—') + '</td><td>' + esc(r.qtdClientes||'—') + '</td><td>' + esc(r.email||'—') + '</td></tr>';
+    }).join('');
+    document.getElementById('previewTable').innerHTML = thead + tbody;
+    document.getElementById('importInfo').innerHTML =
+      '<strong>' + parsedImportRows.length + ' leads</strong> encontrados na planilha.';
+    document.getElementById('importPreviewArea').style.display = 'block';
+    document.getElementById('confirmImportBtn').style.display = 'inline-flex';
+    document.getElementById('confirmImportBtn').textContent   = 'Importar ' + parsedImportRows.length + ' Leads';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+document.getElementById('importBtn').addEventListener('click', function() {
+  document.getElementById('importOverlay').classList.add('open');
+});
+document.getElementById('closeImportBtn').addEventListener('click', closeImport);
+document.getElementById('cancelImportBtn').addEventListener('click', closeImport);
+
+function closeImport() {
+  document.getElementById('importOverlay').classList.remove('open');
+  document.getElementById('importPreviewArea').style.display = 'none';
+  document.getElementById('confirmImportBtn').style.display  = 'none';
+  document.getElementById('importFile').value = '';
+  parsedImportRows = [];
+}
+
+// Clique na drop zone abre o seletor de arquivo
+document.getElementById('importDropZone').addEventListener('click', function() {
+  document.getElementById('importFile').click();
+});
+
+document.getElementById('importFile').addEventListener('change', function() {
+  if (this.files[0]) processFile(this.files[0]);
+});
+
+// Drag & drop
+var dropZone = document.getElementById('importDropZone');
+dropZone.addEventListener('dragover',  function(e) { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', function()  { dropZone.classList.remove('drag'); });
+dropZone.addEventListener('drop',      function(e) {
+  e.preventDefault();
+  dropZone.classList.remove('drag');
+  if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+});
+
+document.getElementById('confirmImportBtn').addEventListener('click', function() {
+  var existingEmails = leads.map(function(l){ return (l.email||'').toLowerCase(); });
+  var added = 0;
+  parsedImportRows.forEach(function(r) {
+    var emailLow = (r.email||'').toLowerCase();
+    if (emailLow && existingEmails.includes(emailLow)) return; // pula duplicado
+    leads.push({
+      id:          generateId(),
+      createdAt:   Date.now(),
+      status:      'Novo',
+      nome:        r.nome     || '',
+      cargo:       r.cargo    || '',
+      email:       r.email    || '',
+      whatsapp:    r.whatsapp || '',
+      qtdClientes: r.qtdClientes || '',
+      porte:       r.qtdClientes ? porteFromQtd(r.qtdClientes) : '',
+      empresa:     '',
+      estado:      '',
+      cidade:      '',
+      anotacao:    '',
+    });
+    added++;
+  });
+  saveLeads();
+  render();
+  closeImport();
+  alert(added + ' leads importados com sucesso!');
 });
 
 // Exportar CSV
