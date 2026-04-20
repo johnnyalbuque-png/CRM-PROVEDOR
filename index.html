@@ -517,14 +517,14 @@
     <table class="leads-table" id="leadsTable">
       <thead>
         <tr>
+          <th data-sort="createdAt" class="sortable">Cadastro <span class="sort-icon">↕</span></th>
           <th data-sort="empresa" class="sortable">Empresa <span class="sort-icon">↕</span></th>
+          <th data-sort="nome" class="sortable">Nome <span class="sort-icon">↕</span></th>
           <th data-sort="cargo" class="sortable">Cargo <span class="sort-icon">↕</span></th>
-          <th data-sort="status" class="sortable">Status <span class="sort-icon">↕</span></th>
           <th>WhatsApp</th>
-          <th data-sort="cidade" class="sortable">Cidade / Estado <span class="sort-icon">↕</span></th>
+          <th data-sort="estado" class="sortable">Estado <span class="sort-icon">↕</span></th>
           <th data-sort="porte" class="sortable">Porte <span class="sort-icon">↕</span></th>
           <th style="text-align:center">Nota</th>
-          <th data-sort="createdAt" class="sortable">Cadastro <span class="sort-icon">↕</span></th>
           <th>Ações</th>
         </tr>
       </thead>
@@ -577,6 +577,12 @@
           <input type="text" id="empresa" placeholder="Nome da empresa" />
           <span class="field-error" id="empresaError"></span>
         </div>
+        <div class="form-group">
+          <label for="nome">Nome do Contato</label>
+          <input type="text" id="nome" placeholder="Ex: João Silva" />
+        </div>
+      </div>
+      <div class="form-row">
         <div class="form-group">
           <label for="cargo">Cargo <span class="required">*</span></label>
           <input type="text" id="cargo" placeholder="Ex: Gerente de TI" />
@@ -657,6 +663,7 @@
       <h3>Informações do Lead</h3>
       <div class="detail-grid">
         <div class="detail-field"><label>Empresa</label><span id="dEmpresa"></span></div>
+        <div class="detail-field"><label>Nome do Contato</label><span id="dNome"></span></div>
         <div class="detail-field"><label>Cargo</label><span id="dCargo"></span></div>
         <div class="detail-field"><label>Status</label><span id="dStatus"></span></div>
         <div class="detail-field"><label>Porte</label><span id="dPorte"></span></div>
@@ -767,14 +774,14 @@ function render() {
   leadsBody.innerHTML = visible.map(l => {
     const wa = l.whatsapp ? l.whatsapp.replace(/\D/g,'') : '';
     return '<tr>' +
-      '<td class="cell-empresa"><span class="link-empresa" onclick="openDetail(\'' + l.id + '\')">' + esc(l.empresa) + '</span></td>' +
-      '<td>' + esc(l.cargo) + '</td>' +
-      '<td><span class="' + statusClass(l.status) + '">' + esc(l.status || 'Novo') + '</span></td>' +
-      '<td class="cell-whatsapp">' + (wa ? '<a href="https://wa.me/55' + wa + '" target="_blank" rel="noopener">📱 ' + esc(l.whatsapp) + '</a>' : '—') + '</td>' +
-      '<td class="cell-local">' + (l.cidade ? esc(l.cidade) + ' / ' : '') + esc(l.estado) + '</td>' +
-      '<td>' + (l.porte ? '<span class="badge-porte porte-' + l.porte.toLowerCase().replace('é','e') + '">' + esc(l.porte) + '</span>' : '—') + '</td>' +
-      '<td class="cell-nota"><button class="icon-nota" onclick="openEdit(\'' + l.id + '\')" title="' + (l.anotacao ? esc(l.anotacao) : 'Sem anotação') + '"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="' + (l.anotacao ? '#16a34a' : '#cbd5e1') + '" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></button></td>' +
       '<td class="cell-data">' + new Date(l.createdAt || Date.now()).toLocaleDateString('pt-BR') + '</td>' +
+      '<td class="cell-empresa"><span class="link-empresa" onclick="openDetail(\'' + l.id + '\')">' + esc(l.empresa) + '</span></td>' +
+      '<td>' + esc(l.nome || '—') + '</td>' +
+      '<td>' + esc(l.cargo) + '</td>' +
+      '<td class="cell-whatsapp">' + (wa ? '<a href="https://wa.me/55' + wa + '" target="_blank" rel="noopener">📱 ' + esc(l.whatsapp) + '</a>' : '—') + '</td>' +
+      '<td><span class="badge-estado">' + esc(l.estado) + '</span></td>' +
+      '<td>' + (l.porte ? '<span class="badge-porte porte-' + l.porte.toLowerCase().replace('é','e') + '">' + esc(l.porte) + '</span>' : '—') + '</td>' +
+      '<td class="cell-nota"><button class="icon-nota" onclick="openDetail(\'' + l.id + '\')" title="' + (l.anotacao ? esc(l.anotacao) : 'Sem anotação') + '"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="' + (l.anotacao ? '#16a34a' : '#cbd5e1') + '" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></button></td>' +
       '<td><div class="action-btns">' +
         '<button class="btn-icon" onclick="openEdit(\'' + l.id + '\')" title="Editar">✏️</button>' +
         '<button class="btn-icon delete" onclick="openDelete(\'' + l.id + '\')" title="Excluir">🗑️</button>' +
@@ -818,6 +825,7 @@ function openEdit(id) {
   document.getElementById('leadId').value   = lead.id;
   document.getElementById('status').value   = lead.status || 'Novo';
   document.getElementById('empresa').value  = lead.empresa;
+  document.getElementById('nome').value     = lead.nome || '';
   document.getElementById('cargo').value    = lead.cargo;
   document.getElementById('email').value    = lead.email;
   document.getElementById('whatsapp').value = lead.whatsapp || '';
@@ -835,6 +843,7 @@ function openDetail(id) {
   if (!l) return;
   document.getElementById('detailEmpresa').textContent = l.empresa;
   document.getElementById('dEmpresa').textContent   = l.empresa;
+  document.getElementById('dNome').textContent      = l.nome || '—';
   document.getElementById('dCargo').textContent     = l.cargo;
   document.getElementById('dStatus').innerHTML      = '<span class="' + statusClass(l.status) + '">' + esc(l.status || 'Novo') + '</span>';
   document.getElementById('dPorte').textContent     = l.porte || '—';
@@ -898,6 +907,7 @@ leadForm.addEventListener('submit', function(e) {
   var data = {
     status:   document.getElementById('status').value,
     empresa:  document.getElementById('empresa').value.trim(),
+    nome:     document.getElementById('nome').value.trim(),
     cargo:    document.getElementById('cargo').value.trim(),
     email:    document.getElementById('email').value.trim(),
     whatsapp: document.getElementById('whatsapp').value.trim(),
