@@ -237,6 +237,10 @@
     .btn-icon:hover { background: #f1f5f9; color: #0f172a; }
     .btn-icon.delete:hover { background: #fef2f2; color: #dc2626; }
 
+    /* Tags */
+    .tags-wrap { display: flex; flex-wrap: wrap; gap: 4px; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; white-space: nowrap; }
+
     /* Link empresa */
     .link-empresa {
       color: #0f172a;
@@ -918,6 +922,12 @@
       </div>
       <div class="form-row-full">
         <div class="form-group">
+          <label for="tags">Tags <span style="font-weight:400;color:#94a3b8;font-size:12px">(separe por vírgula)</span></label>
+          <input type="text" id="tags" placeholder="Ex: VIP, Patrocinador, Palestrante" />
+        </div>
+      </div>
+      <div class="form-row-full">
+        <div class="form-group">
           <label for="anotacao">Anotações</label>
           <textarea id="anotacao" placeholder="Observações sobre o lead, histórico de contato, interesses…"></textarea>
         </div>
@@ -957,6 +967,7 @@
         <div class="detail-field"><label>Cidade</label><span id="dCidade"></span></div>
         <div class="detail-field"><label>Estado</label><span id="dEstado"></span></div>
         <div class="detail-field"><label>Data de Cadastro</label><span id="dCadastro"></span></div>
+        <div class="detail-field" style="grid-column:span 2"><label>Tags</label><div id="dTags"></div></div>
       </div>
     </div>
     <div class="detail-card">
@@ -1065,7 +1076,7 @@ function getVisible() {
   const porte  = filterPorte.value;
   return leads
     .filter(l => {
-      const matchQ      = !q || [l.empresa, l.nome, l.cargo, l.email, l.whatsapp]
+      const matchQ      = !q || [l.empresa, l.nome, l.cargo, l.email, l.whatsapp, l.tags]
         .some(v => v && v.toLowerCase().includes(q));
       const matchState  = !state  || l.estado === state;
       const matchStatus = !status || l.status === status;
@@ -1158,6 +1169,7 @@ function openEdit(id) {
   document.getElementById('estado').value   = lead.estado;
   document.getElementById('porte').value    = lead.porte  || '';
   document.getElementById('origem').value   = lead.origem || '';
+  document.getElementById('tags').value     = lead.tags   || '';
   document.getElementById('anotacao').value = lead.anotacao || '';
   modalTitle.textContent = 'Editar Lead';
   saveBtn.textContent = 'Atualizar Lead';
@@ -1179,6 +1191,10 @@ function openDetail(id) {
   document.getElementById('dCidade').textContent   = l.cidade || '—';
   document.getElementById('dEstado').textContent   = l.estado || '—';
   document.getElementById('dCadastro').textContent = new Date(l.createdAt || Date.now()).toLocaleDateString('pt-BR');
+  var tagsEl = document.getElementById('dTags');
+  if (l.tags) {
+    tagsEl.innerHTML = '<div class="tags-wrap">' + l.tags.split(',').map(function(t){ return t.trim(); }).filter(Boolean).map(function(t){ return '<span class="tag">' + esc(t) + '</span>'; }).join('') + '</div>';
+  } else { tagsEl.innerHTML = '<span style="color:#cbd5e1;font-style:italic;font-size:14px">Nenhuma tag</span>'; }
   var notaEl = document.getElementById('dAnotacao');
   notaEl.innerHTML = l.anotacao
     ? '<p class="detail-nota">' + esc(l.anotacao) + '</p>'
@@ -1242,6 +1258,7 @@ leadForm.addEventListener('submit', function(e) {
     estado:   document.getElementById('estado').value,
     porte:    document.getElementById('porte').value,
     origem:   document.getElementById('origem').value,
+    tags:     document.getElementById('tags').value.trim(),
     anotacao: document.getElementById('anotacao').value.trim(),
   };
   if (!validate(data)) return;
