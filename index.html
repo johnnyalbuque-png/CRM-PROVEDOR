@@ -237,6 +237,20 @@
     .btn-icon:hover { background: #f1f5f9; color: #0f172a; }
     .btn-icon.delete:hover { background: #fef2f2; color: #dc2626; }
 
+    /* Dashboard */
+    .dashboard { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+    .dash-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.06); cursor: pointer; transition: box-shadow .15s, transform .1s; }
+    .dash-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.10); transform: translateY(-1px); }
+    .dash-value { font-size: 28px; font-weight: 800; color: #0f172a; line-height: 1; margin-bottom: 6px; }
+    .dash-label { font-size: 12px; color: #64748b; font-weight: 500; }
+    .dash-novo .dash-value        { color: #2563eb; }
+    .dash-interessado .dash-value { color: #7c3aed; }
+    .dash-proposta .dash-value    { color: #c2410c; }
+    .dash-fechado .dash-value     { color: #15803d; }
+    .dash-grande .dash-value      { color: #0369a1; }
+    @media (max-width: 900px) { .dashboard { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 560px) { .dashboard { grid-template-columns: repeat(2, 1fr); } }
+
     /* Tags */
     .tags-wrap { display: flex; flex-wrap: wrap; gap: 4px; }
     .tag { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; white-space: nowrap; }
@@ -732,6 +746,16 @@
 </header>
 
 <main class="main">
+  <!-- Dashboard -->
+  <div class="dashboard" id="dashboard">
+    <div class="dash-card"><div class="dash-value" id="dTotal">0</div><div class="dash-label">Total de Leads</div></div>
+    <div class="dash-card dash-novo"><div class="dash-value" id="dNovo">0</div><div class="dash-label">Novos</div></div>
+    <div class="dash-card dash-interessado"><div class="dash-value" id="dInteressado">0</div><div class="dash-label">Interessados</div></div>
+    <div class="dash-card dash-proposta"><div class="dash-value" id="dProposta">0</div><div class="dash-label">Proposta</div></div>
+    <div class="dash-card dash-fechado"><div class="dash-value" id="dFechado">0</div><div class="dash-label">Fechados</div></div>
+    <div class="dash-card dash-grande"><div class="dash-value" id="dGrande">0</div><div class="dash-label">Grandes Provedores</div></div>
+  </div>
+
   <div class="toolbar">
     <div class="search-wrap">
       <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1096,9 +1120,27 @@ function esc(str) {
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function updateDashboard() {
+  document.getElementById('dTotal').textContent       = leads.length;
+  document.getElementById('dNovo').textContent        = leads.filter(function(l){ return (l.status||'Novo') === 'Novo'; }).length;
+  document.getElementById('dInteressado').textContent = leads.filter(function(l){ return l.status === 'Interessado'; }).length;
+  document.getElementById('dProposta').textContent    = leads.filter(function(l){ return l.status === 'Proposta'; }).length;
+  document.getElementById('dFechado').textContent     = leads.filter(function(l){ return l.status === 'Fechado'; }).length;
+  document.getElementById('dGrande').textContent      = leads.filter(function(l){ return l.porte === 'Grande'; }).length;
+}
+
+// Clique no card filtra a lista
+document.getElementById('dNovo').closest('.dash-card').addEventListener('click', function(){ filterStatus.value='Novo'; filterPorte.value=''; render(); });
+document.getElementById('dInteressado').closest('.dash-card').addEventListener('click', function(){ filterStatus.value='Interessado'; filterPorte.value=''; render(); });
+document.getElementById('dProposta').closest('.dash-card').addEventListener('click', function(){ filterStatus.value='Proposta'; filterPorte.value=''; render(); });
+document.getElementById('dFechado').closest('.dash-card').addEventListener('click', function(){ filterStatus.value='Fechado'; filterPorte.value=''; render(); });
+document.getElementById('dGrande').closest('.dash-card').addEventListener('click', function(){ filterPorte.value='Grande'; filterStatus.value=''; render(); });
+document.getElementById('dTotal').closest('.dash-card').addEventListener('click', function(){ filterStatus.value=''; filterPorte.value=''; searchInput.value=''; filterEstado.value=''; render(); });
+
 function render() {
   const visible = getVisible();
   totalLeads.textContent = leads.length + ' lead' + (leads.length !== 1 ? 's' : '');
+  updateDashboard();
 
   if (visible.length === 0) {
     leadsBody.innerHTML = '';
