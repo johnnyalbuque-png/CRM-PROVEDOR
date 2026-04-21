@@ -755,6 +755,12 @@
         <option>RS</option><option>RO</option><option>RR</option><option>SC</option>
         <option>SP</option><option>SE</option><option>TO</option>
       </select>
+      <select id="filterPorte" class="select-filter">
+        <option value="">Todos os portes</option>
+        <option value="Pequeno">Pequeno</option>
+        <option value="Médio">Médio</option>
+        <option value="Grande">Grande</option>
+      </select>
       <input type="file" id="importFile" accept=".csv,.xlsx,.xls" style="display:none" />
       <button class="btn btn-outline" id="importBtn">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -883,6 +889,19 @@
       </div>
       <div class="form-row">
         <div class="form-group">
+          <label for="origem">Origem do Lead</label>
+          <select id="origem">
+            <option value="">Selecione…</option>
+            <option value="Evento INTER'ISP">Evento INTER'ISP</option>
+            <option value="LinkedIn">LinkedIn</option>
+            <option value="Indicação">Indicação</option>
+            <option value="WhatsApp">WhatsApp</option>
+            <option value="Instagram">Instagram</option>
+            <option value="Site">Site</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label for="estado">Estado <span class="required">*</span></label>
           <select id="estado">
             <option value="">Selecione…</option>
@@ -896,7 +915,6 @@
           </select>
           <span class="field-error" id="estadoError"></span>
         </div>
-        <div class="form-group"></div>
       </div>
       <div class="form-row-full">
         <div class="form-group">
@@ -933,6 +951,7 @@
         <div class="detail-field"><label>Cargo</label><span id="dCargo"></span></div>
         <div class="detail-field"><label>Status</label><span id="dStatus"></span></div>
         <div class="detail-field"><label>Porte</label><span id="dPorte"></span></div>
+        <div class="detail-field"><label>Origem</label><span id="dOrigem"></span></div>
         <div class="detail-field"><label>E-mail</label><span id="dEmail"></span></div>
         <div class="detail-field"><label>WhatsApp</label><span id="dWhatsapp"></span></div>
         <div class="detail-field"><label>Cidade</label><span id="dCidade"></span></div>
@@ -1027,6 +1046,7 @@ const totalLeads   = document.getElementById('totalLeads');
 const searchInput  = document.getElementById('searchInput');
 const filterStatus = document.getElementById('filterStatus');
 const filterEstado = document.getElementById('filterEstado');
+const filterPorte  = document.getElementById('filterPorte');
 const modalOverlay = document.getElementById('modalOverlay');
 const deleteOverlay= document.getElementById('deleteOverlay');
 const leadForm     = document.getElementById('leadForm');
@@ -1042,13 +1062,15 @@ function getVisible() {
   const q      = searchInput.value.trim().toLowerCase();
   const state  = filterEstado.value;
   const status = filterStatus.value;
+  const porte  = filterPorte.value;
   return leads
     .filter(l => {
-      const matchQ      = !q || [l.empresa, l.cargo, l.email, l.whatsapp]
+      const matchQ      = !q || [l.empresa, l.nome, l.cargo, l.email, l.whatsapp]
         .some(v => v && v.toLowerCase().includes(q));
       const matchState  = !state  || l.estado === state;
       const matchStatus = !status || l.status === status;
-      return matchQ && matchState && matchStatus;
+      const matchPorte  = !porte  || l.porte  === porte;
+      return matchQ && matchState && matchStatus && matchPorte;
     })
     .sort((a, b) => {
       const va = (a[sortField] || '').toLowerCase();
@@ -1134,7 +1156,8 @@ function openEdit(id) {
   document.getElementById('whatsapp').value = lead.whatsapp || '';
   document.getElementById('cidade').value   = lead.cidade || '';
   document.getElementById('estado').value   = lead.estado;
-  document.getElementById('porte').value    = lead.porte || '';
+  document.getElementById('porte').value    = lead.porte  || '';
+  document.getElementById('origem').value   = lead.origem || '';
   document.getElementById('anotacao').value = lead.anotacao || '';
   modalTitle.textContent = 'Editar Lead';
   saveBtn.textContent = 'Atualizar Lead';
@@ -1149,7 +1172,8 @@ function openDetail(id) {
   document.getElementById('dNome').textContent      = l.nome || '—';
   document.getElementById('dCargo').textContent     = l.cargo;
   document.getElementById('dStatus').innerHTML      = '<span class="' + statusClass(l.status) + '">' + esc(l.status || 'Novo') + '</span>';
-  document.getElementById('dPorte').textContent     = l.porte || '—';
+  document.getElementById('dPorte').textContent     = l.porte  || '—';
+  document.getElementById('dOrigem').textContent    = l.origem || '—';
   document.getElementById('dEmail').innerHTML       = l.email ? '<a href="mailto:' + esc(l.email) + '">' + esc(l.email) + '</a>' : '—';
   document.getElementById('dWhatsapp').innerHTML    = l.whatsapp ? '<a href="https://wa.me/55' + l.whatsapp.replace(/\D/g,'') + '" target="_blank">📱 ' + esc(l.whatsapp) + '</a>' : '—';
   document.getElementById('dCidade').textContent   = l.cidade || '—';
@@ -1217,10 +1241,22 @@ leadForm.addEventListener('submit', function(e) {
     cidade:   document.getElementById('cidade').value.trim(),
     estado:   document.getElementById('estado').value,
     porte:    document.getElementById('porte').value,
+    origem:   document.getElementById('origem').value,
     anotacao: document.getElementById('anotacao').value.trim(),
   };
   if (!validate(data)) return;
   var id = document.getElementById('leadId').value;
+
+  // Detectar duplicados por e-mail ou WhatsApp
+  if (!id && (data.email || data.whatsapp)) {
+    var dup = leads.find(function(l) {
+      var sameEmail = data.email && l.email && l.email.toLowerCase() === data.email.toLowerCase();
+      var sameWA    = data.whatsapp && l.whatsapp && l.whatsapp.replace(/\D/g,'') === data.whatsapp.replace(/\D/g,'');
+      return sameEmail || sameWA;
+    });
+    if (dup && !confirm('⚠️ Possível lead duplicado encontrado: "' + dup.empresa + ' — ' + (dup.nome || dup.cargo) + '"\n\nDeseja cadastrar mesmo assim?')) return;
+  }
+
   if (id) {
     var idx = leads.findIndex(function(l){ return l.id === id; });
     if (idx !== -1) leads[idx] = Object.assign({}, leads[idx], data);
@@ -1249,6 +1285,7 @@ document.getElementById('cancelDeleteBtn').addEventListener('click', function() 
 searchInput.addEventListener('input', render);
 filterStatus.addEventListener('change', render);
 filterEstado.addEventListener('change', render);
+filterPorte.addEventListener('change',  render);
 
 // Botões
 document.getElementById('detailBackBtn').addEventListener('click', closeDetail);
@@ -1394,13 +1431,18 @@ document.getElementById('confirmImportBtn').addEventListener('click', function()
   alert(added + ' leads importados com sucesso!');
 });
 
-// Exportar CSV
+// Exportar CSV (segmentado pelos filtros ativos)
 document.getElementById('exportBtn').addEventListener('click', function() {
   var visible = getVisible();
   if (visible.length === 0) { alert('Nenhum lead para exportar.'); return; }
-  var header = ['Empresa','Cargo','E-mail','WhatsApp','Estado'];
+  var total = leads.length;
+  var msg = visible.length === total
+    ? 'Exportar todos os ' + total + ' leads?'
+    : 'Exportar ' + visible.length + ' de ' + total + ' leads (filtro ativo)?\n\nSó os leads visíveis serão exportados.';
+  if (!confirm(msg)) return;
+  var header = ['Empresa','Nome','Cargo','E-mail','WhatsApp','Estado','Cidade','Porte','Origem','Status','Cadastro'];
   var rows = visible.map(function(l) {
-    return [l.empresa, l.cargo, l.email, l.whatsapp||'', l.estado]
+    return [l.empresa, l.nome||'', l.cargo, l.email||'', l.whatsapp||'', l.estado, l.cidade||'', l.porte||'', l.origem||'', l.status||'Novo', new Date(l.createdAt||Date.now()).toLocaleDateString('pt-BR')]
       .map(function(v){ return '"' + String(v).replace(/"/g,'""') + '"'; })
       .join(',');
   });
