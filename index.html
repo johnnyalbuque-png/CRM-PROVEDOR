@@ -544,7 +544,13 @@
     .badge-perfil-user  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
     .badge-ativo   { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
     .badge-inativo { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;  padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-    .user-avatar { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: #eff6ff; color: #2563eb; font-size: 13px; font-weight: 700; }
+    .user-avatar { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: #eff6ff; color: #2563eb; font-size: 13px; font-weight: 700; overflow: hidden; flex-shrink: 0; }
+    .user-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+    .photo-upload-wrap { display: flex; align-items: center; gap: 14px; margin: 0 24px 14px; }
+    .photo-preview { width: 56px; height: 56px; border-radius: 50%; background: #eff6ff; color: #2563eb; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; border: 2px solid #e2e8f0; }
+    .photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-upload-btn { font-size: 13px; color: #2563eb; cursor: pointer; background: none; border: 1px dashed #bfdbfe; border-radius: 8px; padding: 7px 14px; transition: background .15s; }
+    .photo-upload-btn:hover { background: #eff6ff; }
 
     /* user menu header */
     .user-menu-wrap { position: relative; }
@@ -654,6 +660,14 @@
     </div>
     <form id="newUserForm" novalidate>
       <input type="hidden" id="editUserId" />
+      <input type="file" id="photoFile" accept="image/*" style="display:none" />
+      <div class="photo-upload-wrap">
+        <div class="photo-preview" id="photoPreview"><span id="photoInitial">?</span></div>
+        <div>
+          <button type="button" class="photo-upload-btn" id="photoUploadBtn">📷 Escolher foto</button>
+          <div style="font-size:12px;color:#94a3b8;margin-top:4px">JPG ou PNG, máx. 2MB</div>
+        </div>
+      </div>
       <div class="form-row">
         <div class="form-group">
           <label for="newUserNome">Nome completo <span class="required">*</span></label>
@@ -909,9 +923,9 @@
           <label for="porte">Porte do Provedor</label>
           <select id="porte">
             <option value="">Selecione…</option>
-            <option value="Pequeno">Pequeno (até 1k assinantes)</option>
-            <option value="Médio">Médio (1k – 20k assinantes)</option>
-            <option value="Grande">Grande (20k+ assinantes)</option>
+            <option value="Pequeno">Pequeno (até 3 mil clientes)</option>
+            <option value="Médio">Médio (3 mil – 20 mil clientes)</option>
+            <option value="Grande">Grande (mais de 20 mil clientes)</option>
           </select>
         </div>
       </div>
@@ -1370,7 +1384,7 @@ var parsedImportRows = [];
 
 function porteFromQtd(qtd) {
   var n = parseInt(String(qtd).replace(/\D/g,'')) || 0;
-  if (n <= 1000)  return 'Pequeno';
+  if (n <= 3000)  return 'Pequeno';
   if (n <= 20000) return 'Médio';
   return 'Grande';
 }
@@ -1538,7 +1552,7 @@ async function ensureDefaultAdmin() {
 
 function initApp(session) {
   document.getElementById('userMenuName').textContent = session.nome.split(' ')[0];
-  document.getElementById('userAvatar').textContent   = session.nome[0].toUpperCase();
+  updateHeaderAvatar(session);
   if (session.perfil === 'admin') {
     document.getElementById('menuAdminBtn').style.display = 'flex';
     document.getElementById('menuDivider').style.display  = 'block';
@@ -1591,7 +1605,7 @@ function renderUsers() {
     var isSelf = session && u.id === session.id;
     return '<tr>' +
       '<td><code style="font-size:13px">' + esc(u.login) + '</code>' + (isSelf ? ' <span style="font-size:11px;color:#94a3b8">(você)</span>' : '') + '</td>' +
-      '<td><div style="display:flex;align-items:center;gap:8px"><span class="user-avatar">' + u.nome[0].toUpperCase() + '</span>' + esc(u.nome) + '</div></td>' +
+      '<td><div style="display:flex;align-items:center;gap:8px"><span class="user-avatar">' + (u.foto ? '<img src="' + u.foto + '" />' : u.nome[0].toUpperCase()) + '</span>' + esc(u.nome) + '</div></td>' +
       '<td><span class="badge-perfil-' + u.perfil + '">' + (u.perfil === 'admin' ? 'Administrador' : 'Usuário') + '</span></td>' +
       '<td><span class="' + (u.ativo ? 'badge-ativo' : 'badge-inativo') + '">' + (u.ativo ? 'Ativo' : 'Inativo') + '</span></td>' +
       '<td class="cell-data">' + new Date(u.criadoEm).toLocaleDateString('pt-BR') + '</td>' +
@@ -1602,12 +1616,56 @@ function renderUsers() {
   }).join('');
 }
 
+// ── Foto de perfil ─────────────────────────────────────────────────────────
+var currentPhotoB64 = '';
+
+function setPhotoPreview(b64, nome) {
+  var preview = document.getElementById('photoPreview');
+  var initial = document.getElementById('photoInitial');
+  if (b64) {
+    preview.innerHTML = '<img src="' + b64 + '" />';
+  } else {
+    preview.innerHTML = '<span id="photoInitial">' + (nome ? nome[0].toUpperCase() : '?') + '</span>';
+  }
+  currentPhotoB64 = b64 || '';
+}
+
+document.getElementById('photoUploadBtn').addEventListener('click', function() {
+  document.getElementById('photoFile').click();
+});
+
+document.getElementById('photoFile').addEventListener('change', function() {
+  var file = this.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { alert('Imagem muito grande. Use uma imagem menor que 2MB.'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) { setPhotoPreview(e.target.result, document.getElementById('newUserNome').value); };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('newUserNome').addEventListener('input', function() {
+  if (!currentPhotoB64) setPhotoPreview('', this.value);
+});
+
+function updateHeaderAvatar(session) {
+  var users = loadUsers();
+  var u = users.find(function(x){ return x.id === session.id; });
+  var avatarEl = document.getElementById('userAvatar');
+  if (u && u.foto) {
+    avatarEl.innerHTML = '<img src="' + u.foto + '" style="width:32px;height:32px;border-radius:50%;object-fit:cover" />';
+  } else {
+    avatarEl.textContent = session.nome[0].toUpperCase();
+  }
+}
+
 document.getElementById('openNewUserBtn').addEventListener('click', function() {
   document.getElementById('newUserTitle').textContent  = 'Novo Usuário';
   document.getElementById('saveUserBtn').textContent   = 'Criar Usuário';
   document.getElementById('editUserId').value          = '';
   document.getElementById('senhaRequired').textContent = '*';
   document.getElementById('newUserForm').reset();
+  document.getElementById('photoFile').value = '';
+  setPhotoPreview('', '');
   document.getElementById('newUserOverlay').classList.add('open');
 });
 document.getElementById('closeNewUserBtn').addEventListener('click', closeNewUser);
@@ -1625,6 +1683,8 @@ function editUser(id) {
   document.getElementById('newUserPerfil').value       = u.perfil;
   document.getElementById('newUserSenha').value        = '';
   document.getElementById('senhaRequired').textContent = '(opcional)';
+  document.getElementById('photoFile').value = '';
+  setPhotoPreview(u.foto || '', u.nome);
   document.getElementById('newUserOverlay').classList.add('open');
 }
 
@@ -1656,9 +1716,16 @@ document.getElementById('newUserForm').addEventListener('submit', async function
   }
   if (editId) {
     var u = users.find(function(x){ return x.id === editId; });
-    if (u) { u.nome = nome; u.login = login; u.perfil = perfil; if (senha) u.senhaHash = await hashPass(senha); }
+    if (u) { u.nome = nome; u.login = login; u.perfil = perfil; if (senha) u.senhaHash = await hashPass(senha); if (currentPhotoB64) u.foto = currentPhotoB64; }
   } else {
-    users.push({ id: generateId(), nome: nome, login: login, senhaHash: await hashPass(senha), perfil: perfil, ativo: true, criadoEm: Date.now() });
+    users.push({ id: generateId(), nome: nome, login: login, senhaHash: await hashPass(senha), perfil: perfil, ativo: true, criadoEm: Date.now(), foto: currentPhotoB64 || '' });
+  }
+  // Atualiza avatar no header se for o próprio usuário
+  var session = getSession();
+  if (session && (editId === session.id || !editId)) {
+    var updated = loadUsers();
+    var me = updated.find(function(x){ return x.id === (editId || updated[updated.length-1].id); });
+    if (me && me.id === session.id) updateHeaderAvatar(session);
   }
   saveUsers(users);
   renderUsers();
