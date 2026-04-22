@@ -1563,7 +1563,7 @@ function initApp(session) {
 
 document.getElementById('loginForm').addEventListener('submit', async function(e) {
   e.preventDefault();
-  var login = document.getElementById('loginUser').value.trim();
+  var login = document.getElementById('loginUser').value.trim().toLowerCase();
   var pass  = document.getElementById('loginPass').value;
   var hash  = await hashPass(pass);
   var user  = loadUsers().find(function(u){ return u.login === login && u.senhaHash === hash && u.ativo; });
@@ -1670,7 +1670,7 @@ document.getElementById('openNewUserBtn').addEventListener('click', function() {
 });
 document.getElementById('closeNewUserBtn').addEventListener('click', closeNewUser);
 document.getElementById('cancelNewUserBtn').addEventListener('click', closeNewUser);
-function closeNewUser() { document.getElementById('newUserOverlay').classList.remove('open'); }
+function closeNewUser() { document.getElementById('newUserOverlay').classList.remove('open'); currentPhotoB64 = ''; }
 
 function editUser(id) {
   var u = loadUsers().find(function(x){ return x.id === id; });
@@ -1697,7 +1697,7 @@ function toggleUser(id) {
 document.getElementById('newUserForm').addEventListener('submit', async function(e) {
   e.preventDefault();
   var nome   = document.getElementById('newUserNome').value.trim();
-  var login  = document.getElementById('newUserLogin').value.trim();
+  var login  = document.getElementById('newUserLogin').value.trim().toLowerCase();
   var senha  = document.getElementById('newUserSenha').value;
   var perfil = document.getElementById('newUserPerfil').value;
   var editId = document.getElementById('editUserId').value;
@@ -1714,22 +1714,23 @@ document.getElementById('newUserForm').addEventListener('submit', async function
   if (users.find(function(u){ return u.login === login && u.id !== editId; })) {
     document.getElementById('newUserLoginError').textContent = 'Usuário já existe'; return;
   }
+  var hash = senha ? await hashPass(senha) : null;
   if (editId) {
     var u = users.find(function(x){ return x.id === editId; });
-    if (u) { u.nome = nome; u.login = login; u.perfil = perfil; if (senha) u.senhaHash = await hashPass(senha); if (currentPhotoB64) u.foto = currentPhotoB64; }
+    if (u) {
+      u.nome = nome; u.login = login; u.perfil = perfil;
+      if (hash) u.senhaHash = hash;
+      if (currentPhotoB64) u.foto = currentPhotoB64;
+    }
   } else {
-    users.push({ id: generateId(), nome: nome, login: login, senhaHash: await hashPass(senha), perfil: perfil, ativo: true, criadoEm: Date.now(), foto: currentPhotoB64 || '' });
-  }
-  // Atualiza avatar no header se for o próprio usuário
-  var session = getSession();
-  if (session && (editId === session.id || !editId)) {
-    var updated = loadUsers();
-    var me = updated.find(function(x){ return x.id === (editId || updated[updated.length-1].id); });
-    if (me && me.id === session.id) updateHeaderAvatar(session);
+    users.push({ id: generateId(), nome: nome, login: login, senhaHash: hash, perfil: perfil, ativo: true, criadoEm: Date.now(), foto: currentPhotoB64 || '' });
   }
   saveUsers(users);
+  var session = getSession();
+  if (session) updateHeaderAvatar(session);
   renderUsers();
   closeNewUser();
+  alert('Usuário "' + login + '" salvo com sucesso!');
 });
 
 // ── Boot ───────────────────────────────────────────────────────────────────
