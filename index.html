@@ -542,6 +542,10 @@
     .users-table tr:last-child td { border-bottom: none; }
     .badge-perfil-admin { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
     .badge-perfil-user  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+    .btn-desativar { color: #dc2626 !important; font-size: 12px; width: auto !important; padding: 0 10px; gap: 4px; }
+    .btn-desativar:hover { background: #fef2f2 !important; }
+    .btn-ativar { color: #15803d !important; font-size: 12px; width: auto !important; padding: 0 10px; gap: 4px; }
+    .btn-ativar:hover { background: #f0fdf4 !important; }
     .badge-ativo   { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
     .badge-inativo { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;  padding: 2px 8px; border-radius: 4px; font-size: 12px; }
     .user-avatar { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: #eff6ff; color: #2563eb; font-size: 13px; font-weight: 700; overflow: hidden; flex-shrink: 0; }
@@ -1602,16 +1606,20 @@ function renderUsers() {
   var users = loadUsers();
   var session = getSession();
   document.getElementById('usersBody').innerHTML = users.map(function(u) {
-    var isSelf = session && u.id === session.id;
-    return '<tr>' +
-      '<td><code style="font-size:13px">' + esc(u.login) + '</code>' + (isSelf ? ' <span style="font-size:11px;color:#94a3b8">(você)</span>' : '') + '</td>' +
+    var isSelf  = session && u.id === session.id;
+    var isAdmin = u.id === 'u0' || u.login === 'admin';
+    var toggleBtn = !isAdmin
+      ? '<button class="btn-icon ' + (u.ativo ? 'btn-desativar' : 'btn-ativar') + '" onclick="toggleUser(\'' + u.id + '\')" title="' + (u.ativo ? 'Desativar usuário' : 'Ativar usuário') + '">' + (u.ativo ? '🔒 Desativar' : '🔓 Ativar') + '</button>'
+      : '';
+    return '<tr' + (!u.ativo ? ' style="opacity:.6"' : '') + '>' +
+      '<td><code style="font-size:13px">' + esc(u.login) + '</code>' + (isSelf ? ' <span style="font-size:11px;color:#94a3b8">(você)</span>' : '') + (isAdmin ? ' <span style="font-size:11px;color:#2563eb">⭐</span>' : '') + '</td>' +
       '<td><div style="display:flex;align-items:center;gap:8px"><span class="user-avatar">' + (u.foto ? '<img src="' + u.foto + '" />' : u.nome[0].toUpperCase()) + '</span>' + esc(u.nome) + '</div></td>' +
       '<td><span class="badge-perfil-' + u.perfil + '">' + (u.perfil === 'admin' ? 'Administrador' : 'Usuário') + '</span></td>' +
       '<td><span class="' + (u.ativo ? 'badge-ativo' : 'badge-inativo') + '">' + (u.ativo ? 'Ativo' : 'Inativo') + '</span></td>' +
       '<td class="cell-data">' + new Date(u.criadoEm).toLocaleDateString('pt-BR') + '</td>' +
       '<td><div class="action-btns">' +
         '<button class="btn-icon" onclick="editUser(\'' + u.id + '\')" title="Editar">✏️</button>' +
-        (!isSelf ? '<button class="btn-icon" onclick="toggleUser(\'' + u.id + '\')" title="' + (u.ativo ? 'Desativar' : 'Ativar') + '">' + (u.ativo ? '🔒' : '🔓') + '</button>' : '') +
+        toggleBtn +
       '</div></td></tr>';
   }).join('');
 }
