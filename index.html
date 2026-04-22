@@ -577,7 +577,146 @@
       .form-row { grid-template-columns: 1fr; }
       .leads-table th:nth-child(4),
       .leads-table td:nth-child(4) { display: none; }
+      .sidebar { display: none; }
     }
+
+    /* ── Sidebar layout ── */
+    .app-body { display: flex; min-height: calc(100vh - 60px); }
+    .sidebar {
+      width: 200px;
+      flex-shrink: 0;
+      background: #fff;
+      border-right: 1px solid #e2e8f0;
+      padding: 12px 0;
+      position: sticky;
+      top: 60px;
+      height: calc(100vh - 60px);
+      overflow-y: auto;
+    }
+    .app-content { flex: 1; min-width: 0; }
+    .sidebar-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      padding: 8px 20px 6px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 20px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #64748b;
+      text-align: left;
+      transition: background .15s, color .15s;
+      border-left: 3px solid transparent;
+    }
+    .nav-item:hover { background: #f8fafc; color: #0f172a; }
+    .nav-item.active { background: #eff6ff; color: #2563eb; border-left-color: #2563eb; }
+
+    /* ── Kanban ── */
+    .crm-toolbar {
+      padding: 24px 24px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .crm-toolbar h2 { font-size: 17px; font-weight: 700; }
+    .kanban-board {
+      display: flex;
+      gap: 14px;
+      overflow-x: auto;
+      padding: 20px 24px 32px;
+      align-items: flex-start;
+    }
+    .kanban-column {
+      flex-shrink: 0;
+      width: 268px;
+      background: #f8fafc;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      transition: border-color .15s, background .15s;
+    }
+    .kanban-column.drag-over { border-color: #2563eb; background: #eff6ff; }
+    .kanban-col-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 14px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .kanban-col-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .kanban-col-title { font-size: 13px; font-weight: 700; color: #0f172a; flex: 1; }
+    .kanban-col-count {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      background: #e2e8f0;
+      border-radius: 20px;
+      padding: 1px 8px;
+    }
+    .kanban-col-body {
+      padding: 10px;
+      min-height: 100px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .kanban-card {
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      padding: 12px 14px;
+      cursor: grab;
+      transition: box-shadow .15s, transform .1s;
+      user-select: none;
+    }
+    .kanban-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.10); transform: translateY(-1px); }
+    .kanban-card.dragging { opacity: 0.35; box-shadow: 0 4px 16px rgba(0,0,0,.15); }
+    .kcard-empresa { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 2px; }
+    .kcard-nome { font-size: 12px; color: #64748b; margin-bottom: 6px; }
+    .kcard-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+    .kcard-wa { color: #16a34a; text-decoration: none; font-size: 16px; line-height: 1; }
+    .kanban-empty { font-size: 13px; color: #cbd5e1; text-align: center; padding: 24px 8px; font-style: italic; }
+
+    /* ── Stage editor ── */
+    .stage-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .stage-row:last-child { border-bottom: none; }
+    .stage-color-input {
+      width: 34px;
+      height: 34px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      cursor: pointer;
+      padding: 2px;
+      background: none;
+      flex-shrink: 0;
+    }
+    .stage-name-input {
+      flex: 1;
+      padding: 7px 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #0f172a;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .stage-name-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px #dbeafe; }
+    .stage-row-btns { display: flex; gap: 2px; flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -764,7 +903,28 @@
   </div>
 </header>
 
-<main class="main">
+<div class="app-body">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-section-title">Menu</div>
+    <nav>
+      <button class="nav-item active" id="navLeads" onclick="showView('leads')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/>
+          <line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/>
+        </svg>
+        Leads
+      </button>
+      <button class="nav-item" id="navCRM" onclick="showView('crm')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="3" width="6" height="18" rx="1"/><rect x="9" y="3" width="6" height="12" rx="1"/>
+          <rect x="16" y="3" width="6" height="15" rx="1"/>
+        </svg>
+        CRM
+      </button>
+    </nav>
+  </aside>
+  <div class="app-content">
+<main class="main" id="leadsView">
   <!-- Dashboard -->
   <div class="dashboard" id="dashboard">
     <div class="dash-card"><div class="dash-value" id="dTotal">0</div><div class="dash-label">Total de Leads</div></div>
@@ -861,6 +1021,24 @@
     </div>
   </div>
 </main>
+
+    <!-- CRM / Kanban -->
+    <div id="crmView" style="display:none">
+      <div class="crm-toolbar">
+        <h2>Pipeline CRM</h2>
+        <button class="btn btn-outline" id="editStagesBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+          </svg>
+          Configurar Etapas
+        </button>
+      </div>
+      <div class="kanban-board" id="kanbanBoard"></div>
+    </div>
+
+  </div><!-- /app-content -->
+</div><!-- /app-body -->
 
 <!-- Modal novo/editar lead -->
 <div class="modal-overlay" id="modalOverlay">
@@ -1064,6 +1242,32 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" id="cancelDeleteBtn">Cancelar</button>
       <button class="btn btn-danger" id="confirmDeleteBtn">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal configurar etapas CRM -->
+<div class="modal-overlay" id="stagesOverlay" style="z-index:600">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2>Configurar Etapas do CRM</h2>
+      <button class="modal-close" id="closeStagesBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div style="padding:0 24px;max-height:52vh;overflow-y:auto">
+      <div id="stagesList"></div>
+    </div>
+    <div style="padding:12px 24px 4px">
+      <button class="btn btn-outline" id="addStageBtn" style="width:100%;justify-content:center">
+        + Adicionar Etapa
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancelStagesBtn">Cancelar</button>
+      <button class="btn btn-primary" id="saveStagesBtn">Salvar</button>
     </div>
   </div>
 </div>
@@ -1280,6 +1484,7 @@ document.querySelectorAll('th[data-sort]').forEach(function(th) {
 
 // Modal abrir/fechar
 function openModal() {
+  populateStatusDropdown();
   modalOverlay.classList.add('open');
   setTimeout(function(){ document.getElementById('empresa').focus(); }, 100);
 }
@@ -1674,6 +1879,8 @@ function initApp(session) {
     document.getElementById('menuDivider').style.display  = 'block';
   }
   document.getElementById('loginOverlay').classList.remove('open');
+  populateStatusDropdown();
+  populateFilterStatus();
   render();
 }
 
@@ -1872,6 +2079,212 @@ window.openDelete = openDelete;
 window.openDetail = openDetail;
 window.editUser   = editUser;
 window.toggleUser = toggleUser;
+
+// ── Navegação: Leads ↔ CRM ─────────────────────────────────────────────────
+function showView(name) {
+  var isLeads = name === 'leads';
+  document.getElementById('leadsView').style.display = isLeads ? '' : 'none';
+  document.getElementById('crmView').style.display   = isLeads ? 'none' : '';
+  document.getElementById('navLeads').classList.toggle('active',  isLeads);
+  document.getElementById('navCRM').classList.toggle('active',   !isLeads);
+  if (!isLeads) renderKanban();
+}
+window.showView = showView;
+
+// ── Etapas do CRM (config em localStorage) ─────────────────────────────────
+var STAGES_KEY = 'crm_etapas';
+var DEFAULT_STAGES = [
+  { id: 'Novo',        label: 'Novo',        cor: '#2563eb' },
+  { id: 'Contatado',   label: 'Contatado',   cor: '#a16207' },
+  { id: 'Interessado', label: 'Interessado', cor: '#7c3aed' },
+  { id: 'Proposta',    label: 'Proposta',    cor: '#c2410c' },
+  { id: 'Fechado',     label: 'Fechado',     cor: '#15803d' },
+  { id: 'Perdido',     label: 'Perdido',     cor: '#64748b' },
+];
+
+function loadStages() {
+  try {
+    var s = JSON.parse(localStorage.getItem(STAGES_KEY));
+    return (s && s.length) ? s : DEFAULT_STAGES.slice();
+  } catch { return DEFAULT_STAGES.slice(); }
+}
+
+function saveStages(s) { localStorage.setItem(STAGES_KEY, JSON.stringify(s)); }
+
+function populateStatusDropdown() {
+  var stages = loadStages();
+  var sel = document.getElementById('status');
+  if (!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = stages.map(function(s) {
+    return '<option value="' + esc(s.id) + '">' + esc(s.label) + '</option>';
+  }).join('');
+  if (stages.find(function(s){ return s.id === cur; })) sel.value = cur;
+}
+
+function populateFilterStatus() {
+  var stages = loadStages();
+  var sel = document.getElementById('filterStatus');
+  if (!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">Todos os status</option>' +
+    stages.map(function(s) {
+      return '<option value="' + esc(s.id) + '">' + esc(s.label) + '</option>';
+    }).join('');
+  if (stages.find(function(s){ return s.id === cur; })) sel.value = cur;
+}
+
+// ── Kanban ─────────────────────────────────────────────────────────────────
+var draggedLeadId = null;
+
+function renderKanban() {
+  var stages = loadStages();
+  var board  = document.getElementById('kanbanBoard');
+  board.innerHTML = stages.map(function(stage) {
+    var sl = leads.filter(function(l){ return (l.status || 'Novo') === stage.id; });
+    var cards = sl.length
+      ? sl.map(function(l) {
+          var wa = l.whatsapp ? l.whatsapp.replace(/\D/g,'') : '';
+          return '<div class="kanban-card" draggable="true"' +
+            ' ondragstart="dragStart(event,\'' + l.id + '\')"' +
+            ' ondragend="dragEnd(event)"' +
+            ' onclick="openDetail(\'' + l.id + '\')">' +
+            '<div class="kcard-empresa">' + esc(l.empresa || '—') + '</div>' +
+            (l.nome ? '<div class="kcard-nome">' + esc(l.nome) + '</div>' : '') +
+            '<div class="kcard-footer">' +
+              (l.porte ? '<span class="badge-porte porte-' + l.porte.toLowerCase().replace('é','e') + '">' + esc(l.porte) + '</span>' : '<span></span>') +
+              (wa ? '<a class="kcard-wa" href="https://wa.me/55' + wa + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="WhatsApp">📱</a>' : '') +
+            '</div>' +
+          '</div>';
+        }).join('')
+      : '<div class="kanban-empty">Nenhum lead</div>';
+
+    return '<div class="kanban-column"' +
+      ' ondragover="kDragOver(event,this)"' +
+      ' ondragleave="kDragLeave(event,this)"' +
+      ' ondrop="dropOnStage(event,\'' + stage.id + '\',this)">' +
+      '<div class="kanban-col-header">' +
+        '<span class="kanban-col-dot" style="background:' + stage.cor + '"></span>' +
+        '<span class="kanban-col-title">' + esc(stage.label) + '</span>' +
+        '<span class="kanban-col-count">' + sl.length + '</span>' +
+      '</div>' +
+      '<div class="kanban-col-body">' + cards + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function dragStart(event, id) {
+  draggedLeadId = id;
+  event.dataTransfer.effectAllowed = 'move';
+  setTimeout(function() {
+    if (event.target) event.target.classList.add('dragging');
+  }, 0);
+}
+function dragEnd(event) {
+  if (event.target) event.target.classList.remove('dragging');
+  draggedLeadId = null;
+}
+function kDragOver(event, col) {
+  event.preventDefault();
+  col.classList.add('drag-over');
+}
+function kDragLeave(event, col) {
+  if (!col.contains(event.relatedTarget)) col.classList.remove('drag-over');
+}
+async function dropOnStage(event, stageId, col) {
+  event.preventDefault();
+  col.classList.remove('drag-over');
+  if (!draggedLeadId) return;
+  var lead = leads.find(function(l){ return l.id === draggedLeadId; });
+  if (!lead || lead.status === stageId) return;
+  var updated = Object.assign({}, lead, { status: stageId });
+  try {
+    await updateLead(lead.id, updated);
+    var idx = leads.findIndex(function(l){ return l.id === draggedLeadId; });
+    if (idx !== -1) leads[idx] = updated;
+    renderKanban();
+    updateDashboard();
+  } catch(err) {
+    alert('Erro ao mover lead. Tente novamente.');
+  }
+}
+window.dragStart   = dragStart;
+window.dragEnd     = dragEnd;
+window.kDragOver   = kDragOver;
+window.kDragLeave  = kDragLeave;
+window.dropOnStage = dropOnStage;
+
+// ── Editor de etapas ───────────────────────────────────────────────────────
+var editingStages = [];
+
+function openStagesEditor() {
+  editingStages = loadStages().map(function(s){ return Object.assign({}, s); });
+  renderStagesList();
+  document.getElementById('stagesOverlay').classList.add('open');
+}
+
+function renderStagesList() {
+  document.getElementById('stagesList').innerHTML = editingStages.map(function(s, i) {
+    var isFirst = i === 0;
+    var isLast  = i === editingStages.length - 1;
+    return '<div class="stage-row">' +
+      '<input type="color" class="stage-color-input" value="' + s.cor + '"' +
+        ' oninput="editingStages[' + i + '].cor=this.value" title="Cor" />' +
+      '<input type="text" class="stage-name-input" value="' + esc(s.label) + '"' +
+        ' oninput="editingStages[' + i + '].label=this.value"' +
+        ' placeholder="Nome da etapa" />' +
+      '<div class="stage-row-btns">' +
+        '<button class="btn-icon" onclick="moveStage(' + i + ',-1)" title="Subir"' + (isFirst ? ' disabled style="opacity:.3"' : '') + '>↑</button>' +
+        '<button class="btn-icon" onclick="moveStage(' + i + ',1)" title="Descer"' + (isLast  ? ' disabled style="opacity:.3"' : '') + '>↓</button>' +
+        '<button class="btn-icon delete" onclick="removeStage(' + i + ')" title="Excluir">🗑️</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function moveStage(idx, dir) {
+  var ni = idx + dir;
+  if (ni < 0 || ni >= editingStages.length) return;
+  var tmp = editingStages[idx];
+  editingStages[idx] = editingStages[ni];
+  editingStages[ni] = tmp;
+  renderStagesList();
+}
+
+function removeStage(idx) {
+  var s = editingStages[idx];
+  var count = leads.filter(function(l){ return (l.status || 'Novo') === s.id; }).length;
+  if (count > 0 && !confirm(count + ' lead(s) estão nesta etapa. Remover mesmo assim?\n\nEles ficarão sem etapa definida.')) return;
+  editingStages.splice(idx, 1);
+  renderStagesList();
+}
+
+function addStage() {
+  editingStages.push({ id: 'stage_' + Date.now(), label: 'Nova Etapa', cor: '#64748b' });
+  renderStagesList();
+}
+
+function saveStagesEditor() {
+  if (!editingStages.length) { alert('É necessário ao menos uma etapa.'); return; }
+  if (editingStages.some(function(s){ return !s.label.trim(); })) {
+    alert('Todas as etapas precisam ter um nome.'); return;
+  }
+  saveStages(editingStages);
+  document.getElementById('stagesOverlay').classList.remove('open');
+  populateStatusDropdown();
+  populateFilterStatus();
+  renderKanban();
+}
+
+window.moveStage   = moveStage;
+window.removeStage = removeStage;
+window.addStage    = addStage;
+
+document.getElementById('editStagesBtn').addEventListener('click', openStagesEditor);
+document.getElementById('closeStagesBtn').addEventListener('click', function(){ document.getElementById('stagesOverlay').classList.remove('open'); });
+document.getElementById('cancelStagesBtn').addEventListener('click', function(){ document.getElementById('stagesOverlay').classList.remove('open'); });
+document.getElementById('saveStagesBtn').addEventListener('click', saveStagesEditor);
+document.getElementById('addStageBtn').addEventListener('click', addStage);
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
