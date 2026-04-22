@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CRM Provedor — Leads</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1070,27 +1071,104 @@
 <script>
 'use strict';
 
-// ── Auth ───────────────────────────────────────────────────────────────────
-const USERS_KEY   = 'crm_users';
-const SESSION_KEY = 'crm_session';
-const STORAGE_KEY = 'crm_leads';
+// ── Supabase ───────────────────────────────────────────────────────────────
+const db = supabase.createClient(
+  'https://mgnhtflpyfgmxfwizhzx.supabase.co',
+  'sb_publishable_BTxC9rYjUi2iKCqZXPifng_2xDq__Vn'
+);
 
-let leads = loadLeads();
+let leads = [];
 let sortField = 'empresa';
 let sortDir = 'asc';
 let pendingDeleteId = null;
 
-function loadLeads() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-  catch { return []; }
+// ── Mapeamento DB ↔ JS ─────────────────────────────────────────────────────
+function dbToLead(row) {
+  return {
+    id:          row.id,
+    empresa:     row.empresa      || '',
+    nome:        row.nome         || '',
+    cargo:       row.cargo        || '',
+    email:       row.email        || '',
+    whatsapp:    row.whatsapp     || '',
+    cidade:      row.cidade       || '',
+    estado:      row.estado       || '',
+    porte:       row.porte        || '',
+    origem:      row.origem       || '',
+    status:      row.status       || 'Novo',
+    tags:        row.tags         || '',
+    anotacao:    row.anotacao     || '',
+    qtdClientes: row.qtd_clientes || '',
+    createdAt:   row.created_at   ? new Date(row.created_at).getTime() : Date.now(),
+  };
 }
 
-function saveLeads() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
+function leadToDb(lead) {
+  return {
+    id:           lead.id,
+    empresa:      lead.empresa,
+    nome:         lead.nome,
+    cargo:        lead.cargo,
+    email:        lead.email,
+    whatsapp:     lead.whatsapp,
+    cidade:       lead.cidade,
+    estado:       lead.estado,
+    porte:        lead.porte,
+    origem:       lead.origem,
+    status:       lead.status,
+    tags:         lead.tags,
+    anotacao:     lead.anotacao,
+    qtd_clientes: lead.qtdClientes,
+  };
+}
+
+function dbToUser(row) {
+  return {
+    id:        row.id,
+    nome:      row.nome       || '',
+    login:     row.login      || '',
+    senhaHash: row.senha_hash || '',
+    perfil:    row.perfil     || 'usuario',
+    ativo:     row.ativo !== false,
+    criadoEm:  row.criado_em  ? new Date(row.criado_em).getTime() : Date.now(),
+    foto:      row.foto       || '',
+  };
+}
+
+// ── Supabase CRUD ──────────────────────────────────────────────────────────
+async function fetchLeads() {
+  var { data, error } = await db.from('leads').select('*').order('created_at', { ascending: true });
+  if (error) { console.error('fetchLeads:', error); return []; }
+  return (data || []).map(dbToLead);
+}
+
+async function insertLead(lead) {
+  var row = leadToDb(lead);
+  var { data, error } = await db.from('leads').insert(row).select().single();
+  if (error) { console.error('insertLead:', error); throw error; }
+  return dbToLead(data);
+}
+
+async function updateLead(id, lead) {
+  var row = leadToDb(lead);
+  delete row.id;
+  var { error } = await db.from('leads').update(row).eq('id', id);
+  if (error) { console.error('updateLead:', error); throw error; }
+}
+
+async function deleteLead(id) {
+  var { error } = await db.from('leads').delete().eq('id', id);
+  if (error) { console.error('deleteLead:', error); throw error; }
+}
+
+async function fetchUsers() {
+  var { data, error } = await db.from('usuarios').select('*').order('criado_em', { ascending: true });
+  if (error) { console.error('fetchUsers:', error); return []; }
+  return (data || []).map(dbToUser);
 }
 
 function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
 const leadsBody    = document.getElementById('leadsBody');
@@ -1304,7 +1382,7 @@ function validate(data) {
 }
 
 // Submit
-leadForm.addEventListener('submit', function(e) {
+leadForm.addEventListener('submit', async function(e) {
   e.preventDefault();
   clearErrors();
   var data = {
@@ -1334,24 +1412,43 @@ leadForm.addEventListener('submit', function(e) {
     if (dup && !confirm('⚠️ Possível lead duplicado encontrado: "' + dup.empresa + ' — ' + (dup.nome || dup.cargo) + '"\n\nDeseja cadastrar mesmo assim?')) return;
   }
 
-  if (id) {
-    var idx = leads.findIndex(function(l){ return l.id === id; });
-    if (idx !== -1) leads[idx] = Object.assign({}, leads[idx], data);
-  } else {
-    leads.push(Object.assign({ id: generateId(), createdAt: Date.now() }, data));
+  var originalText = saveBtn.textContent;
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Salvando...';
+  try {
+    if (id) {
+      var idx = leads.findIndex(function(l){ return l.id === id; });
+      if (idx !== -1) {
+        var updated = Object.assign({}, leads[idx], data);
+        await updateLead(id, updated);
+        leads[idx] = updated;
+      }
+    } else {
+      var newLead = Object.assign({ id: generateId(), createdAt: Date.now() }, data);
+      var saved = await insertLead(newLead);
+      leads.push(saved);
+    }
+    render();
+    closeModal();
+  } catch(err) {
+    alert('Erro ao salvar lead. Verifique sua conexão e tente novamente.');
+    saveBtn.disabled = false;
+    saveBtn.textContent = originalText;
   }
-  saveLeads();
-  render();
-  closeModal();
 });
 
 // Delete
-document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-  leads = leads.filter(function(l){ return l.id !== pendingDeleteId; });
-  pendingDeleteId = null;
-  saveLeads();
-  render();
+document.getElementById('confirmDeleteBtn').addEventListener('click', async function() {
+  var id = pendingDeleteId;
   deleteOverlay.classList.remove('open');
+  try {
+    await deleteLead(id);
+    leads = leads.filter(function(l){ return l.id !== id; });
+    pendingDeleteId = null;
+    render();
+  } catch(err) {
+    alert('Erro ao excluir lead. Tente novamente.');
+  }
 });
 document.getElementById('cancelDeleteBtn').addEventListener('click', function() {
   pendingDeleteId = null;
@@ -1479,20 +1576,19 @@ dropZone.addEventListener('drop',      function(e) {
   if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
 });
 
-document.getElementById('confirmImportBtn').addEventListener('click', function() {
+document.getElementById('confirmImportBtn').addEventListener('click', async function() {
   var existingEmails = leads.map(function(l){ return (l.email||'').toLowerCase(); });
-  var added = 0;
+  var toInsert = [];
   parsedImportRows.forEach(function(r) {
     var emailLow = (r.email||'').toLowerCase();
-    if (emailLow && existingEmails.includes(emailLow)) return; // pula duplicado
-    leads.push({
+    if (emailLow && existingEmails.includes(emailLow)) return;
+    toInsert.push({
       id:          generateId(),
-      createdAt:   Date.now(),
       status:      'Novo',
-      nome:        r.nome     || '',
-      cargo:       r.cargo    || '',
-      email:       r.email    || '',
-      whatsapp:    r.whatsapp || '',
+      nome:        r.nome        || '',
+      cargo:       r.cargo       || '',
+      email:       r.email       || '',
+      whatsapp:    r.whatsapp    || '',
       qtdClientes: r.qtdClientes || '',
       porte:       r.qtdClientes ? porteFromQtd(r.qtdClientes) : '',
       empresa:     '',
@@ -1500,12 +1596,23 @@ document.getElementById('confirmImportBtn').addEventListener('click', function()
       cidade:      '',
       anotacao:    '',
     });
-    added++;
   });
-  saveLeads();
-  render();
-  closeImport();
-  alert(added + ' leads importados com sucesso!');
+  var btn = document.getElementById('confirmImportBtn');
+  btn.disabled = true;
+  btn.textContent = 'Importando...';
+  try {
+    for (var i = 0; i < toInsert.length; i++) {
+      var saved = await insertLead(toInsert[i]);
+      leads.push(saved);
+    }
+    render();
+    closeImport();
+    alert(toInsert.length + ' leads importados com sucesso!');
+  } catch(err) {
+    alert('Erro ao importar leads. Tente novamente.');
+    btn.disabled = false;
+    btn.textContent = 'Importar ' + toInsert.length + ' Leads';
+  }
 });
 
 // Exportar CSV (segmentado pelos filtros ativos)
@@ -1540,17 +1647,22 @@ async function hashPass(pass) {
   var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass + 'crm-isp-2025'));
   return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
 }
-function loadUsers() { try { return JSON.parse(localStorage.getItem('crm_users')) || []; } catch { return []; } }
-function saveUsers(u) { localStorage.setItem('crm_users', JSON.stringify(u)); }
 function getSession() { try { return JSON.parse(sessionStorage.getItem('crm_session')); } catch { return null; } }
 function setSession(u) { sessionStorage.setItem('crm_session', JSON.stringify(u)); }
 function clearSession() { sessionStorage.removeItem('crm_session'); }
 
 async function ensureDefaultAdmin() {
-  var users = loadUsers();
-  if (users.length === 0) {
+  var { data } = await db.from('usuarios').select('id').limit(1);
+  if (!data || data.length === 0) {
     var hash = await hashPass('admin123');
-    saveUsers([{ id: 'u0', nome: 'Administrador', login: 'admin', senhaHash: hash, perfil: 'admin', ativo: true, criadoEm: Date.now() }]);
+    await db.from('usuarios').insert({
+      id:         generateId(),
+      nome:       'Administrador',
+      login:      'admin',
+      senha_hash: hash,
+      perfil:     'admin',
+      ativo:      true,
+    });
   }
 }
 
@@ -1570,8 +1682,10 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
   var login = document.getElementById('loginUser').value.trim().toLowerCase();
   var pass  = document.getElementById('loginPass').value;
   var hash  = await hashPass(pass);
-  var user  = loadUsers().find(function(u){ return u.login === login && u.senhaHash === hash && u.ativo; });
-  if (!user) { document.getElementById('loginError').classList.add('visible'); return; }
+  var { data } = await db.from('usuarios')
+    .select('*').eq('login', login).eq('senha_hash', hash).eq('ativo', true).maybeSingle();
+  if (!data) { document.getElementById('loginError').classList.add('visible'); return; }
+  var user = dbToUser(data);
   document.getElementById('loginError').classList.remove('visible');
   setSession({ id: user.id, nome: user.nome, login: user.login, perfil: user.perfil });
   initApp(getSession());
@@ -1602,12 +1716,12 @@ document.getElementById('adminBackBtn').addEventListener('click', function() {
   document.getElementById('adminOverlay').classList.remove('open');
 });
 
-function renderUsers() {
-  var users = loadUsers();
+async function renderUsers() {
+  var users = await fetchUsers();
   var session = getSession();
   document.getElementById('usersBody').innerHTML = users.map(function(u) {
     var isSelf  = session && u.id === session.id;
-    var isAdmin = u.id === 'u0' || u.login === 'admin';
+    var isAdmin = u.login === 'admin';
     var toggleBtn = !isAdmin
       ? '<button class="btn-icon ' + (u.ativo ? 'btn-desativar' : 'btn-ativar') + '" onclick="toggleUser(\'' + u.id + '\')" title="' + (u.ativo ? 'Desativar usuário' : 'Ativar usuário') + '">' + (u.ativo ? '🔒 Desativar' : '🔓 Ativar') + '</button>'
       : '';
@@ -1655,12 +1769,11 @@ document.getElementById('newUserNome').addEventListener('input', function() {
   if (!currentPhotoB64) setPhotoPreview('', this.value);
 });
 
-function updateHeaderAvatar(session) {
-  var users = loadUsers();
-  var u = users.find(function(x){ return x.id === session.id; });
+async function updateHeaderAvatar(session) {
+  var { data } = await db.from('usuarios').select('foto').eq('id', session.id).maybeSingle();
   var avatarEl = document.getElementById('userAvatar');
-  if (u && u.foto) {
-    avatarEl.innerHTML = '<img src="' + u.foto + '" style="width:32px;height:32px;border-radius:50%;object-fit:cover" />';
+  if (data && data.foto) {
+    avatarEl.innerHTML = '<img src="' + data.foto + '" style="width:32px;height:32px;border-radius:50%;object-fit:cover" />';
   } else {
     avatarEl.textContent = session.nome[0].toUpperCase();
   }
@@ -1680,8 +1793,9 @@ document.getElementById('closeNewUserBtn').addEventListener('click', closeNewUse
 document.getElementById('cancelNewUserBtn').addEventListener('click', closeNewUser);
 function closeNewUser() { document.getElementById('newUserOverlay').classList.remove('open'); currentPhotoB64 = ''; }
 
-function editUser(id) {
-  var u = loadUsers().find(function(x){ return x.id === id; });
+async function editUser(id) {
+  var users = await fetchUsers();
+  var u = users.find(function(x){ return x.id === id; });
   if (!u) return;
   document.getElementById('newUserTitle').textContent  = 'Editar Usuário';
   document.getElementById('saveUserBtn').textContent   = 'Salvar';
@@ -1696,10 +1810,13 @@ function editUser(id) {
   document.getElementById('newUserOverlay').classList.add('open');
 }
 
-function toggleUser(id) {
-  var users = loadUsers();
+async function toggleUser(id) {
+  var users = await fetchUsers();
   var u = users.find(function(x){ return x.id === id; });
-  if (u) { u.ativo = !u.ativo; saveUsers(users); renderUsers(); }
+  if (u) {
+    await db.from('usuarios').update({ ativo: !u.ativo }).eq('id', id);
+    renderUsers();
+  }
 }
 
 document.getElementById('newUserForm').addEventListener('submit', async function(e) {
@@ -1718,35 +1835,52 @@ document.getElementById('newUserForm').addEventListener('submit', async function
   if (!editId && !senha) { document.getElementById('newUserSenhaError').textContent = 'Obrigatório'; ok = false; }
   if (senha && senha.length < 6) { document.getElementById('newUserSenhaError').textContent = 'Mínimo 6 caracteres'; ok = false; }
   if (!ok) return;
-  var users = loadUsers();
+  var users = await fetchUsers();
   if (users.find(function(u){ return u.login === login && u.id !== editId; })) {
     document.getElementById('newUserLoginError').textContent = 'Usuário já existe'; return;
   }
   var hash = senha ? await hashPass(senha) : null;
-  if (editId) {
-    var u = users.find(function(x){ return x.id === editId; });
-    if (u) {
-      u.nome = nome; u.login = login; u.perfil = perfil;
-      if (hash) u.senhaHash = hash;
-      if (currentPhotoB64) u.foto = currentPhotoB64;
+  try {
+    if (editId) {
+      var updates = { nome: nome, login: login, perfil: perfil };
+      if (hash) updates.senha_hash = hash;
+      if (currentPhotoB64) updates.foto = currentPhotoB64;
+      await db.from('usuarios').update(updates).eq('id', editId);
+    } else {
+      await db.from('usuarios').insert({
+        id:         generateId(),
+        nome:       nome,
+        login:      login,
+        senha_hash: hash,
+        perfil:     perfil,
+        ativo:      true,
+        foto:       currentPhotoB64 || '',
+      });
     }
-  } else {
-    users.push({ id: generateId(), nome: nome, login: login, senhaHash: hash, perfil: perfil, ativo: true, criadoEm: Date.now(), foto: currentPhotoB64 || '' });
+    var session = getSession();
+    if (session) updateHeaderAvatar(session);
+    renderUsers();
+    closeNewUser();
+    alert('Usuário "' + login + '" salvo com sucesso!');
+  } catch(err) {
+    alert('Erro ao salvar usuário: ' + (err.message || 'Verifique sua conexão.'));
   }
-  saveUsers(users);
-  var session = getSession();
-  if (session) updateHeaderAvatar(session);
-  renderUsers();
-  closeNewUser();
-  alert('Usuário "' + login + '" salvo com sucesso!');
 });
 
+window.openEdit   = openEdit;
+window.openDelete = openDelete;
+window.openDetail = openDetail;
+window.editUser   = editUser;
+window.toggleUser = toggleUser;
+
 // ── Boot ───────────────────────────────────────────────────────────────────
-ensureDefaultAdmin().then(function() {
+async function boot() {
+  await ensureDefaultAdmin();
+  leads = await fetchLeads();
   var session = getSession();
   if (session) initApp(session);
-  // login overlay já está open por padrão
-});
+}
+boot();
 </script>
 </body>
 </html>
