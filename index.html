@@ -1717,10 +1717,28 @@ let sortDir = 'asc';
 let pendingDeleteId = null;
 
 // ── Mapeamento DB ↔ JS ─────────────────────────────────────────────────────
-// ── Lead extra (tipo/segmento em localStorage) ─────────────────────────────
+// ── Config cache (em memória, persistido no Supabase `configs`) ─────────────
+// SETUP: Execute no Supabase SQL Editor:
+//   CREATE TABLE IF NOT EXISTS configs (
+//     id TEXT PRIMARY KEY,
+//     value JSONB NOT NULL DEFAULT 'null'::jsonb,
+//     updated_at TIMESTAMPTZ DEFAULT NOW()
+//   );
+//   ALTER TABLE configs ENABLE ROW LEVEL SECURITY;
+//   CREATE POLICY "Public read/write" ON configs FOR ALL USING (true) WITH CHECK (true);
+var _cfgCache = {};
+
+function saveConfigBg(key, value) {
+  _cfgCache[key] = value;
+  db.from('configs').upsert({ id: key, value: value, updated_at: new Date().toISOString() })
+    .then(function(r){ if (r.error) console.error('saveConfig', key, r.error); })
+    .catch(function(e){ console.error('saveConfig', key, e); });
+}
+
+// ── Lead extra (tipo/segmento) ───────────────────────────────────────────────
 var LEAD_EXTRA_KEY = 'crm_lead_extra';
-function loadLeadExtra()    { try { return JSON.parse(localStorage.getItem(LEAD_EXTRA_KEY)) || {}; } catch { return {}; } }
-function saveLeadExtra(obj) { localStorage.setItem(LEAD_EXTRA_KEY, JSON.stringify(obj)); }
+function loadLeadExtra()    { return _cfgCache[LEAD_EXTRA_KEY] || {}; }
+function saveLeadExtra(obj) { saveConfigBg(LEAD_EXTRA_KEY, obj); }
 function getLeadExtra(id)   { return loadLeadExtra()[id] || { tipo: 'Provedor', segmento: '' }; }
 function setLeadExtra(id, data) {
   var all = loadLeadExtra();
@@ -2111,6 +2129,7 @@ leadForm.addEventListener('submit', async function(e) {
     closeModal();
   } catch(err) {
     alert('Erro ao salvar lead. Verifique sua conexão e tente novamente.');
+  } finally {
     saveBtn.disabled = false;
     saveBtn.textContent = originalText;
   }
@@ -2569,7 +2588,7 @@ function showView(name) {
 }
 window.showView = showView;
 
-// ── Etapas do CRM (config em localStorage) ─────────────────────────────────
+// ── Etapas do CRM ──────────────────────────────────────────────────────────
 var STAGES_KEY = 'crm_etapas';
 var DEFAULT_STAGES = [
   { id: 'Novo',        label: 'Novo',        cor: '#2563eb' },
@@ -2581,13 +2600,11 @@ var DEFAULT_STAGES = [
 ];
 
 function loadStages() {
-  try {
-    var s = JSON.parse(localStorage.getItem(STAGES_KEY));
-    return (s && s.length) ? s : DEFAULT_STAGES.slice();
-  } catch { return DEFAULT_STAGES.slice(); }
+  var s = _cfgCache[STAGES_KEY];
+  return (s && s.length) ? s : DEFAULT_STAGES.slice();
 }
 
-function saveStages(s) { localStorage.setItem(STAGES_KEY, JSON.stringify(s)); }
+function saveStages(s) { saveConfigBg(STAGES_KEY, s); }
 
 function populateStatusDropdown() {
   var stages = loadStages();
@@ -2616,8 +2633,8 @@ function populateFilterStatus() {
 var NEGOCIOS_KEY           = 'crm_negocios';
 var negocioLeadSelecionado = null;
 
-function loadNegocios()    { try { return JSON.parse(localStorage.getItem(NEGOCIOS_KEY)) || []; } catch { return []; } }
-function saveNegocios(arr) { localStorage.setItem(NEGOCIOS_KEY, JSON.stringify(arr)); }
+function loadNegocios()    { return _cfgCache[NEGOCIOS_KEY] || []; }
+function saveNegocios(arr) { saveConfigBg(NEGOCIOS_KEY, arr); }
 
 function openNovaNegocioModal() {
   negocioLeadSelecionado = null;
@@ -2890,15 +2907,11 @@ var LEAD_SERVS_KEY    = 'crm_lead_servicos';
 var editingServId     = null;
 var currentLeadId     = null;
 
-function loadServicos() {
-  try { return JSON.parse(localStorage.getItem(SERVICOS_KEY)) || []; } catch { return []; }
-}
-function saveServicos(arr) { localStorage.setItem(SERVICOS_KEY, JSON.stringify(arr)); }
+function loadServicos()    { return _cfgCache[SERVICOS_KEY] || []; }
+function saveServicos(arr) { saveConfigBg(SERVICOS_KEY, arr); }
 
-function loadLeadServicos() {
-  try { return JSON.parse(localStorage.getItem(LEAD_SERVS_KEY)) || {}; } catch { return {}; }
-}
-function saveLeadServicos(obj) { localStorage.setItem(LEAD_SERVS_KEY, JSON.stringify(obj)); }
+function loadLeadServicos()    { return _cfgCache[LEAD_SERVS_KEY] || {}; }
+function saveLeadServicos(obj) { saveConfigBg(LEAD_SERVS_KEY, obj); }
 
 function fmtMoney(v) {
   return 'R$ ' + (Number(v) || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -3158,8 +3171,8 @@ var PROPOSTAS_KEY   = 'crm_propostas';
 var propostaLeadId  = null;
 var propostaLinhas  = [];  // [{servId, nome, qty, valorUnit, descontoR, descontoPct, total}]
 
-function loadPropostas()      { try { return JSON.parse(localStorage.getItem(PROPOSTAS_KEY)) || []; } catch { return []; } }
-function savePropostas(arr)   { localStorage.setItem(PROPOSTAS_KEY, JSON.stringify(arr)); }
+function loadPropostas()      { return _cfgCache[PROPOSTAS_KEY] || []; }
+function savePropostas(arr)   { saveConfigBg(PROPOSTAS_KEY, arr); }
 
 function gerarNumProposta() {
   var n = loadPropostas().length + 1;
@@ -3476,10 +3489,40 @@ window.gerarPropostaPDF       = gerarPropostaPDF;
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
+  // Preload all configs from Supabase into memory (single query)
+  var cfgKeys = [STAGES_KEY, NEGOCIOS_KEY, SERVICOS_KEY, LEAD_SERVS_KEY, LEAD_EXTRA_KEY, PROPOSTAS_KEY];
+  try {
+    var { data: cfgRows } = await db.from('configs').select('id,value').in('id', cfgKeys);
+    if (cfgRows) cfgRows.forEach(function(row){ _cfgCache[row.id] = row.value; });
+  } catch(e) { console.warn('configs table not ready yet, using defaults:', e); }
+
   await ensureDefaultAdmin();
   leads = await fetchLeads();
   var session = getSession();
   if (session) initApp(session);
+
+  // Realtime: sync leads between users
+  db.channel('crm-leads')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, async function() {
+      leads = await fetchLeads();
+      render();
+      var cv = document.getElementById('crmView');
+      if (cv && cv.style.display !== 'none') renderKanban();
+    })
+    .subscribe();
+
+  // Realtime: sync config data (servicos, negocios, etapas, etc.) between users
+  db.channel('crm-configs')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'configs' }, function(payload) {
+      if (payload.new && payload.new.id) {
+        _cfgCache[payload.new.id] = payload.new.value;
+        renderServicos();
+        if (document.getElementById('kanbanView') && !document.getElementById('kanbanView').classList.contains('hidden')) {
+          renderKanban();
+        }
+      }
+    })
+    .subscribe();
 }
 boot();
 </script>
