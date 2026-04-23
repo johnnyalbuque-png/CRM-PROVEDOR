@@ -3196,9 +3196,10 @@ window.updateLeadServQty   = updateLeadServQty;
 window.updateLeadServPrice = updateLeadServPrice;
 
 // ── Proposta Comercial ─────────────────────────────────────────────────────
-var PROPOSTAS_KEY   = 'crm_propostas';
-var propostaLeadId  = null;
-var propostaLinhas  = [];  // [{servId, nome, qty, valorUnit, descontoR, descontoPct, total}]
+var PROPOSTAS_KEY    = 'crm_propostas';
+var propostaLeadId   = null;
+var propostaLinhas   = [];  // [{servId, nome, qty, valorUnit, descontoR, descontoPct, total}]
+var propostaEditingId = null;
 
 function loadPropostas()      { return _cfgCache[PROPOSTAS_KEY] || []; }
 function savePropostas(arr)   { saveConfigBg(PROPOSTAS_KEY, arr); }
@@ -3227,10 +3228,36 @@ function openPropostaModal(leadId) {
   document.getElementById('propostaModal').classList.add('open');
 }
 
+function editarProposta(propostaId) {
+  var p = loadPropostas().find(function(x){ return x.id === propostaId; });
+  if (!p) return;
+  propostaLeadId    = p.leadId;
+  propostaEditingId = p.id;
+  propostaLinhas    = p.linhas.map(function(l){ return Object.assign({}, l); });
+  var lead = leads.find(function(l){ return l.id === p.leadId; });
+  document.getElementById('propostaLeadName').textContent = lead
+    ? (lead.empresa || lead.nome || 'Lead sem nome') : '';
+  document.getElementById('propostaNumero').value    = p.numero;
+  document.getElementById('propostaData').value      = p.data || '';
+  document.getElementById('propostaValidade').value  = p.validade || '';
+  document.getElementById('propostaNParcelas').value = p.parcelas || 1;
+  document.getElementById('propostaObs').value       = p.obs || '';
+  renderPropostaLinhas();
+  calcPropostaTotal();
+  // Render installment rows then restore saved due dates
+  updatePropostaParcelas();
+  var dateInputs = document.querySelectorAll('#propostaParcBody input[type="date"]');
+  if (p.vencimentos) {
+    dateInputs.forEach(function(el, i){ if (p.vencimentos[i]) el.value = p.vencimentos[i]; });
+  }
+  document.getElementById('propostaModal').classList.add('open');
+}
+
 function closePropostaModal() {
   document.getElementById('propostaModal').classList.remove('open');
-  propostaLeadId = null;
-  propostaLinhas = [];
+  propostaLeadId    = null;
+  propostaLinhas    = [];
+  propostaEditingId = null;
 }
 
 function addPropostaLinha() {
@@ -3343,7 +3370,7 @@ function coletarPropostaData() {
     document.querySelectorAll('#propostaParcBody input[type="date"]')
   ).map(function(el){ return el.value; });
   return {
-    id:          generateId(),
+    id:          propostaEditingId || generateId(),
     numero:      document.getElementById('propostaNumero').value,
     leadId:      propostaLeadId,
     data:        document.getElementById('propostaData').value,
@@ -3393,6 +3420,7 @@ function renderDetailPropostas(leadId) {
       '</div>' +
       '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0">' +
         '<span class="psi-total">' + fmtMoney(p.total) + '</span>' +
+        '<button class="btn btn-outline btn-sm" onclick="editarProposta(\'' + p.id + '\')">✏️ Editar</button>' +
         '<button class="btn btn-outline btn-sm" onclick="gerarPropostaPDFById(\'' + p.id + '\')">📄 PDF</button>' +
         '<button class="btn btn-ghost btn-sm" style="color:#dc2626" onclick="deletarProposta(\'' + p.id + '\',\'' + p.leadId + '\')">🗑️</button>' +
       '</div>' +
@@ -3570,6 +3598,7 @@ window.gerarPropostaPDF       = gerarPropostaPDF;
 window.gerarPropostaPDFById   = gerarPropostaPDFById;
 window.renderDetailPropostas  = renderDetailPropostas;
 window.deletarProposta        = deletarProposta;
+window.editarProposta         = editarProposta;
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
