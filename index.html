@@ -799,6 +799,14 @@
     .kcard-prop-btn { display:inline-flex; align-items:center; justify-content:center; gap:4px; font-size:11px; color:#7c3aed; background:#ede9fe; border:none; border-radius:6px; padding:2px 8px; cursor:pointer; margin-top:4px; line-height:1.8; width:100%; }
     .kcard-prop-btn:hover { background:#ddd6fe; }
 
+    /* ── Propostas salvas no detalhe do lead ── */
+    .proposta-saved-item { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:8px; gap:12px; }
+    .proposta-saved-item:last-child { margin-bottom:0; }
+    .psi-numero { font-weight:700; font-size:13px; color:#0f172a; }
+    .psi-info { font-size:11px; color:#64748b; margin-top:2px; }
+    .psi-total { font-weight:700; font-size:14px; color:#15803d; white-space:nowrap; }
+    .btn-sm { padding:4px 10px !important; font-size:11px !important; }
+
     /* ── Proposta modal ── */
     .prop-serv-table, .prop-parc-table { width:100%; border-collapse:collapse; font-size:13px; margin-bottom:4px; }
     .prop-serv-table th, .prop-parc-table th { background:#1e3a8a; color:#fff; padding:8px 10px; text-align:left; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
@@ -1369,6 +1377,12 @@
     <div class="detail-card">
       <h3>Anotações</h3>
       <div id="dAnotacao"></div>
+    </div>
+    <div class="detail-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin-bottom:0">Propostas</h3>
+      </div>
+      <div id="dPropostasList"></div>
     </div>
   </div>
 </div>
@@ -2040,6 +2054,7 @@ function openDetail(id) {
     : '<p class="detail-nota-vazia">Nenhuma anotação registrada.</p>';
   document.getElementById('detailEditBtn').onclick     = function(){ closeDetail(); openEdit(id); };
   document.getElementById('detailPropostaBtn').onclick = function(){ openPropostaModal(id); };
+  renderDetailPropostas(id);
   document.getElementById('detailOverlay').classList.add('open');
 }
 
@@ -3344,19 +3359,54 @@ function coletarPropostaData() {
   };
 }
 
-function salvarRascunhoProposta() {
-  var p = coletarPropostaData();
+function salvarProposta(p) {
   var lista = loadPropostas();
-  var idx = lista.findIndex(function(x){ return x.numero === p.numero; });
+  var idx = lista.findIndex(function(x){ return x.id === p.id || x.numero === p.numero; });
   if (idx !== -1) lista[idx] = p; else lista.push(p);
   savePropostas(lista);
-  alert('Rascunho "' + p.numero + '" salvo com sucesso!');
+  renderDetailPropostas(p.leadId);
 }
 
-function gerarPropostaPDF() {
-  var p    = coletarPropostaData();
-  var lead = leads.find(function(l){ return l.id === propostaLeadId; }) || {};
+function salvarRascunhoProposta() {
+  var p = coletarPropostaData();
+  salvarProposta(p);
+  alert('Proposta "' + p.numero + '" salva com sucesso!');
+}
 
+function renderDetailPropostas(leadId) {
+  var el = document.getElementById('dPropostasList');
+  if (!el) return;
+  var lista = loadPropostas().filter(function(p){ return p.leadId === leadId; });
+  if (!lista.length) {
+    el.innerHTML = '<p style="color:#94a3b8;font-size:13px;font-style:italic;padding:4px 0">Nenhuma proposta salva para este lead.</p>';
+    return;
+  }
+  el.innerHTML = lista.slice().reverse().map(function(p) {
+    return '<div class="proposta-saved-item">' +
+      '<div style="min-width:0">' +
+        '<div class="psi-numero">' + esc(p.numero) + '</div>' +
+        '<div class="psi-info">' +
+          new Date(p.criadoEm).toLocaleDateString('pt-BR') +
+          ' · ' + esc(p.geradoPor || '—') +
+          ' · ' + p.parcelas + 'x de ' + fmtMoney(p.valorParcela) +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0">' +
+        '<span class="psi-total">' + fmtMoney(p.total) + '</span>' +
+        '<button class="btn btn-outline btn-sm" onclick="gerarPropostaPDFById(\'' + p.id + '\')">📄 PDF</button>' +
+        '<button class="btn btn-ghost btn-sm" style="color:#dc2626" onclick="deletarProposta(\'' + p.id + '\',\'' + p.leadId + '\')">🗑️</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function deletarProposta(propostaId, leadId) {
+  if (!confirm('Excluir esta proposta?')) return;
+  savePropostas(loadPropostas().filter(function(x){ return x.id !== propostaId; }));
+  renderDetailPropostas(leadId);
+}
+
+function _renderPropostaPDF(p, lead) {
   function fmtDate(d) {
     return d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
   }
@@ -3494,6 +3544,20 @@ function gerarPropostaPDF() {
   else   { alert('Bloqueio de pop-up detectado. Permita pop-ups para este site para gerar o PDF.'); }
 }
 
+function gerarPropostaPDF() {
+  var p    = coletarPropostaData();
+  salvarProposta(p);
+  var lead = leads.find(function(l){ return l.id === propostaLeadId; }) || {};
+  _renderPropostaPDF(p, lead);
+}
+
+function gerarPropostaPDFById(propostaId) {
+  var p    = loadPropostas().find(function(x){ return x.id === propostaId; });
+  if (!p) { alert('Proposta não encontrada.'); return; }
+  var lead = leads.find(function(l){ return l.id === p.leadId; }) || {};
+  _renderPropostaPDF(p, lead);
+}
+
 window.openPropostaModal      = openPropostaModal;
 window.closePropostaModal     = closePropostaModal;
 window.addPropostaLinha       = addPropostaLinha;
@@ -3503,6 +3567,9 @@ window.onPropostaFieldChange  = onPropostaFieldChange;
 window.updatePropostaParcelas = updatePropostaParcelas;
 window.salvarRascunhoProposta = salvarRascunhoProposta;
 window.gerarPropostaPDF       = gerarPropostaPDF;
+window.gerarPropostaPDFById   = gerarPropostaPDFById;
+window.renderDetailPropostas  = renderDetailPropostas;
+window.deletarProposta        = deletarProposta;
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
