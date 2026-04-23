@@ -239,7 +239,7 @@
     .btn-icon.delete:hover { background: #fef2f2; color: #dc2626; }
 
     /* Dashboard */
-    .dashboard { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+    .dashboard { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
     .dash-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.06); cursor: pointer; transition: box-shadow .15s, transform .1s; }
     .dash-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.10); transform: translateY(-1px); }
     .dash-value { font-size: 28px; font-weight: 800; color: #0f172a; line-height: 1; margin-bottom: 6px; }
@@ -248,9 +248,18 @@
     .dash-interessado .dash-value { color: #7c3aed; }
     .dash-proposta .dash-value    { color: #c2410c; }
     .dash-fechado .dash-value     { color: #15803d; }
-    .dash-grande .dash-value      { color: #0369a1; }
-    @media (max-width: 900px) { .dashboard { grid-template-columns: repeat(3, 1fr); } }
-    @media (max-width: 560px) { .dashboard { grid-template-columns: repeat(2, 1fr); } }
+    .dash-provedor .dash-value    { color: #0369a1; }
+    .dash-expositor .dash-value   { color: #b45309; }
+    @media (max-width: 1100px) { .dashboard { grid-template-columns: repeat(4, 1fr); } }
+    @media (max-width: 640px)  { .dashboard { grid-template-columns: repeat(2, 1fr); } }
+
+    /* Tipo toggle (Provedor / Expositor) */
+    .tipo-toggle { display:flex; border:2px solid #e2e8f0; border-radius:10px; overflow:hidden; }
+    .tipo-btn { flex:1; padding:9px 12px; background:#fff; border:none; cursor:pointer; font-size:13px; font-weight:600; color:#64748b; transition:background .15s, color .15s; text-align:center; }
+    .tipo-btn + .tipo-btn { border-left:1px solid #e2e8f0; }
+    .tipo-btn.active.provedor { background:#2563eb; color:#fff; }
+    .tipo-btn.active.expositor { background:#b45309; color:#fff; }
+    .field-disabled { opacity:.4; pointer-events:none; }
 
     /* Tags */
     .tags-wrap { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -1023,11 +1032,12 @@
   <!-- Dashboard -->
   <div class="dashboard" id="dashboard">
     <div class="dash-card"><div class="dash-value" id="dTotal">0</div><div class="dash-label">Total de Leads</div></div>
+    <div class="dash-card dash-provedor"><div class="dash-value" id="dProvedores">0</div><div class="dash-label">Provedores</div></div>
+    <div class="dash-card dash-expositor"><div class="dash-value" id="dExpositores">0</div><div class="dash-label">Expositores</div></div>
     <div class="dash-card dash-novo"><div class="dash-value" id="dNovo">0</div><div class="dash-label">Novos</div></div>
     <div class="dash-card dash-interessado"><div class="dash-value" id="dInteressado">0</div><div class="dash-label">Interessados</div></div>
     <div class="dash-card dash-proposta"><div class="dash-value" id="dProposta">0</div><div class="dash-label">Proposta</div></div>
     <div class="dash-card dash-fechado"><div class="dash-value" id="dFechado">0</div><div class="dash-label">Fechados</div></div>
-    <div class="dash-card dash-grande"><div class="dash-value" id="dGrande">0</div><div class="dash-label">Grandes Provedores</div></div>
   </div>
 
   <div class="toolbar">
@@ -1184,6 +1194,16 @@
     </div>
     <form id="leadForm" novalidate>
       <input type="hidden" id="leadId" />
+      <div class="form-row-full" style="margin-bottom:14px">
+        <div class="form-group">
+          <label>Tipo de Cadastro <span class="required">*</span></label>
+          <div class="tipo-toggle">
+            <button type="button" class="tipo-btn provedor active" id="tipoBtnProvedor" onclick="setTipo('Provedor')">🌐 Provedor de Internet</button>
+            <button type="button" class="tipo-btn expositor" id="tipoBtnExpositor" onclick="setTipo('Expositor')">🏢 Expositor</button>
+          </div>
+          <input type="hidden" id="tipoLead" value="Provedor" />
+        </div>
+      </div>
       <div class="form-row">
         <div class="form-group">
           <label for="status">Status <span class="required">*</span></label>
@@ -1233,7 +1253,7 @@
           <label for="cidade">Cidade</label>
           <input type="text" id="cidade" placeholder="Ex: São Paulo" />
         </div>
-        <div class="form-group">
+        <div class="form-group" id="porteGroup">
           <label for="porte">Porte do Provedor</label>
           <select id="porte">
             <option value="">Selecione…</option>
@@ -1241,6 +1261,12 @@
             <option value="Médio">Médio (3 mil – 20 mil clientes)</option>
             <option value="Grande">Grande (mais de 20 mil clientes)</option>
           </select>
+        </div>
+      </div>
+      <div class="form-row" id="segmentoRow" style="display:none">
+        <div class="form-group" style="grid-column:span 2">
+          <label for="segmento">Segmento de Atuação</label>
+          <input type="text" id="segmento" placeholder="Ex: Tecnologia, Telecomunicações, Segurança…" />
         </div>
       </div>
       <div class="form-row">
@@ -1320,9 +1346,11 @@
       <div class="detail-grid">
         <div class="detail-field"><label>Empresa</label><span id="dEmpresa"></span></div>
         <div class="detail-field"><label>Nome do Contato</label><span id="dNome"></span></div>
+        <div class="detail-field"><label>Tipo</label><span id="dTipo"></span></div>
         <div class="detail-field"><label>Cargo</label><span id="dCargo"></span></div>
         <div class="detail-field"><label>Status</label><span id="dStatus"></span></div>
         <div class="detail-field"><label>Porte</label><span id="dPorte"></span></div>
+        <div class="detail-field"><label>Segmento</label><span id="dSegmento"></span></div>
         <div class="detail-field"><label>Origem</label><span id="dOrigem"></span></div>
         <div class="detail-field"><label>E-mail</label><span id="dEmail"></span></div>
         <div class="detail-field"><label>WhatsApp</label><span id="dWhatsapp"></span></div>
@@ -1689,7 +1717,19 @@ let sortDir = 'asc';
 let pendingDeleteId = null;
 
 // ── Mapeamento DB ↔ JS ─────────────────────────────────────────────────────
+// ── Lead extra (tipo/segmento em localStorage) ─────────────────────────────
+var LEAD_EXTRA_KEY = 'crm_lead_extra';
+function loadLeadExtra()    { try { return JSON.parse(localStorage.getItem(LEAD_EXTRA_KEY)) || {}; } catch { return {}; } }
+function saveLeadExtra(obj) { localStorage.setItem(LEAD_EXTRA_KEY, JSON.stringify(obj)); }
+function getLeadExtra(id)   { return loadLeadExtra()[id] || { tipo: 'Provedor', segmento: '' }; }
+function setLeadExtra(id, data) {
+  var all = loadLeadExtra();
+  all[id] = Object.assign(all[id] || {}, data);
+  saveLeadExtra(all);
+}
+
 function dbToLead(row) {
+  var extra = getLeadExtra(row.id);
   return {
     id:          row.id,
     empresa:     row.empresa      || '',
@@ -1706,6 +1746,8 @@ function dbToLead(row) {
     anotacao:    row.anotacao     || '',
     qtdClientes: row.qtd_clientes || '',
     createdAt:   row.created_at   ? new Date(row.created_at).getTime() : Date.now(),
+    tipo:        extra.tipo       || 'Provedor',
+    segmento:    extra.segmento   || '',
   };
 }
 
@@ -1795,6 +1837,8 @@ function statusClass(s) {
   return 'badge-status status-' + (map[s] || 'novo');
 }
 
+var filterTipoValue = '';
+
 function getVisible() {
   const q      = searchInput.value.trim().toLowerCase();
   const state  = filterEstado.value;
@@ -1807,7 +1851,8 @@ function getVisible() {
       const matchState  = !state  || l.estado === state;
       const matchStatus = !status || l.status === status;
       const matchPorte  = !porte  || l.porte  === porte;
-      return matchQ && matchState && matchStatus && matchPorte;
+      const matchTipo   = !filterTipoValue || (l.tipo || 'Provedor') === filterTipoValue;
+      return matchQ && matchState && matchStatus && matchPorte && matchTipo;
     })
     .sort((a, b) => {
       const va = (a[sortField] || '').toLowerCase();
@@ -1824,20 +1869,22 @@ function esc(str) {
 
 function updateDashboard() {
   document.getElementById('dTotal').textContent       = leads.length;
+  document.getElementById('dProvedores').textContent  = leads.filter(function(l){ return (l.tipo||'Provedor') === 'Provedor'; }).length;
+  document.getElementById('dExpositores').textContent = leads.filter(function(l){ return l.tipo === 'Expositor'; }).length;
   document.getElementById('dNovo').textContent        = leads.filter(function(l){ return (l.status||'Novo') === 'Novo'; }).length;
   document.getElementById('dInteressado').textContent = leads.filter(function(l){ return l.status === 'Interessado'; }).length;
   document.getElementById('dProposta').textContent    = leads.filter(function(l){ return l.status === 'Proposta'; }).length;
   document.getElementById('dFechado').textContent     = leads.filter(function(l){ return l.status === 'Fechado'; }).length;
-  document.getElementById('dGrande').textContent      = leads.filter(function(l){ return l.porte === 'Grande'; }).length;
 }
 
 // Clique no card filtra a lista
-document.getElementById('dNovo').closest('.dash-card').addEventListener('click', function(){ filterStatus.value='Novo'; filterPorte.value=''; render(); });
-document.getElementById('dInteressado').closest('.dash-card').addEventListener('click', function(){ filterStatus.value='Interessado'; filterPorte.value=''; render(); });
-document.getElementById('dProposta').closest('.dash-card').addEventListener('click', function(){ filterStatus.value='Proposta'; filterPorte.value=''; render(); });
-document.getElementById('dFechado').closest('.dash-card').addEventListener('click', function(){ filterStatus.value='Fechado'; filterPorte.value=''; render(); });
-document.getElementById('dGrande').closest('.dash-card').addEventListener('click', function(){ filterPorte.value='Grande'; filterStatus.value=''; render(); });
-document.getElementById('dTotal').closest('.dash-card').addEventListener('click', function(){ filterStatus.value=''; filterPorte.value=''; searchInput.value=''; filterEstado.value=''; render(); });
+document.getElementById('dTotal').closest('.dash-card').addEventListener('click', function(){ filterStatus.value=''; filterPorte.value=''; searchInput.value=''; filterEstado.value=''; filterTipoValue=''; render(); });
+document.getElementById('dProvedores').closest('.dash-card').addEventListener('click', function(){ filterStatus.value=''; filterPorte.value=''; searchInput.value=''; filterEstado.value=''; filterTipoValue='Provedor'; render(); });
+document.getElementById('dExpositores').closest('.dash-card').addEventListener('click', function(){ filterStatus.value=''; filterPorte.value=''; searchInput.value=''; filterEstado.value=''; filterTipoValue='Expositor'; render(); });
+document.getElementById('dNovo').closest('.dash-card').addEventListener('click', function(){ filterTipoValue=''; filterStatus.value='Novo'; filterPorte.value=''; render(); });
+document.getElementById('dInteressado').closest('.dash-card').addEventListener('click', function(){ filterTipoValue=''; filterStatus.value='Interessado'; filterPorte.value=''; render(); });
+document.getElementById('dProposta').closest('.dash-card').addEventListener('click', function(){ filterTipoValue=''; filterStatus.value='Proposta'; filterPorte.value=''; render(); });
+document.getElementById('dFechado').closest('.dash-card').addEventListener('click', function(){ filterTipoValue=''; filterStatus.value='Fechado'; filterPorte.value=''; render(); });
 
 function render() {
   const visible = getVisible();
@@ -1898,7 +1945,21 @@ function closeModal() {
   clearErrors();
   modalTitle.textContent = 'Novo Lead';
   saveBtn.textContent = 'Salvar Lead';
+  setTipo('Provedor');
 }
+
+// ── Tipo Provedor/Expositor ────────────────────────────────────────────────
+function setTipo(tipo) {
+  document.getElementById('tipoLead').value = tipo;
+  document.getElementById('tipoBtnProvedor').classList.toggle('active', tipo === 'Provedor');
+  document.getElementById('tipoBtnExpositor').classList.toggle('active', tipo === 'Expositor');
+  var isExpositor = tipo === 'Expositor';
+  document.getElementById('porteGroup').classList.toggle('field-disabled', isExpositor);
+  document.getElementById('segmentoRow').style.display = isExpositor ? '' : 'none';
+  if (isExpositor) document.getElementById('porte').value = '';
+  else document.getElementById('segmento').value = '';
+}
+window.setTipo = setTipo;
 
 function openEdit(id) {
   const lead = leads.find(function(l){ return l.id === id; });
@@ -1916,6 +1977,8 @@ function openEdit(id) {
   document.getElementById('origem').value   = lead.origem || '';
   document.getElementById('tags').value     = lead.tags   || '';
   document.getElementById('anotacao').value = lead.anotacao || '';
+  document.getElementById('segmento').value = lead.segmento || '';
+  setTipo(lead.tipo || 'Provedor');
   modalTitle.textContent = 'Editar Lead';
   saveBtn.textContent = 'Atualizar Lead';
   openModal();
@@ -1927,9 +1990,11 @@ function openDetail(id) {
   document.getElementById('detailEmpresa').textContent = l.empresa;
   document.getElementById('dEmpresa').textContent   = l.empresa;
   document.getElementById('dNome').textContent      = l.nome || '—';
+  document.getElementById('dTipo').textContent      = l.tipo === 'Expositor' ? '🏢 Expositor' : '🌐 Provedor de Internet';
   document.getElementById('dCargo').textContent     = l.cargo;
   document.getElementById('dStatus').innerHTML      = '<span class="' + statusClass(l.status) + '">' + esc(l.status || 'Novo') + '</span>';
-  document.getElementById('dPorte').textContent     = l.porte  || '—';
+  document.getElementById('dPorte').textContent     = l.tipo === 'Expositor' ? '—' : (l.porte || '—');
+  document.getElementById('dSegmento').textContent  = l.tipo === 'Expositor' ? (l.segmento || '—') : '—';
   document.getElementById('dOrigem').textContent    = l.origem || '—';
   document.getElementById('dEmail').innerHTML       = l.email ? '<a href="mailto:' + esc(l.email) + '">' + esc(l.email) + '</a>' : '—';
   document.getElementById('dWhatsapp').innerHTML    = l.whatsapp ? '<a href="https://wa.me/55' + l.whatsapp.replace(/\D/g,'') + '" target="_blank">📱 ' + esc(l.whatsapp) + '</a>' : '—';
@@ -1993,6 +2058,7 @@ function validate(data) {
 leadForm.addEventListener('submit', async function(e) {
   e.preventDefault();
   clearErrors();
+  var tipoVal = document.getElementById('tipoLead').value || 'Provedor';
   var data = {
     status:   document.getElementById('status').value,
     empresa:  document.getElementById('empresa').value.trim(),
@@ -2002,10 +2068,12 @@ leadForm.addEventListener('submit', async function(e) {
     whatsapp: document.getElementById('whatsapp').value.trim(),
     cidade:   document.getElementById('cidade').value.trim(),
     estado:   document.getElementById('estado').value,
-    porte:    document.getElementById('porte').value,
+    porte:    tipoVal === 'Expositor' ? '' : document.getElementById('porte').value,
     origem:   document.getElementById('origem').value,
     tags:     document.getElementById('tags').value.trim(),
     anotacao: document.getElementById('anotacao').value.trim(),
+    tipo:     tipoVal,
+    segmento: tipoVal === 'Expositor' ? document.getElementById('segmento').value.trim() : '',
   };
   if (!validate(data)) return;
   var id = document.getElementById('leadId').value;
@@ -2030,10 +2098,13 @@ leadForm.addEventListener('submit', async function(e) {
         var updated = Object.assign({}, leads[idx], data);
         await updateLead(id, updated);
         leads[idx] = updated;
+        setLeadExtra(id, { tipo: data.tipo, segmento: data.segmento });
       }
     } else {
       var newLead = Object.assign({ id: generateId(), createdAt: Date.now() }, data);
       var saved = await insertLead(newLead);
+      setLeadExtra(saved.id, { tipo: data.tipo, segmento: data.segmento });
+      saved.tipo = data.tipo; saved.segmento = data.segmento;
       leads.push(saved);
     }
     render();
@@ -2572,20 +2643,23 @@ function closeNovaNegocioModal() {
 }
 
 function filterNegLeads(query) {
-  var q = (query || '').toLowerCase();
-  var filtered = leads.filter(function(l) {
-    return !q ||
-      (l.empresa || '').toLowerCase().includes(q) ||
-      (l.nome    || '').toLowerCase().includes(q) ||
-      (l.email   || '').toLowerCase().includes(q);
-  });
+  var q = (query || '').toLowerCase().trim();
   var list = document.getElementById('negLeadList');
+  if (!q) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px">Digite o nome ou empresa para buscar leads…</div>';
+    return;
+  }
   if (!leads.length) {
     list.innerHTML = '<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">Nenhum lead cadastrado no sistema</div>';
     return;
   }
+  var filtered = leads.filter(function(l) {
+    return (l.empresa || '').toLowerCase().includes(q) ||
+           (l.nome    || '').toLowerCase().includes(q) ||
+           (l.email   || '').toLowerCase().includes(q);
+  });
   if (!filtered.length) {
-    list.innerHTML = '<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">Nenhum lead encontrado</div>';
+    list.innerHTML = '<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">Nenhum lead encontrado para "' + esc(query) + '"</div>';
     return;
   }
   list.innerHTML = filtered.slice(0, 50).map(function(l) {
