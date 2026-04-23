@@ -717,6 +717,38 @@
     }
     .stage-name-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px #dbeafe; }
     .stage-row-btns { display: flex; gap: 2px; flex-shrink: 0; }
+
+    /* ── Serviços view ── */
+    .servicos-toolbar { display:flex; justify-content:space-between; align-items:center; padding:20px 24px 12px; }
+    .servicos-toolbar h2 { font-size:20px; font-weight:700; color:#0f172a; }
+    .servicos-table-wrap { padding:0 24px 24px; overflow-x:auto; }
+    .servicos-table { width:100%; border-collapse:collapse; }
+    .servicos-table th { text-align:left; padding:10px 12px; font-size:12px; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:.04em; border-bottom:2px solid #e2e8f0; white-space:nowrap; }
+    .servicos-table td { padding:12px; border-bottom:1px solid #f1f5f9; font-size:14px; vertical-align:middle; }
+    .servicos-table tr:hover td { background:#f8fafc; }
+    .serv-preco { font-weight:600; color:#0f172a; }
+    .serv-desconto { color:#dc2626; font-size:13px; }
+    .serv-preco-final { font-weight:700; color:#15803d; }
+
+    /* ── Kanban card service button ── */
+    .kcard-serv-btn { display:inline-flex; align-items:center; gap:4px; font-size:11px; color:#2563eb; background:#dbeafe; border:none; border-radius:6px; padding:2px 8px; cursor:pointer; margin-top:6px; line-height:1.8; width:100%; justify-content:center; }
+    .kcard-serv-btn:hover { background:#bfdbfe; }
+    .kcard-serv-count { font-weight:700; }
+
+    /* ── Lead-service picker modal ── */
+    .lsp-serv-item { display:flex; align-items:center; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:6px; gap:8px; }
+    .lsp-serv-info { flex:1; min-width:0; }
+    .lsp-serv-nome { font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .lsp-serv-preco { font-size:12px; color:#64748b; }
+    .lsp-qty-wrap { display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0; }
+    .lsp-price-wrap { display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0; }
+    .lsp-qty-input { width:56px; padding:4px 6px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px; text-align:center; }
+    .lsp-price-input { width:90px; padding:4px 6px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px; text-align:right; }
+    .lsp-field-label { font-size:10px; color:#94a3b8; font-weight:600; text-transform:uppercase; }
+    .lsp-line-total { font-size:11px; color:#15803d; font-weight:600; }
+    .lsp-total-row { display:flex; justify-content:flex-end; align-items:center; gap:8px; padding:12px 0 4px; border-top:2px solid #e2e8f0; margin-top:8px; font-weight:700; font-size:15px; }
+    .lsp-catalog-select { flex:1; padding:8px 10px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; }
+    .lsp-add-row { display:flex; gap:8px; margin-top:10px; }
   </style>
 </head>
 <body>
@@ -921,6 +953,13 @@
         </svg>
         CRM
       </button>
+      <button class="nav-item" id="navServicos" onclick="showView('servicos')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>
+          <path d="M16 10a4 4 0 0 1-8 0"/>
+        </svg>
+        Serviços
+      </button>
     </nav>
   </aside>
   <div class="app-content">
@@ -1035,6 +1074,34 @@
         </button>
       </div>
       <div class="kanban-board" id="kanbanBoard"></div>
+    </div>
+
+    <!-- Serviços / Produtos -->
+    <div id="servicosView" style="display:none">
+      <div class="servicos-toolbar">
+        <h2>Serviços / Produtos</h2>
+        <button class="btn btn-primary" onclick="openNewServModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Novo Serviço
+        </button>
+      </div>
+      <div class="servicos-table-wrap">
+        <table class="servicos-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Descrição</th>
+              <th>Preço (R$)</th>
+              <th>Desconto</th>
+              <th>Preço Final</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="servicosBody"></tbody>
+        </table>
+      </div>
     </div>
 
   </div><!-- /app-content -->
@@ -1268,6 +1335,89 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" id="cancelStagesBtn">Cancelar</button>
       <button class="btn btn-primary" id="saveStagesBtn">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Cadastrar/Editar Serviço -->
+<div class="modal-overlay" id="servModal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <h2 id="servModalTitle">Novo Serviço</h2>
+      <button class="modal-close" onclick="closeServModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="servId" />
+      <div class="form-group">
+        <label for="servNome">Nome <span class="required">*</span></label>
+        <input type="text" id="servNome" placeholder="Ex: Suporte Técnico Mensal" />
+        <span class="field-error" id="servNomeError"></span>
+      </div>
+      <div class="form-group">
+        <label for="servDescricao">Descrição</label>
+        <textarea id="servDescricao" rows="3" placeholder="Descreva o serviço ou produto…" style="resize:vertical"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="servPreco">Preço (R$) <span class="required">*</span></label>
+          <input type="number" id="servPreco" min="0" step="0.01" placeholder="0,00" oninput="calcServFinal()" />
+          <span class="field-error" id="servPrecoError"></span>
+        </div>
+        <div class="form-group">
+          <label for="servDescR">Desconto (R$)</label>
+          <input type="number" id="servDescR" min="0" step="0.01" placeholder="0,00" oninput="onServDescR()" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="servDescPct">Desconto (%)</label>
+          <input type="number" id="servDescPct" min="0" max="100" step="0.01" placeholder="0" oninput="onServDescPct()" />
+        </div>
+        <div class="form-group">
+          <label>Preço Final (R$)</label>
+          <input type="text" id="servPrecoFinal" readonly style="background:#f8fafc;font-weight:700;color:#15803d;cursor:default" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeServModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveServ()">Salvar Serviço</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Serviços vinculados ao Lead -->
+<div class="modal-overlay" id="leadServModal">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header">
+      <div>
+        <h2>Serviços do Lead</h2>
+        <div id="leadServTitle" style="font-size:13px;color:#64748b;margin-top:2px"></div>
+      </div>
+      <button class="modal-close" onclick="closeLeadServModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div id="leadServList"></div>
+      <div class="lsp-total-row">
+        <span>Total:</span>
+        <span id="leadServTotal" style="color:#15803d">R$ 0,00</span>
+      </div>
+      <hr style="margin:14px 0;border:none;border-top:1px solid #e2e8f0" />
+      <div style="font-weight:600;margin-bottom:8px;font-size:13px;color:#0f172a">Adicionar serviço ao lead</div>
+      <div class="lsp-add-row">
+        <select id="leadServSelect" class="lsp-catalog-select">
+          <option value="">Selecione um serviço do catálogo…</option>
+        </select>
+        <button class="btn btn-primary" onclick="addLeadServ()">Adicionar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2080,14 +2230,18 @@ window.openDetail = openDetail;
 window.editUser   = editUser;
 window.toggleUser = toggleUser;
 
-// ── Navegação: Leads ↔ CRM ─────────────────────────────────────────────────
+// ── Navegação ──────────────────────────────────────────────────────────────
 function showView(name) {
-  var isLeads = name === 'leads';
-  document.getElementById('leadsView').style.display = isLeads ? '' : 'none';
-  document.getElementById('crmView').style.display   = isLeads ? 'none' : '';
-  document.getElementById('navLeads').classList.toggle('active',  isLeads);
-  document.getElementById('navCRM').classList.toggle('active',   !isLeads);
-  if (!isLeads) renderKanban();
+  var views = { leads: 'leadsView', crm: 'crmView', servicos: 'servicosView' };
+  var navs  = { leads: 'navLeads', crm: 'navCRM', servicos: 'navServicos' };
+  Object.keys(views).forEach(function(k) {
+    var el = document.getElementById(views[k]);
+    if (el) el.style.display = k === name ? '' : 'none';
+    var nav = document.getElementById(navs[k]);
+    if (nav) nav.classList.toggle('active', k === name);
+  });
+  if (name === 'crm') renderKanban();
+  if (name === 'servicos') renderServicos();
 }
 window.showView = showView;
 
@@ -2138,13 +2292,17 @@ function populateFilterStatus() {
 var draggedLeadId = null;
 
 function renderKanban() {
-  var stages = loadStages();
-  var board  = document.getElementById('kanbanBoard');
+  var stages   = loadStages();
+  var lsData   = loadLeadServicos();
+  var board    = document.getElementById('kanbanBoard');
   board.innerHTML = stages.map(function(stage) {
     var sl = leads.filter(function(l){ return (l.status || 'Novo') === stage.id; });
     var cards = sl.length
       ? sl.map(function(l) {
           var wa = l.whatsapp ? l.whatsapp.replace(/\D/g,'') : '';
+          var servs  = lsData[l.id] || [];
+          var sCount = servs.length;
+          var sTotal = servs.reduce(function(acc, e){ return acc + (e.precoUnit * e.qty); }, 0);
           return '<div class="kanban-card" draggable="true"' +
             ' ondragstart="dragStart(event,\'' + l.id + '\')"' +
             ' ondragend="dragEnd(event)"' +
@@ -2155,6 +2313,10 @@ function renderKanban() {
               (l.porte ? '<span class="badge-porte porte-' + l.porte.toLowerCase().replace('é','e') + '">' + esc(l.porte) + '</span>' : '<span></span>') +
               (wa ? '<a class="kcard-wa" href="https://wa.me/55' + wa + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="WhatsApp">📱</a>' : '') +
             '</div>' +
+            '<button class="kcard-serv-btn" onclick="event.stopPropagation();openLeadServPicker(\'' + l.id + '\')">' +
+              '📦 <span class="kcard-serv-count">' + sCount + '</span> Serviço' + (sCount !== 1 ? 's' : '') +
+              (sCount > 0 ? ' · ' + fmtMoney(sTotal) : '') +
+            '</button>' +
           '</div>';
         }).join('')
       : '<div class="kanban-empty">Nenhum lead</div>';
@@ -2189,7 +2351,7 @@ function kDragOver(event, col) {
   col.classList.add('drag-over');
 }
 function kDragLeave(event, col) {
-  if (!col.contains(event.relatedTarget)) col.classList.remove('drag-over');
+  if (!event.relatedTarget || !col.contains(event.relatedTarget)) col.classList.remove('drag-over');
 }
 async function dropOnStage(event, stageId, col) {
   event.preventDefault();
@@ -2285,6 +2447,275 @@ document.getElementById('closeStagesBtn').addEventListener('click', function(){ 
 document.getElementById('cancelStagesBtn').addEventListener('click', function(){ document.getElementById('stagesOverlay').classList.remove('open'); });
 document.getElementById('saveStagesBtn').addEventListener('click', saveStagesEditor);
 document.getElementById('addStageBtn').addEventListener('click', addStage);
+
+// ── Serviços ───────────────────────────────────────────────────────────────
+var SERVICOS_KEY      = 'crm_servicos';
+var LEAD_SERVS_KEY    = 'crm_lead_servicos';
+var editingServId     = null;
+var currentLeadId     = null;
+
+function loadServicos() {
+  try { return JSON.parse(localStorage.getItem(SERVICOS_KEY)) || []; } catch { return []; }
+}
+function saveServicos(arr) { localStorage.setItem(SERVICOS_KEY, JSON.stringify(arr)); }
+
+function loadLeadServicos() {
+  try { return JSON.parse(localStorage.getItem(LEAD_SERVS_KEY)) || {}; } catch { return {}; }
+}
+function saveLeadServicos(obj) { localStorage.setItem(LEAD_SERVS_KEY, JSON.stringify(obj)); }
+
+function fmtMoney(v) {
+  return 'R$ ' + (Number(v) || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function calcServFinal() {
+  var preco   = parseFloat(document.getElementById('servPreco').value)   || 0;
+  var descR   = parseFloat(document.getElementById('servDescR').value)   || 0;
+  var descPct = parseFloat(document.getElementById('servDescPct').value) || 0;
+  var final;
+  if (descR > 0)        final = Math.max(0, preco - descR);
+  else if (descPct > 0) final = Math.max(0, preco * (1 - descPct / 100));
+  else                  final = preco;
+  document.getElementById('servPrecoFinal').value = fmtMoney(final);
+}
+function onServDescR()   { document.getElementById('servDescPct').value = ''; calcServFinal(); }
+function onServDescPct() { document.getElementById('servDescR').value   = ''; calcServFinal(); }
+
+function renderServicos() {
+  var servicos = loadServicos();
+  var tbody = document.getElementById('servicosBody');
+  if (!tbody) return;
+  if (!servicos.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:40px 0;font-size:13px">Nenhum serviço cadastrado. Clique em "Novo Serviço" para começar.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = servicos.map(function(s) {
+    var descInfo = '';
+    if (s.descontoR   > 0) descInfo = '− ' + fmtMoney(s.descontoR);
+    else if (s.descontoPct > 0) descInfo = '− ' + s.descontoPct + '%';
+    return '<tr>' +
+      '<td><strong>' + esc(s.nome) + '</strong></td>' +
+      '<td style="max-width:180px;color:#64748b;white-space:pre-wrap">' + esc(s.descricao || '—') + '</td>' +
+      '<td class="serv-preco">' + fmtMoney(s.preco) + '</td>' +
+      '<td class="serv-desconto">' + (descInfo || '—') + '</td>' +
+      '<td class="serv-preco-final">' + fmtMoney(s.precoFinal) + '</td>' +
+      '<td style="white-space:nowrap">' +
+        '<button class="btn-icon" onclick="editServico(\'' + s.id + '\')" title="Editar">✏️</button> ' +
+        '<button class="btn-icon delete" onclick="deleteServico(\'' + s.id + '\')" title="Excluir">🗑️</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function openNewServModal() {
+  editingServId = null;
+  document.getElementById('servModalTitle').textContent = 'Novo Serviço';
+  document.getElementById('servId').value        = '';
+  document.getElementById('servNome').value      = '';
+  document.getElementById('servDescricao').value = '';
+  document.getElementById('servPreco').value     = '';
+  document.getElementById('servDescR').value     = '';
+  document.getElementById('servDescPct').value   = '';
+  document.getElementById('servPrecoFinal').value = '';
+  document.getElementById('servNomeError').textContent  = '';
+  document.getElementById('servPrecoError').textContent = '';
+  document.getElementById('servModal').classList.add('open');
+  document.getElementById('servNome').focus();
+}
+
+function editServico(id) {
+  var s = loadServicos().find(function(x){ return x.id === id; });
+  if (!s) return;
+  editingServId = id;
+  document.getElementById('servModalTitle').textContent  = 'Editar Serviço';
+  document.getElementById('servId').value        = s.id;
+  document.getElementById('servNome').value      = s.nome;
+  document.getElementById('servDescricao').value = s.descricao || '';
+  document.getElementById('servPreco').value     = s.preco;
+  document.getElementById('servDescR').value     = s.descontoR   || '';
+  document.getElementById('servDescPct').value   = s.descontoPct || '';
+  document.getElementById('servPrecoFinal').value = fmtMoney(s.precoFinal);
+  document.getElementById('servNomeError').textContent  = '';
+  document.getElementById('servPrecoError').textContent = '';
+  document.getElementById('servModal').classList.add('open');
+  document.getElementById('servNome').focus();
+}
+
+function closeServModal() {
+  document.getElementById('servModal').classList.remove('open');
+}
+
+function saveServ() {
+  var nome  = document.getElementById('servNome').value.trim();
+  var preco = parseFloat(document.getElementById('servPreco').value);
+  var ok    = true;
+  document.getElementById('servNomeError').textContent  = '';
+  document.getElementById('servPrecoError').textContent = '';
+  if (!nome)       { document.getElementById('servNomeError').textContent  = 'Campo obrigatório'; ok = false; }
+  if (isNaN(preco) || preco < 0) { document.getElementById('servPrecoError').textContent = 'Valor inválido'; ok = false; }
+  if (!ok) return;
+
+  var descR      = parseFloat(document.getElementById('servDescR').value)   || 0;
+  var descPct    = parseFloat(document.getElementById('servDescPct').value) || 0;
+  var precoFinal;
+  if (descR > 0)        precoFinal = Math.max(0, preco - descR);
+  else if (descPct > 0) precoFinal = Math.max(0, preco * (1 - descPct / 100));
+  else                  precoFinal = preco;
+
+  var servicos = loadServicos();
+  if (editingServId) {
+    var idx = servicos.findIndex(function(x){ return x.id === editingServId; });
+    if (idx !== -1) servicos[idx] = Object.assign(servicos[idx], {
+      nome: nome, descricao: document.getElementById('servDescricao').value.trim(),
+      preco: preco, descontoR: descR, descontoPct: descPct, precoFinal: precoFinal,
+    });
+  } else {
+    servicos.push({
+      id: generateId(), nome: nome,
+      descricao: document.getElementById('servDescricao').value.trim(),
+      preco: preco, descontoR: descR, descontoPct: descPct, precoFinal: precoFinal,
+    });
+  }
+  saveServicos(servicos);
+  closeServModal();
+  renderServicos();
+}
+
+function deleteServico(id) {
+  if (!confirm('Excluir este serviço? Ele será removido de todos os leads vinculados.')) return;
+  saveServicos(loadServicos().filter(function(x){ return x.id !== id; }));
+  var lsData = loadLeadServicos();
+  Object.keys(lsData).forEach(function(leadId) {
+    lsData[leadId] = lsData[leadId].filter(function(e){ return e.servId !== id; });
+  });
+  saveLeadServicos(lsData);
+  renderServicos();
+  renderKanban();
+}
+
+// ── Lead-Service picker ────────────────────────────────────────────────────
+function openLeadServPicker(leadId) {
+  currentLeadId = leadId;
+  var lead = leads.find(function(l){ return l.id === leadId; });
+  document.getElementById('leadServTitle').textContent = lead
+    ? (lead.empresa || lead.nome || 'Lead sem nome')
+    : '';
+  populateLeadServSelect();
+  renderLeadServList();
+  document.getElementById('leadServModal').classList.add('open');
+}
+
+function closeLeadServModal() {
+  document.getElementById('leadServModal').classList.remove('open');
+  currentLeadId = null;
+}
+
+function populateLeadServSelect() {
+  var servicos = loadServicos();
+  document.getElementById('leadServSelect').innerHTML =
+    '<option value="">Selecione um serviço do catálogo…</option>' +
+    servicos.map(function(s) {
+      return '<option value="' + esc(s.id) + '">' + esc(s.nome) + ' — ' + fmtMoney(s.precoFinal) + '</option>';
+    }).join('');
+}
+
+function renderLeadServList() {
+  var lsData  = loadLeadServicos();
+  var entries = lsData[currentLeadId] || [];
+  var servicos = loadServicos();
+  var total   = 0;
+  var html    = '';
+  if (!entries.length) {
+    html = '<div style="color:#94a3b8;text-align:center;padding:20px 0;font-size:13px">Nenhum serviço vinculado a este lead.</div>';
+  } else {
+    html = entries.map(function(entry, idx) {
+      var s = servicos.find(function(x){ return x.id === entry.servId; });
+      if (!s) return '';
+      var lineTotal = entry.precoUnit * entry.qty;
+      total += lineTotal;
+      return '<div class="lsp-serv-item">' +
+        '<div class="lsp-serv-info">' +
+          '<div class="lsp-serv-nome">' + esc(s.nome) + '</div>' +
+          '<div class="lsp-serv-preco">Catálogo: ' + fmtMoney(s.precoFinal) + '</div>' +
+        '</div>' +
+        '<div class="lsp-qty-wrap">' +
+          '<span class="lsp-field-label">Qtd</span>' +
+          '<input type="number" class="lsp-qty-input" min="1" value="' + entry.qty + '"' +
+            ' onchange="updateLeadServQty(' + idx + ',this.value)" />' +
+        '</div>' +
+        '<div class="lsp-price-wrap">' +
+          '<span class="lsp-field-label">Valor Unit. (R$)</span>' +
+          '<input type="number" class="lsp-price-input" min="0" step="0.01" value="' + entry.precoUnit.toFixed(2) + '"' +
+            ' onchange="updateLeadServPrice(' + idx + ',this.value)" />' +
+          '<span class="lsp-line-total">' + fmtMoney(lineTotal) + '</span>' +
+        '</div>' +
+        '<button class="btn-icon delete" onclick="removeLeadServ(' + idx + ')" title="Remover" style="margin-left:4px">🗑️</button>' +
+      '</div>';
+    }).join('');
+  }
+  document.getElementById('leadServList').innerHTML = html;
+  document.getElementById('leadServTotal').textContent = fmtMoney(total);
+}
+
+function addLeadServ() {
+  var sel    = document.getElementById('leadServSelect');
+  var servId = sel.value;
+  if (!servId) return;
+  var s = loadServicos().find(function(x){ return x.id === servId; });
+  if (!s) return;
+  var lsData = loadLeadServicos();
+  if (!lsData[currentLeadId]) lsData[currentLeadId] = [];
+  lsData[currentLeadId].push({ servId: s.id, qty: 1, precoUnit: s.precoFinal });
+  saveLeadServicos(lsData);
+  sel.value = '';
+  renderLeadServList();
+  renderKanban();
+}
+
+function updateLeadServQty(idx, val) {
+  var lsData  = loadLeadServicos();
+  var entries = lsData[currentLeadId];
+  if (!entries || !entries[idx]) return;
+  entries[idx].qty = Math.max(1, parseInt(val) || 1);
+  saveLeadServicos(lsData);
+  renderLeadServList();
+  renderKanban();
+}
+
+function updateLeadServPrice(idx, val) {
+  var lsData  = loadLeadServicos();
+  var entries = lsData[currentLeadId];
+  if (!entries || !entries[idx]) return;
+  entries[idx].precoUnit = Math.max(0, parseFloat(val) || 0);
+  saveLeadServicos(lsData);
+  renderLeadServList();
+  renderKanban();
+}
+
+function removeLeadServ(idx) {
+  var lsData  = loadLeadServicos();
+  var entries = lsData[currentLeadId];
+  if (!entries) return;
+  entries.splice(idx, 1);
+  saveLeadServicos(lsData);
+  renderLeadServList();
+  renderKanban();
+}
+
+window.openNewServModal    = openNewServModal;
+window.editServico         = editServico;
+window.deleteServico       = deleteServico;
+window.closeServModal      = closeServModal;
+window.saveServ            = saveServ;
+window.calcServFinal       = calcServFinal;
+window.onServDescR         = onServDescR;
+window.onServDescPct       = onServDescPct;
+window.openLeadServPicker  = openLeadServPicker;
+window.closeLeadServModal  = closeLeadServModal;
+window.addLeadServ         = addLeadServ;
+window.removeLeadServ      = removeLeadServ;
+window.updateLeadServQty   = updateLeadServQty;
+window.updateLeadServPrice = updateLeadServPrice;
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
