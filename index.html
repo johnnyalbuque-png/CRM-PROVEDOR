@@ -3348,16 +3348,17 @@ function gerarPropostaPDF() {
 
   var linhasHTML = p.linhas.length ? p.linhas.map(function(l, i) {
     var descInfo = '';
-    if (l.descontoR   > 0) descInfo = '<br><small style="color:#dc2626">− ' + fmtMoney(l.descontoR) + '/un</small>';
-    else if (l.descontoPct > 0) descInfo = '<br><small style="color:#dc2626">− ' + l.descontoPct + '%</small>';
+    if (l.descontoR   > 0) descInfo = fmtMoney(l.descontoR);
+    else if (l.descontoPct > 0) descInfo = l.descontoPct + '%';
     return '<tr>' +
       '<td style="text-align:center;color:#64748b">' + (i+1) + '</td>' +
-      '<td><strong>' + esc(l.nome || 'Item') + '</strong>' + descInfo + '</td>' +
+      '<td><strong>' + esc(l.nome || 'Item') + '</strong></td>' +
       '<td style="text-align:center">' + l.qty + '</td>' +
       '<td style="text-align:right">' + fmtMoney(l.valorUnit) + '</td>' +
+      '<td style="text-align:center;color:#dc2626;font-weight:600">' + (descInfo ? '− ' + descInfo : '—') + '</td>' +
       '<td style="text-align:right;font-weight:700;color:#15803d">' + fmtMoney(l.total) + '</td>' +
     '</tr>';
-  }).join('') : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:16px">Sem itens</td></tr>';
+  }).join('') : '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:16px">Sem itens</td></tr>';
 
   var parcelasHTML = p.vencimentos.map(function(v, i) {
     return '<tr>' +
@@ -3410,16 +3411,16 @@ function gerarPropostaPDF() {
     'tbody tr:nth-child(even){background:#f8fafc}' +
     'tbody td{padding:9px 11px;border-bottom:1px solid #e2e8f0;font-size:13px}' +
     'tfoot td{padding:10px 11px;font-weight:700;background:#f1f5f9;border-top:2px solid #1e3a8a}' +
-    '.total-bar{background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;border-radius:10px;display:flex;justify-content:space-between;align-items:center;padding:14px 20px;margin-top:12px}' +
+    '.total-bar{background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;border-radius:10px;display:flex;justify-content:space-between;align-items:center;padding:12px 18px;margin-top:12px}' +
     '.total-bar .tbl{font-size:13px;font-weight:600;opacity:.9}' +
-    '.total-bar .tbv{font-size:24px;font-weight:900}' +
+    '.total-bar .tbv{font-size:17px;font-weight:800}' +
     '.obs-block{background:#f8fafc;border-left:4px solid #2563eb;padding:12px 16px;border-radius:0 8px 8px 0;font-size:12px;color:#475569;white-space:pre-wrap}' +
     '.footer{margin-top:36px;padding-top:12px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:11px;color:#94a3b8}' +
     '@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.page{padding:20px 32px}}' +
     '</style></head><body><div class="page">' +
 
     '<div class="prop-header">' +
-      '<div>' + LOGO_SVG + '<div style="font-size:11px;color:#64748b;margin-top:4px">Soluções para Provedores ISP</div></div>' +
+      '<div>' + LOGO_SVG + '</div>' +
       '<div class="prop-meta">' +
         '<div class="prop-type">Proposta Comercial</div>' +
         '<div class="prop-num">' + esc(p.numero) + '</div>' +
@@ -3446,8 +3447,9 @@ function gerarPropostaPDF() {
         '<th style="width:32px;text-align:center">#</th>' +
         '<th>Descrição</th>' +
         '<th style="width:50px;text-align:center">Qtd</th>' +
-        '<th style="width:115px;text-align:right">Valor Unit.</th>' +
-        '<th style="width:115px;text-align:right">Total</th>' +
+        '<th style="width:110px;text-align:right">Valor Unit.</th>' +
+        '<th style="width:90px;text-align:center">Desconto</th>' +
+        '<th style="width:110px;text-align:right">Total</th>' +
       '</tr></thead><tbody>' + linhasHTML + '</tbody>' +
       '</table>' +
       '<div class="total-bar"><span class="tbl">Valor Total</span><span class="tbv">' + fmtMoney(p.total) + '</span></div>' +
