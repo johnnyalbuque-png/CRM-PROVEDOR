@@ -3496,6 +3496,20 @@ async function boot() {
     if (cfgRows) cfgRows.forEach(function(row){ _cfgCache[row.id] = row.value; });
   } catch(e) { console.warn('configs table not ready yet, using defaults:', e); }
 
+  // One-time migration: move any localStorage data to Supabase
+  cfgKeys.forEach(function(key) {
+    if (_cfgCache[key] == null) {
+      try {
+        var raw = localStorage.getItem(key);
+        if (raw) {
+          var val = JSON.parse(raw);
+          var hasData = Array.isArray(val) ? val.length > 0 : (val && Object.keys(val).length > 0);
+          if (hasData) { saveConfigBg(key, val); }
+        }
+      } catch(e) {}
+    }
+  });
+
   await ensureDefaultAdmin();
   leads = await fetchLeads();
   var session = getSession();
