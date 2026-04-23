@@ -750,6 +750,24 @@
     .lsp-catalog-select { flex:1; padding:8px 10px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; }
     .lsp-add-row { display:flex; gap:8px; margin-top:10px; }
 
+    /* ── Kanban deal value + remove ── */
+    .kcard-valor { font-size:12px; font-weight:700; color:#15803d; margin-bottom:4px; }
+    .kcard-del-btn { position:absolute; top:6px; right:6px; background:none; border:none; color:#cbd5e1; font-size:14px; cursor:pointer; line-height:1; padding:2px 4px; border-radius:4px; }
+    .kcard-del-btn:hover { color:#dc2626; background:#fee2e2; }
+    .kanban-card { position:relative; }
+
+    /* ── Novo Negócio modal ── */
+    .neg-lead-search { width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; outline:none; color:#0f172a; }
+    .neg-lead-search:focus { border-color:#2563eb; box-shadow:0 0 0 3px #dbeafe; }
+    .neg-lead-list { max-height:210px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px; margin-top:6px; }
+    .neg-lead-opt { padding:10px 12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f1f5f9; transition:background .1s; }
+    .neg-lead-opt:last-child { border-bottom:none; }
+    .neg-lead-opt:hover { background:#f8fafc; }
+    .neg-lead-opt.selected { background:#dbeafe; }
+    .neg-lead-empresa { font-weight:700; font-size:13px; color:#0f172a; }
+    .neg-lead-info { font-size:11px; color:#64748b; margin-top:1px; }
+    .neg-selected-badge { display:flex; align-items:center; gap:8px; background:#dbeafe; border:1px solid #93c5fd; border-radius:8px; padding:8px 12px; margin-top:6px; font-size:13px; font-weight:600; color:#1d4ed8; }
+
     /* ── Proposta button no card ── */
     .kcard-prop-btn { display:inline-flex; align-items:center; justify-content:center; gap:4px; font-size:11px; color:#7c3aed; background:#ede9fe; border:none; border-radius:6px; padding:2px 8px; cursor:pointer; margin-top:4px; line-height:1.8; width:100%; }
     .kcard-prop-btn:hover { background:#ddd6fe; }
@@ -1085,13 +1103,21 @@
     <div id="crmView" style="display:none">
       <div class="crm-toolbar">
         <h2>Pipeline CRM</h2>
-        <button class="btn btn-outline" id="editStagesBtn">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
-          </svg>
-          Configurar Etapas
-        </button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline" id="editStagesBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+            </svg>
+            Etapas
+          </button>
+          <button class="btn btn-primary" onclick="openNovaNegocioModal()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Novo Negócio
+          </button>
+        </div>
       </div>
       <div class="kanban-board" id="kanbanBoard"></div>
     </div>
@@ -1448,6 +1474,59 @@
         </select>
         <button class="btn btn-primary" onclick="addLeadServ()">Adicionar</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Novo Negócio -->
+<div class="modal-overlay" id="novaNegocioModal" style="z-index:500">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-header">
+      <h2>Novo Negócio</h2>
+      <button class="modal-close" onclick="closeNovaNegocioModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Selecionar Lead <span class="required">*</span></label>
+        <input type="text" id="negLeadSearch" class="neg-lead-search" placeholder="Buscar por empresa ou nome…" oninput="filterNegLeads(this.value)" autocomplete="off" />
+        <div id="negLeadListWrap">
+          <div class="neg-lead-list" id="negLeadList"></div>
+        </div>
+        <div id="negSelectedBadge" style="display:none" class="neg-selected-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          <span id="negSelectedLabel"></span>
+          <button onclick="clearNegLead()" style="margin-left:auto;background:none;border:none;color:#1d4ed8;cursor:pointer;font-size:12px">Trocar</button>
+        </div>
+        <input type="hidden" id="negLeadId" />
+        <span class="field-error" id="negLeadError"></span>
+      </div>
+      <div class="form-group">
+        <label>Etapa do Pipeline <span class="required">*</span></label>
+        <select id="negStage" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;color:#0f172a"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Título do Negócio <span style="font-size:11px;color:#94a3b8">(opcional)</span></label>
+          <input type="text" id="negTitulo" placeholder="Ex: Proposta Software 2026" />
+        </div>
+        <div class="form-group">
+          <label>Valor Estimado (R$) <span style="font-size:11px;color:#94a3b8">(opcional)</span></label>
+          <input type="number" id="negValor" min="0" step="0.01" placeholder="0,00" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeNovaNegocioModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveNovaNegocio()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Adicionar ao Pipeline
+      </button>
     </div>
   </div>
 </div>
@@ -2444,41 +2523,155 @@ function populateFilterStatus() {
   if (stages.find(function(s){ return s.id === cur; })) sel.value = cur;
 }
 
+// ── Negócios (pipeline) ────────────────────────────────────────────────────
+var NEGOCIOS_KEY           = 'crm_negocios';
+var negocioLeadSelecionado = null;
+
+function loadNegocios()    { try { return JSON.parse(localStorage.getItem(NEGOCIOS_KEY)) || []; } catch { return []; } }
+function saveNegocios(arr) { localStorage.setItem(NEGOCIOS_KEY, JSON.stringify(arr)); }
+
+function openNovaNegocioModal() {
+  negocioLeadSelecionado = null;
+  document.getElementById('negLeadSearch').value = '';
+  document.getElementById('negLeadId').value = '';
+  document.getElementById('negLeadError').textContent = '';
+  document.getElementById('negTitulo').value = '';
+  document.getElementById('negValor').value = '';
+  document.getElementById('negSelectedBadge').style.display = 'none';
+  document.getElementById('negLeadListWrap').style.display = '';
+  var stages = loadStages();
+  document.getElementById('negStage').innerHTML = stages.map(function(s) {
+    return '<option value="' + esc(s.id) + '">' + esc(s.label) + '</option>';
+  }).join('');
+  filterNegLeads('');
+  document.getElementById('novaNegocioModal').classList.add('open');
+  document.getElementById('negLeadSearch').focus();
+}
+
+function closeNovaNegocioModal() {
+  document.getElementById('novaNegocioModal').classList.remove('open');
+  negocioLeadSelecionado = null;
+}
+
+function filterNegLeads(query) {
+  var q = (query || '').toLowerCase();
+  var filtered = leads.filter(function(l) {
+    return !q ||
+      (l.empresa || '').toLowerCase().includes(q) ||
+      (l.nome    || '').toLowerCase().includes(q) ||
+      (l.email   || '').toLowerCase().includes(q);
+  });
+  var list = document.getElementById('negLeadList');
+  if (!leads.length) {
+    list.innerHTML = '<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">Nenhum lead cadastrado no sistema</div>';
+    return;
+  }
+  if (!filtered.length) {
+    list.innerHTML = '<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">Nenhum lead encontrado</div>';
+    return;
+  }
+  list.innerHTML = filtered.slice(0, 50).map(function(l) {
+    var isSelected = negocioLeadSelecionado && negocioLeadSelecionado.id === l.id;
+    return '<div class="neg-lead-opt' + (isSelected ? ' selected' : '') + '" onclick="selectNegLead(\'' + l.id + '\')">' +
+      '<div>' +
+        '<div class="neg-lead-empresa">' + esc(l.empresa || 'Sem empresa') + '</div>' +
+        '<div class="neg-lead-info">' + esc(l.nome || '') + (l.cidade ? ' · ' + esc(l.cidade) + '/' + esc(l.estado || '') : '') + '</div>' +
+      '</div>' +
+      (l.porte ? '<span class="badge-porte porte-' + l.porte.toLowerCase().replace('é','e') + '" style="font-size:10px;flex-shrink:0">' + esc(l.porte) + '</span>' : '') +
+    '</div>';
+  }).join('');
+}
+
+function selectNegLead(id) {
+  var lead = leads.find(function(l){ return l.id === id; });
+  if (!lead) return;
+  negocioLeadSelecionado = lead;
+  document.getElementById('negLeadId').value = id;
+  document.getElementById('negLeadError').textContent = '';
+  document.getElementById('negSelectedLabel').textContent = (lead.empresa || lead.nome || 'Lead selecionado');
+  document.getElementById('negSelectedBadge').style.display = 'flex';
+  document.getElementById('negLeadListWrap').style.display = 'none';
+  document.getElementById('negLeadSearch').value = '';
+}
+
+function clearNegLead() {
+  negocioLeadSelecionado = null;
+  document.getElementById('negLeadId').value = '';
+  document.getElementById('negSelectedBadge').style.display = 'none';
+  document.getElementById('negLeadListWrap').style.display = '';
+  document.getElementById('negLeadSearch').value = '';
+  filterNegLeads('');
+  document.getElementById('negLeadSearch').focus();
+}
+
+function saveNovaNegocio() {
+  var leadId = document.getElementById('negLeadId').value;
+  if (!leadId) { document.getElementById('negLeadError').textContent = 'Selecione um lead'; return; }
+  var stageId = document.getElementById('negStage').value;
+  var titulo  = document.getElementById('negTitulo').value.trim();
+  var valor   = parseFloat(document.getElementById('negValor').value) || 0;
+  var negocios = loadNegocios();
+  negocios.push({ id: generateId(), leadId: leadId, stageId: stageId, titulo: titulo, valor: valor, criadoEm: Date.now() });
+  saveNegocios(negocios);
+  closeNovaNegocioModal();
+  renderKanban();
+}
+
+function removeNegocio(negId) {
+  if (!confirm('Remover este negócio do pipeline?')) return;
+  saveNegocios(loadNegocios().filter(function(n){ return n.id !== negId; }));
+  renderKanban();
+}
+
+window.openNovaNegocioModal  = openNovaNegocioModal;
+window.closeNovaNegocioModal = closeNovaNegocioModal;
+window.filterNegLeads        = filterNegLeads;
+window.selectNegLead         = selectNegLead;
+window.clearNegLead          = clearNegLead;
+window.saveNovaNegocio       = saveNovaNegocio;
+window.removeNegocio         = removeNegocio;
+
 // ── Kanban ─────────────────────────────────────────────────────────────────
-var draggedLeadId = null;
+var draggedNegocioId = null;
 
 function renderKanban() {
   var stages   = loadStages();
+  var negocios = loadNegocios();
   var lsData   = loadLeadServicos();
   var board    = document.getElementById('kanbanBoard');
   board.innerHTML = stages.map(function(stage) {
-    var sl = leads.filter(function(l){ return (l.status || 'Novo') === stage.id; });
-    var cards = sl.length
-      ? sl.map(function(l) {
-          var wa = l.whatsapp ? l.whatsapp.replace(/\D/g,'') : '';
-          var servs  = lsData[l.id] || [];
+    var sn = negocios.filter(function(n){ return n.stageId === stage.id; });
+    var cards = sn.length
+      ? sn.map(function(n) {
+          var lead   = leads.find(function(l){ return l.id === n.leadId; }) || {};
+          var wa     = lead.porte ? lead.whatsapp ? lead.whatsapp.replace(/\D/g,'') : '' : '';
+          wa = lead.whatsapp ? lead.whatsapp.replace(/\D/g,'') : '';
+          var servs  = lsData[n.leadId] || [];
           var sCount = servs.length;
           var sTotal = servs.reduce(function(acc, e){ return acc + (e.precoUnit * e.qty); }, 0);
+          var titulo = n.titulo || lead.empresa || '—';
           return '<div class="kanban-card" draggable="true"' +
-            ' ondragstart="dragStart(event,\'' + l.id + '\')"' +
+            ' ondragstart="dragStart(event,\'' + n.id + '\')"' +
             ' ondragend="dragEnd(event)"' +
-            ' onclick="openDetail(\'' + l.id + '\')">' +
-            '<div class="kcard-empresa">' + esc(l.empresa || '—') + '</div>' +
-            (l.nome ? '<div class="kcard-nome">' + esc(l.nome) + '</div>' : '') +
+            ' onclick="openDetail(\'' + n.leadId + '\')">' +
+            '<button class="kcard-del-btn" onclick="event.stopPropagation();removeNegocio(\'' + n.id + '\')" title="Remover do pipeline">✕</button>' +
+            '<div class="kcard-empresa">' + esc(titulo) + '</div>' +
+            (lead.nome ? '<div class="kcard-nome">' + esc(lead.nome) + '</div>' : '') +
+            (n.valor > 0 ? '<div class="kcard-valor">' + fmtMoney(n.valor) + '</div>' : '') +
             '<div class="kcard-footer">' +
-              (l.porte ? '<span class="badge-porte porte-' + l.porte.toLowerCase().replace('é','e') + '">' + esc(l.porte) + '</span>' : '<span></span>') +
+              (lead.porte ? '<span class="badge-porte porte-' + lead.porte.toLowerCase().replace('é','e') + '">' + esc(lead.porte) + '</span>' : '<span></span>') +
               (wa ? '<a class="kcard-wa" href="https://wa.me/55' + wa + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="WhatsApp">📱</a>' : '') +
             '</div>' +
-            '<button class="kcard-serv-btn" onclick="event.stopPropagation();openLeadServPicker(\'' + l.id + '\')">' +
+            '<button class="kcard-serv-btn" onclick="event.stopPropagation();openLeadServPicker(\'' + n.leadId + '\')">' +
               '📦 <span class="kcard-serv-count">' + sCount + '</span> Serviço' + (sCount !== 1 ? 's' : '') +
               (sCount > 0 ? ' · ' + fmtMoney(sTotal) : '') +
             '</button>' +
-            '<button class="kcard-prop-btn" onclick="event.stopPropagation();openPropostaModal(\'' + l.id + '\')">' +
-              '📄 Nova Proposta' +
+            '<button class="kcard-prop-btn" onclick="event.stopPropagation();openPropostaModal(\'' + n.leadId + '\')">' +
+              '📄 Proposta' +
             '</button>' +
           '</div>';
         }).join('')
-      : '<div class="kanban-empty">Nenhum lead</div>';
+      : '<div class="kanban-empty">Nenhum negócio<br><small style="color:#e2e8f0">Use "Novo Negócio" para adicionar</small></div>';
 
     return '<div class="kanban-column"' +
       ' ondragover="kDragOver(event,this)"' +
@@ -2487,23 +2680,21 @@ function renderKanban() {
       '<div class="kanban-col-header">' +
         '<span class="kanban-col-dot" style="background:' + stage.cor + '"></span>' +
         '<span class="kanban-col-title">' + esc(stage.label) + '</span>' +
-        '<span class="kanban-col-count">' + sl.length + '</span>' +
+        '<span class="kanban-col-count">' + sn.length + '</span>' +
       '</div>' +
       '<div class="kanban-col-body">' + cards + '</div>' +
     '</div>';
   }).join('');
 }
 
-function dragStart(event, id) {
-  draggedLeadId = id;
+function dragStart(event, negId) {
+  draggedNegocioId = negId;
   event.dataTransfer.effectAllowed = 'move';
-  setTimeout(function() {
-    if (event.target) event.target.classList.add('dragging');
-  }, 0);
+  setTimeout(function() { if (event.target) event.target.classList.add('dragging'); }, 0);
 }
 function dragEnd(event) {
   if (event.target) event.target.classList.remove('dragging');
-  draggedLeadId = null;
+  draggedNegocioId = null;
 }
 function kDragOver(event, col) {
   event.preventDefault();
@@ -2512,22 +2703,16 @@ function kDragOver(event, col) {
 function kDragLeave(event, col) {
   if (!event.relatedTarget || !col.contains(event.relatedTarget)) col.classList.remove('drag-over');
 }
-async function dropOnStage(event, stageId, col) {
+function dropOnStage(event, stageId, col) {
   event.preventDefault();
   col.classList.remove('drag-over');
-  if (!draggedLeadId) return;
-  var lead = leads.find(function(l){ return l.id === draggedLeadId; });
-  if (!lead || lead.status === stageId) return;
-  var updated = Object.assign({}, lead, { status: stageId });
-  try {
-    await updateLead(lead.id, updated);
-    var idx = leads.findIndex(function(l){ return l.id === draggedLeadId; });
-    if (idx !== -1) leads[idx] = updated;
-    renderKanban();
-    updateDashboard();
-  } catch(err) {
-    alert('Erro ao mover lead. Tente novamente.');
-  }
+  if (!draggedNegocioId) return;
+  var negocios = loadNegocios();
+  var idx = negocios.findIndex(function(n){ return n.id === draggedNegocioId; });
+  if (idx === -1 || negocios[idx].stageId === stageId) return;
+  negocios[idx].stageId = stageId;
+  saveNegocios(negocios);
+  renderKanban();
 }
 window.dragStart   = dragStart;
 window.dragEnd     = dragEnd;
