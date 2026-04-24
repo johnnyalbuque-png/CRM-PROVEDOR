@@ -2353,8 +2353,64 @@ function saveDetailFollowUp() {
   var idx      = negocios.findIndex(function(x){ return x.id === _currentDetailNegId; });
   if (idx === -1) return;
   negocios[idx].followUp = data ? { data: data, hora: hora } : null;
+  negocios[idx] = _syncFollowUpTask(negocios[idx], data, hora);
   saveNegocios(negocios);
   renderKanban();
+  updateNavBadge();
+}
+
+function _syncFollowUpTask(neg, data, hora) {
+  var session  = getSession();
+  var tarefas  = loadTarefas();
+  var lead     = leads.find(function(l){ return l.id === neg.leadId; }) || {};
+  var taskId   = neg.followUpTaskId || null;
+
+  if (data) {
+    var titulo = 'Follow-up: ' + (lead.empresa || 'Lead');
+    if (taskId) {
+      // Atualiza tarefa existente
+      var tIdx = tarefas.findIndex(function(x){ return x.id === taskId; });
+      if (tIdx !== -1) {
+        tarefas[tIdx].vencimento = data;
+        tarefas[tIdx].hora       = hora;
+        tarefas[tIdx].titulo     = titulo;
+        if (tarefas[tIdx].status === 'Concluída') tarefas[tIdx].status = 'Pendente';
+      } else {
+        taskId = null; // tarefa foi deletada, cria nova
+      }
+    }
+    if (!taskId) {
+      // Cria nova tarefa
+      var nova = {
+        id:          generateId(),
+        titulo:      titulo,
+        descricao:   '',
+        vencimento:  data,
+        hora:        hora,
+        prioridade:  'Alta',
+        status:      'Pendente',
+        responsavel: session ? session.nome : '',
+        leadId:      neg.leadId || '',
+        criadoPor:   session ? session.nome : '—',
+        criadoEm:    Date.now(),
+      };
+      tarefas.push(nova);
+      taskId = nova.id;
+    }
+  } else {
+    // Follow-up removido → remove tarefa associada se ainda estiver pendente
+    if (taskId) {
+      var tIdx2 = tarefas.findIndex(function(x){ return x.id === taskId; });
+      if (tIdx2 !== -1 && tarefas[tIdx2].status !== 'Concluída') {
+        tarefas.splice(tIdx2, 1);
+      }
+      taskId = null;
+    }
+  }
+
+  saveTarefas(tarefas);
+  neg.followUpTaskId = taskId;
+  return neg;
 }
 
 function openDelete(id) {
@@ -3135,15 +3191,16 @@ function addComment() {
 }
 
 function saveFollowUp() {
-  var data = document.getElementById('followUpData').value;
-  var hora = document.getElementById('followUpHora').value;
+  var data     = document.getElementById('followUpData').value;
+  var hora     = document.getElementById('followUpHora').value;
   var negocios = loadNegocios();
-  var idx = negocios.findIndex(function(x){ return x.id === _commentNegId; });
+  var idx      = negocios.findIndex(function(x){ return x.id === _commentNegId; });
   if (idx === -1) return;
   negocios[idx].followUp = data ? { data: data, hora: hora } : null;
+  negocios[idx] = _syncFollowUpTask(negocios[idx], data, hora);
   saveNegocios(negocios);
   renderKanban();
-  alert('Follow-up salvo!');
+  updateNavBadge();
 }
 
 window.openCommentModal    = openCommentModal;
