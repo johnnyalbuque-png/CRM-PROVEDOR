@@ -696,6 +696,9 @@
       flex-direction: column;
       gap: 8px;
     }
+    /* Capitalização automática nos campos */
+    #empresa { text-transform: uppercase; }
+
     .kanban-card {
       background: #fff;
       border-radius: 8px;
@@ -798,6 +801,16 @@
     /* ── Proposta button no card ── */
     .kcard-prop-btn { display:inline-flex; align-items:center; justify-content:center; gap:4px; font-size:11px; color:#7c3aed; background:#ede9fe; border:none; border-radius:6px; padding:2px 8px; cursor:pointer; margin-top:4px; line-height:1.8; width:100%; }
     .kcard-prop-btn:hover { background:#ddd6fe; }
+    .kcard-comment-btn { display:inline-flex; align-items:center; justify-content:center; gap:4px; font-size:11px; color:#0369a1; background:#e0f2fe; border:none; border-radius:6px; padding:2px 8px; cursor:pointer; margin-top:4px; line-height:1.8; width:100%; }
+    .kcard-comment-btn:hover { background:#bae6fd; }
+    .kcard-followup-badge { display:flex; align-items:center; gap:4px; font-size:10px; font-weight:600; color:#b45309; background:#fef3c7; border:1px solid #fde68a; border-radius:5px; padding:2px 6px; margin-top:4px; }
+    /* Modal comentários */
+    .comment-item { padding:8px 0; border-bottom:1px solid #f1f5f9; }
+    .comment-item:last-child { border-bottom:none; }
+    .comment-meta { font-size:10px; color:#94a3b8; margin-bottom:2px; }
+    .comment-text { font-size:13px; color:#0f172a; white-space:pre-wrap; }
+    .followup-row { display:flex; gap:8px; align-items:flex-end; }
+    .followup-row .form-group { flex:1; margin:0; }
 
     /* ── Propostas salvas no detalhe do lead ── */
     .proposta-saved-item { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:8px; gap:12px; }
@@ -1017,7 +1030,7 @@
           <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/>
           <line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/>
         </svg>
-        Leads
+        LEADS
       </button>
       <button class="nav-item" id="navCRM" onclick="showView('crm')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1031,7 +1044,7 @@
           <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>
           <path d="M16 10a4 4 0 0 1-8 0"/>
         </svg>
-        Serviços
+        SERVIÇOS
       </button>
     </nav>
   </aside>
@@ -1056,6 +1069,11 @@
       <input type="text" id="searchInput" class="search-input" placeholder="Buscar por empresa, cargo, e-mail…" />
     </div>
     <div class="toolbar-actions">
+      <select id="filterTipo" class="select-filter">
+        <option value="">Provedores e Expositores</option>
+        <option value="Provedor">Somente Provedores</option>
+        <option value="Expositor">Somente Expositores</option>
+      </select>
       <select id="filterStatus" class="select-filter">
         <option value="">Todos os status</option>
         <option value="Novo">Novo</option>
@@ -1138,7 +1156,7 @@
     <!-- CRM / Kanban -->
     <div id="crmView" style="display:none">
       <div class="crm-toolbar">
-        <h2>Pipeline CRM</h2>
+        <h2>PIPELINE CRM</h2>
         <div style="display:flex;gap:8px">
           <button class="btn btn-outline" id="editStagesBtn">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1544,6 +1562,48 @@
   </div>
 </div>
 
+<!-- Modal: Comentários e Follow-up do Negócio -->
+<div class="modal-overlay" id="commentModal" style="z-index:650">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h2>💬 <span id="commentModalTitle">Comentários</span></h2>
+      <button class="modal-close" onclick="closeCommentModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
+      <!-- Follow-up -->
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px">
+        <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">📅 Follow-up</div>
+        <div class="followup-row">
+          <div class="form-group">
+            <label style="font-size:11px;color:#64748b">Data</label>
+            <input type="date" id="followUpData" class="form-control" style="padding:6px 10px;font-size:13px" />
+          </div>
+          <div class="form-group">
+            <label style="font-size:11px;color:#64748b">Horário</label>
+            <input type="time" id="followUpHora" class="form-control" style="padding:6px 10px;font-size:13px" />
+          </div>
+          <button class="btn btn-primary" style="padding:6px 14px;font-size:12px;flex-shrink:0" onclick="saveFollowUp()">Salvar</button>
+        </div>
+      </div>
+      <!-- Novo comentário -->
+      <div>
+        <label style="font-size:12px;font-weight:700;color:#0f172a;display:block;margin-bottom:6px">Novo comentário</label>
+        <textarea id="newCommentText" rows="3" placeholder="Escreva um comentário…" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;resize:vertical;font-family:inherit;outline:none"></textarea>
+        <button class="btn btn-primary" style="margin-top:6px;width:100%" onclick="addComment()">Adicionar Comentário</button>
+      </div>
+      <!-- Lista de comentários -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#0f172a;margin-bottom:8px">Histórico</div>
+        <div id="commentsList" style="max-height:260px;overflow-y:auto"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Novo Negócio -->
 <div class="modal-overlay" id="novaNegocioModal" style="z-index:500">
   <div class="modal" style="max-width:540px">
@@ -1724,6 +1784,16 @@
 
 <script>
 'use strict';
+
+// ── Helpers de capitalização ───────────────────────────────────────────────
+function strToUpper(s) { return (s || '').toUpperCase(); }
+function strToTitleCase(s) {
+  return (s || '').toLowerCase().replace(/(?:^|\s)\S/g, function(c){ return c.toUpperCase(); });
+}
+function strToSentenceCase(s) {
+  var t = (s || '').trim();
+  return t ? t[0].toUpperCase() + t.slice(1) : '';
+}
 
 // ── Supabase ───────────────────────────────────────────────────────────────
 const db = supabase.createClient(
@@ -1918,9 +1988,9 @@ function updateDashboard() {
 }
 
 // Clique no card filtra a lista
-document.getElementById('dTotal').closest('.dash-card').addEventListener('click', function(){ filterStatus.value=''; filterPorte.value=''; searchInput.value=''; filterEstado.value=''; filterTipoValue=''; render(); });
-document.getElementById('dProvedores').closest('.dash-card').addEventListener('click', function(){ filterStatus.value=''; filterPorte.value=''; searchInput.value=''; filterEstado.value=''; filterTipoValue='Provedor'; render(); });
-document.getElementById('dExpositores').closest('.dash-card').addEventListener('click', function(){ filterStatus.value=''; filterPorte.value=''; searchInput.value=''; filterEstado.value=''; filterTipoValue='Expositor'; render(); });
+document.getElementById('dTotal').closest('.dash-card').addEventListener('click', function(){ filterStatus.value=''; filterPorte.value=''; searchInput.value=''; filterEstado.value=''; filterTipoValue=''; document.getElementById('filterTipo').value=''; render(); });
+document.getElementById('dProvedores').closest('.dash-card').addEventListener('click', function(){ filterStatus.value=''; filterPorte.value=''; searchInput.value=''; filterEstado.value=''; filterTipoValue='Provedor'; document.getElementById('filterTipo').value='Provedor'; render(); });
+document.getElementById('dExpositores').closest('.dash-card').addEventListener('click', function(){ filterStatus.value=''; filterPorte.value=''; searchInput.value=''; filterEstado.value=''; filterTipoValue='Expositor'; document.getElementById('filterTipo').value='Expositor'; render(); });
 document.getElementById('dNovo').closest('.dash-card').addEventListener('click', function(){ filterTipoValue=''; filterStatus.value='Novo'; filterPorte.value=''; render(); });
 document.getElementById('dInteressado').closest('.dash-card').addEventListener('click', function(){ filterTipoValue=''; filterStatus.value='Interessado'; filterPorte.value=''; render(); });
 document.getElementById('dProposta').closest('.dash-card').addEventListener('click', function(){ filterTipoValue=''; filterStatus.value='Proposta'; filterPorte.value=''; render(); });
@@ -2124,6 +2194,10 @@ leadForm.addEventListener('submit', async function(e) {
     segmento: tipoVal === 'Expositor' ? document.getElementById('segmento').value.trim() : '',
     cnpj:     document.getElementById('cnpj').value.trim(),
   };
+  // Capitalização automática
+  data.empresa = strToUpper(data.empresa);
+  data.nome    = strToTitleCase(data.nome);
+  data.cargo   = strToSentenceCase(data.cargo);
   if (!validate(data)) return;
   var id = document.getElementById('leadId').value;
 
@@ -2191,6 +2265,10 @@ searchInput.addEventListener('input', render);
 filterStatus.addEventListener('change', render);
 filterEstado.addEventListener('change', render);
 filterPorte.addEventListener('change',  render);
+document.getElementById('filterTipo').addEventListener('change', function(){
+  filterTipoValue = this.value;
+  render();
+});
 
 // Botões
 document.getElementById('detailBackBtn').addEventListener('click', closeDetail);
@@ -2773,6 +2851,83 @@ window.clearNegLead          = clearNegLead;
 window.saveNovaNegocio       = saveNovaNegocio;
 window.removeNegocio         = removeNegocio;
 
+// ── Comentários e Follow-up ────────────────────────────────────────────────
+var _commentNegId = null;
+
+function openCommentModal(negId) {
+  _commentNegId = negId;
+  var negocios = loadNegocios();
+  var n = negocios.find(function(x){ return x.id === negId; });
+  if (!n) return;
+  var lead = leads.find(function(l){ return l.id === n.leadId; }) || {};
+  document.getElementById('commentModalTitle').textContent = lead.empresa || n.titulo || 'Negócio';
+  document.getElementById('newCommentText').value = '';
+  // Preenche follow-up existente
+  var fu = n.followUp || {};
+  document.getElementById('followUpData').value = fu.data || '';
+  document.getElementById('followUpHora').value = fu.hora || '';
+  renderCommentsList(n);
+  document.getElementById('commentModal').classList.add('open');
+}
+
+function closeCommentModal() {
+  document.getElementById('commentModal').classList.remove('open');
+  _commentNegId = null;
+}
+
+function renderCommentsList(n) {
+  var comentarios = (n && n.comentarios) || [];
+  var el = document.getElementById('commentsList');
+  if (!comentarios.length) {
+    el.innerHTML = '<div style="color:#94a3b8;font-size:13px;font-style:italic;padding:8px 0">Nenhum comentário ainda.</div>';
+    return;
+  }
+  el.innerHTML = comentarios.slice().reverse().map(function(c) {
+    var dt = new Date(c.criadoEm);
+    var dtStr = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+    return '<div class="comment-item">' +
+      '<div class="comment-meta"><strong>' + esc(c.autor) + '</strong> · ' + dtStr + '</div>' +
+      '<div class="comment-text">' + esc(c.texto) + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function addComment() {
+  var texto = document.getElementById('newCommentText').value.trim();
+  if (!texto) return;
+  var session = getSession();
+  var negocios = loadNegocios();
+  var idx = negocios.findIndex(function(x){ return x.id === _commentNegId; });
+  if (idx === -1) return;
+  if (!negocios[idx].comentarios) negocios[idx].comentarios = [];
+  negocios[idx].comentarios.push({
+    texto:    texto,
+    autor:    session ? session.nome : '—',
+    criadoEm: Date.now(),
+  });
+  saveNegocios(negocios);
+  document.getElementById('newCommentText').value = '';
+  renderCommentsList(negocios[idx]);
+  renderKanban();
+}
+
+function saveFollowUp() {
+  var data = document.getElementById('followUpData').value;
+  var hora = document.getElementById('followUpHora').value;
+  var negocios = loadNegocios();
+  var idx = negocios.findIndex(function(x){ return x.id === _commentNegId; });
+  if (idx === -1) return;
+  negocios[idx].followUp = data ? { data: data, hora: hora } : null;
+  saveNegocios(negocios);
+  renderKanban();
+  alert('Follow-up salvo!');
+}
+
+window.openCommentModal = openCommentModal;
+window.closeCommentModal = closeCommentModal;
+window.addComment = addComment;
+window.saveFollowUp = saveFollowUp;
+
 // ── Kanban ─────────────────────────────────────────────────────────────────
 var draggedNegocioId = null;
 
@@ -2811,6 +2966,19 @@ function renderKanban() {
             '<button class="kcard-prop-btn" onclick="event.stopPropagation();openPropostaModal(\'' + n.leadId + '\')">' +
               '📄 Proposta' +
             '</button>' +
+            (function(){
+              var cCount = (n.comentarios || []).length;
+              var fu = n.followUp;
+              var fuStr = '';
+              if (fu && fu.data) {
+                var d = new Date(fu.data + 'T12:00:00');
+                fuStr = d.toLocaleDateString('pt-BR') + (fu.hora ? ' ' + fu.hora : '');
+              }
+              return '<button class="kcard-comment-btn" onclick="event.stopPropagation();openCommentModal(\'' + n.id + '\')">' +
+                '💬 ' + cCount + ' Comentário' + (cCount !== 1 ? 's' : '') +
+              '</button>' +
+              (fuStr ? '<div class="kcard-followup-badge">📅 Follow-up: ' + fuStr + '</div>' : '');
+            })() +
           '</div>';
         }).join('')
       : '<div class="kanban-empty">Nenhum negócio<br><small style="color:#e2e8f0">Use "Novo Negócio" para adicionar</small></div>';
