@@ -860,6 +860,8 @@
     .notif-time { font-size:11px; color:#94a3b8; margin-top:3px; }
     .notif-empty { padding:32px 16px; text-align:center; color:#94a3b8; font-size:13px; }
     .visivel-para-row { display:none; }
+    .visivel-check-item { display:flex; align-items:center; gap:8px; font-size:13px; color:#0f172a; cursor:pointer; }
+    .visivel-check-item input[type=checkbox] { width:15px; height:15px; cursor:pointer; accent-color:#2563eb; }
     /* Modal comentários */
     .comment-item { padding:8px 0; border-bottom:1px solid #f1f5f9; }
     .comment-item:last-child { border-bottom:none; }
@@ -1796,12 +1798,12 @@
         <select id="tarefaVisibilidade" onchange="onVisibilidadeChange(this.value)">
           <option value="todos">Todos os usuários visualizam</option>
           <option value="criador">Somente o criador visualiza</option>
-          <option value="especifico">Somente um usuário específico</option>
+          <option value="especifico">Usuários específicos</option>
         </select>
       </div>
       <div class="form-group visivel-para-row" id="visivelParaRow">
-        <label for="tarefaVisivelPara">Usuário que pode visualizar</label>
-        <select id="tarefaVisivelPara"></select>
+        <label>Usuários que podem visualizar</label>
+        <div id="visivelParaChecks" style="display:flex;flex-direction:column;gap:6px;max-height:140px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;background:#f8fafc"></div>
       </div>
       <div class="form-group">
         <label for="tarefaLeadId">Vincular a um Lead (opcional)</label>
@@ -4252,7 +4254,10 @@ function renderTarefas() {
   var myNome = session ? session.nome : '';
   var visible = tarefas.filter(function(t) {
     if (t.visibilidade === 'criador')    return t.criadoPor === myNome;
-    if (t.visibilidade === 'especifico') return t.criadoPor === myNome || t.visivelPara === myNome || t.responsavel === myNome;
+    if (t.visibilidade === 'especifico') {
+      var arr = Array.isArray(t.visivelPara) ? t.visivelPara : (t.visivelPara ? [t.visivelPara] : []);
+      return t.criadoPor === myNome || t.responsavel === myNome || arr.indexOf(myNome) !== -1;
+    }
     return true; // 'todos' ou sem visibilidade definida
   });
 
@@ -4353,14 +4358,19 @@ async function openTarefaModal(id) {
     return '<option value="' + esc(u.nome) + '" data-id="' + esc(u.id) + '"' + (sel ? ' selected' : '') + '>' + esc(u.nome) + '</option>';
   }).join('');
 
-  var visib = t ? (t.visibilidade || 'todos') : 'todos';
+  var visib      = t ? (t.visibilidade || 'todos') : 'todos';
+  var visivelArr = t && Array.isArray(t.visivelPara) ? t.visivelPara : (t && t.visivelPara ? [t.visivelPara] : []);
   document.getElementById('tarefaVisibilidade').value = visib;
-  var vpSel = document.getElementById('tarefaVisivelPara');
-  vpSel.innerHTML = ativos.map(function(u) {
-    var sel = t && t.visivelPara === u.nome;
-    return '<option value="' + esc(u.nome) + '" data-id="' + esc(u.id) + '"' + (sel ? ' selected' : '') + '>' + esc(u.nome) + '</option>';
+  // Renderiza checkboxes de usuários
+  var checksEl = document.getElementById('visivelParaChecks');
+  checksEl.innerHTML = ativos.filter(function(u){ return u.nome !== meuNome; }).map(function(u) {
+    var checked = visivelArr.indexOf(u.nome) !== -1;
+    return '<label class="visivel-check-item">' +
+      '<input type="checkbox" name="visivelParaCheck" value="' + esc(u.nome) + '"' + (checked ? ' checked' : '') + '>' +
+      esc(u.nome) +
+    '</label>';
   }).join('');
-  document.getElementById('visivelParaRow').style.display = visib === 'especifico' ? '' : 'none';
+  document.getElementById('visivelParaRow').style.display = visib === 'especifico' ? 'block' : 'none';
 
   // Leads
   var leadSel = document.getElementById('tarefaLeadId');
@@ -4374,7 +4384,7 @@ async function openTarefaModal(id) {
 }
 
 function onVisibilidadeChange(val) {
-  document.getElementById('visivelParaRow').style.display = val === 'especifico' ? '' : 'none';
+  document.getElementById('visivelParaRow').style.display = val === 'especifico' ? 'block' : 'none';
 }
 
 function closeTarefaModal() {
@@ -4393,16 +4403,20 @@ function saveTarefa() {
   var id        = document.getElementById('tarefaId').value;
   var session   = getSession();
   var tarefas   = loadTarefas();
-  var isNew        = !id;
-  var visib        = document.getElementById('tarefaVisibilidade').value;
-  var respSel      = document.getElementById('tarefaResponsavel');
-  var vpSel        = document.getElementById('tarefaVisivelPara');
-  var respNome     = respSel.value;
-  var respId       = (respSel.options[respSel.selectedIndex] || {}).dataset && respSel.options[respSel.selectedIndex].dataset.id || '';
-  var vpNome       = vpSel.value;
-  var vpId         = (vpSel.options[vpSel.selectedIndex] || {}).dataset && vpSel.options[vpSel.selectedIndex].dataset.id || '';
-  var meuNome      = session ? session.nome : '—';
-  var existing     = isNew ? null : tarefas.find(function(x){ return x.id === id; });
+  var isNew    = !id;
+  var visib    = document.getElementById('tarefaVisibilidade').value;
+  var respSel  = document.getElementById('tarefaResponsavel');
+  var respNome = respSel.value;
+  var meuNome  = session ? session.nome : '—';
+  var existing = isNew ? null : tarefas.find(function(x){ return x.id === id; });
+
+  // Coleta checkboxes de usuários específicos
+  var visivelArr = [];
+  if (visib === 'especifico') {
+    document.querySelectorAll('#visivelParaChecks input[name=visivelParaCheck]:checked').forEach(function(cb) {
+      visivelArr.push(cb.value);
+    });
+  }
 
   var tarefa = {
     id:           id || generateId(),
@@ -4414,7 +4428,7 @@ function saveTarefa() {
     status:       document.getElementById('tarefaStatus').value,
     responsavel:  respNome,
     visibilidade: visib,
-    visivelPara:  visib === 'especifico' ? vpNome : '',
+    visivelPara:  visivelArr,
     leadId:       document.getElementById('tarefaLeadId').value,
     criadoPor:    isNew ? meuNome : (existing || {}).criadoPor,
     criadoEm:     isNew ? Date.now() : (existing || {}).criadoEm,
@@ -4435,12 +4449,14 @@ function saveTarefa() {
       if (r.data) sendNotification(r.data.id, r.data.nome, tarefa, meuNome);
     });
   }
-  // Notificar usuário específico de visibilidade
-  if (visib === 'especifico' && vpNome && vpNome !== meuNome && vpNome !== respNome) {
-    db.from('usuarios').select('id,nome').eq('nome', vpNome).maybeSingle().then(function(r) {
-      if (r.data) sendNotification(r.data.id, r.data.nome, tarefa, meuNome);
-    });
-  }
+  // Notificar usuários específicos de visibilidade
+  visivelArr.forEach(function(nome) {
+    if (nome && nome !== meuNome && nome !== respNome) {
+      db.from('usuarios').select('id,nome').eq('nome', nome).maybeSingle().then(function(r) {
+        if (r.data) sendNotification(r.data.id, r.data.nome, tarefa, meuNome);
+      });
+    }
+  });
 
   closeTarefaModal();
   renderTarefas();
