@@ -804,6 +804,7 @@
     .kcard-comment-btn { display:inline-flex; align-items:center; justify-content:center; gap:4px; font-size:11px; color:#0369a1; background:#e0f2fe; border:none; border-radius:6px; padding:2px 8px; cursor:pointer; margin-top:4px; line-height:1.8; width:100%; }
     .kcard-comment-btn:hover { background:#bae6fd; }
     .kcard-followup-badge { display:flex; align-items:center; gap:4px; font-size:10px; font-weight:600; color:#b45309; background:#fef3c7; border:1px solid #fde68a; border-radius:5px; padding:2px 6px; margin-top:4px; }
+    .kcard-comment-badge  { display:flex; align-items:center; gap:4px; font-size:10px; font-weight:600; color:#0369a1; background:#e0f2fe; border:1px solid #bae6fd; border-radius:5px; padding:2px 6px; margin-top:4px; }
     /* Modal comentários */
     .comment-item { padding:8px 0; border-bottom:1px solid #f1f5f9; }
     .comment-item:last-child { border-bottom:none; }
@@ -1401,6 +1402,32 @@
         <h3 style="margin-bottom:0">Propostas</h3>
       </div>
       <div id="dPropostasList"></div>
+    </div>
+    <div class="detail-card" id="dCommentsCard" style="display:none">
+      <h3>💬 Comentários &amp; Follow-up</h3>
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">📅 Follow-up</div>
+        <div class="followup-row">
+          <div class="form-group" style="margin:0;flex:1">
+            <label style="font-size:11px;color:#64748b">Data</label>
+            <input type="date" id="dFollowUpData" class="form-control" style="padding:6px 10px;font-size:13px" />
+          </div>
+          <div class="form-group" style="margin:0;flex:1">
+            <label style="font-size:11px;color:#64748b">Horário</label>
+            <input type="time" id="dFollowUpHora" class="form-control" style="padding:6px 10px;font-size:13px" />
+          </div>
+          <button class="btn btn-primary" style="padding:6px 14px;font-size:12px;flex-shrink:0;align-self:flex-end" onclick="saveDetailFollowUp()">Salvar</button>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:700;color:#0f172a;display:block;margin-bottom:6px">Novo comentário</label>
+        <textarea id="dNewCommentText" rows="3" placeholder="Escreva um comentário…" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;resize:vertical;font-family:inherit;outline:none;box-sizing:border-box"></textarea>
+        <button class="btn btn-primary" style="margin-top:6px;width:100%" onclick="addDetailComment()">Adicionar Comentário</button>
+      </div>
+      <div style="margin-top:16px">
+        <div style="font-size:12px;font-weight:700;color:#0f172a;margin-bottom:8px">Histórico</div>
+        <div id="dCommentsList"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2096,8 +2123,9 @@ function openEdit(id) {
 }
 
 var _currentDetailLeadId = null;
+var _currentDetailNegId  = null;
 
-function openDetail(id) {
+function openDetail(id, negId) {
   var l = leads.find(function(x){ return x.id === id; });
   if (!l) return;
   _currentDetailLeadId = id;
@@ -2128,12 +2156,75 @@ function openDetail(id) {
   document.getElementById('detailEditBtn').onclick     = function(){ closeDetail(); openEdit(id); };
   document.getElementById('detailPropostaBtn').onclick = function(){ openPropostaModal(id); };
   renderDetailPropostas(id);
+
+  // Encontra o negócio: usa negId se fornecido, senão pega o primeiro do lead
+  var negs = loadNegocios().filter(function(x){ return x.leadId === id; });
+  var neg  = negId ? negs.find(function(x){ return x.id === negId; }) : negs[0];
+  renderDetailComments(neg || null);
+
   document.getElementById('detailOverlay').classList.add('open');
 }
 
 function closeDetail() {
   document.getElementById('detailOverlay').classList.remove('open');
   _currentDetailLeadId = null;
+  _currentDetailNegId  = null;
+}
+
+function renderDetailComments(n) {
+  var card = document.getElementById('dCommentsCard');
+  if (!n) { card.style.display = 'none'; _currentDetailNegId = null; return; }
+  _currentDetailNegId = n.id;
+  card.style.display = '';
+  var fu = n.followUp || {};
+  document.getElementById('dFollowUpData').value = fu.data || '';
+  document.getElementById('dFollowUpHora').value = fu.hora || '';
+  document.getElementById('dNewCommentText').value = '';
+  _renderDetailCommentsList(n);
+}
+
+function _renderDetailCommentsList(n) {
+  var comentarios = (n && n.comentarios) || [];
+  var el = document.getElementById('dCommentsList');
+  if (!comentarios.length) {
+    el.innerHTML = '<div style="color:#94a3b8;font-size:13px;font-style:italic;padding:8px 0">Nenhum comentário ainda.</div>';
+    return;
+  }
+  el.innerHTML = comentarios.slice().reverse().map(function(c) {
+    var dt    = new Date(c.criadoEm);
+    var dtStr = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+    return '<div class="comment-item">' +
+      '<div class="comment-meta"><strong>' + esc(c.autor) + '</strong> · ' + dtStr + '</div>' +
+      '<div class="comment-text">' + esc(c.texto) + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function addDetailComment() {
+  var texto = document.getElementById('dNewCommentText').value.trim();
+  if (!texto || !_currentDetailNegId) return;
+  var session  = getSession();
+  var negocios = loadNegocios();
+  var idx      = negocios.findIndex(function(x){ return x.id === _currentDetailNegId; });
+  if (idx === -1) return;
+  if (!negocios[idx].comentarios) negocios[idx].comentarios = [];
+  negocios[idx].comentarios.push({ texto: texto, autor: session ? session.nome : '—', criadoEm: Date.now() });
+  saveNegocios(negocios);
+  document.getElementById('dNewCommentText').value = '';
+  _renderDetailCommentsList(negocios[idx]);
+  renderKanban();
+}
+
+function saveDetailFollowUp() {
+  if (!_currentDetailNegId) return;
+  var data     = document.getElementById('dFollowUpData').value;
+  var hora     = document.getElementById('dFollowUpHora').value;
+  var negocios = loadNegocios();
+  var idx      = negocios.findIndex(function(x){ return x.id === _currentDetailNegId; });
+  if (idx === -1) return;
+  negocios[idx].followUp = data ? { data: data, hora: hora } : null;
+  saveNegocios(negocios);
+  renderKanban();
 }
 
 function openDelete(id) {
@@ -2923,10 +3014,12 @@ function saveFollowUp() {
   alert('Follow-up salvo!');
 }
 
-window.openCommentModal = openCommentModal;
-window.closeCommentModal = closeCommentModal;
-window.addComment = addComment;
-window.saveFollowUp = saveFollowUp;
+window.openCommentModal    = openCommentModal;
+window.closeCommentModal   = closeCommentModal;
+window.addComment          = addComment;
+window.saveFollowUp        = saveFollowUp;
+window.addDetailComment    = addDetailComment;
+window.saveDetailFollowUp  = saveDetailFollowUp;
 
 // ── Kanban ─────────────────────────────────────────────────────────────────
 var draggedNegocioId = null;
@@ -2950,7 +3043,7 @@ function renderKanban() {
           return '<div class="kanban-card" draggable="true"' +
             ' ondragstart="dragStart(event,\'' + n.id + '\')"' +
             ' ondragend="dragEnd(event)"' +
-            ' onclick="openDetail(\'' + n.leadId + '\')">' +
+            ' onclick="openDetail(\'' + n.leadId + '\',\'' + n.id + '\')">' +
             '<button class="kcard-del-btn" onclick="event.stopPropagation();removeNegocio(\'' + n.id + '\')" title="Remover do pipeline">✕</button>' +
             '<div class="kcard-empresa">' + esc(titulo) + '</div>' +
             (lead.nome ? '<div class="kcard-nome">' + esc(lead.nome) + '</div>' : '') +
@@ -2974,9 +3067,7 @@ function renderKanban() {
                 var d = new Date(fu.data + 'T12:00:00');
                 fuStr = d.toLocaleDateString('pt-BR') + (fu.hora ? ' ' + fu.hora : '');
               }
-              return '<button class="kcard-comment-btn" onclick="event.stopPropagation();openCommentModal(\'' + n.id + '\')">' +
-                '💬 ' + cCount + ' Comentário' + (cCount !== 1 ? 's' : '') +
-              '</button>' +
+              return (cCount > 0 ? '<div class="kcard-comment-badge">💬 ' + cCount + ' Comentário' + (cCount !== 1 ? 's' : '') + '</div>' : '') +
               (fuStr ? '<div class="kcard-followup-badge">📅 Follow-up: ' + fuStr + '</div>' : '');
             })() +
           '</div>';
@@ -3820,9 +3911,12 @@ async function boot() {
       renderServicos();
       var cv = document.getElementById('crmView');
       if (cv && cv.style.display !== 'none') renderKanban();
-      // Se a lista de propostas mudou e o painel de detalhes está aberto, atualiza
       if (payload.new.id === PROPOSTAS_KEY && _currentDetailLeadId) {
         renderDetailPropostas(_currentDetailLeadId);
+      }
+      if (payload.new.id === NEGOCIOS_KEY && _currentDetailNegId) {
+        var n = loadNegocios().find(function(x){ return x.id === _currentDetailNegId; });
+        if (n) _renderDetailCommentsList(n);
       }
     })
     .subscribe();
