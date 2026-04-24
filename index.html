@@ -805,6 +805,37 @@
     .kcard-comment-btn:hover { background:#bae6fd; }
     .kcard-followup-badge { display:flex; align-items:center; gap:4px; font-size:10px; font-weight:600; color:#b45309; background:#fef3c7; border:1px solid #fde68a; border-radius:5px; padding:2px 6px; margin-top:4px; }
     .kcard-comment-badge  { display:flex; align-items:center; gap:4px; font-size:10px; font-weight:600; color:#0369a1; background:#e0f2fe; border:1px solid #bae6fd; border-radius:5px; padding:2px 6px; margin-top:4px; }
+
+    /* ── Tarefas ── */
+    .tarefas-toolbar { padding:24px 24px 0; display:flex; align-items:center; justify-content:space-between; }
+    .tarefas-toolbar h2 { font-size:17px; font-weight:700; }
+    .tarefas-filters { display:flex; gap:8px; padding:12px 24px 0; flex-wrap:wrap; align-items:center; }
+    .tarefa-list { padding:16px 24px 24px; display:flex; flex-direction:column; gap:8px; }
+    .tarefa-empty { text-align:center; padding:56px 24px; color:#94a3b8; font-size:14px; }
+    .tarefa-item { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:14px 16px; display:flex; align-items:flex-start; gap:12px; cursor:pointer; transition:box-shadow .15s; }
+    .tarefa-item:hover { box-shadow:0 2px 8px rgba(0,0,0,.08); }
+    .tarefa-item.concluida { opacity:.55; }
+    .tarefa-check { width:22px; height:22px; border:2px solid #cbd5e1; border-radius:50%; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; margin-top:1px; transition:all .15s; }
+    .tarefa-check.pend { border-color:#cbd5e1; }
+    .tarefa-check.pend:hover { border-color:#2563eb; background:#eff6ff; }
+    .tarefa-check.anda { border-color:#f59e0b; background:#fef3c7; }
+    .tarefa-check.conc { border-color:#16a34a; background:#16a34a; }
+    .tarefa-titulo { font-size:14px; font-weight:600; color:#0f172a; }
+    .tarefa-item.concluida .tarefa-titulo { text-decoration:line-through; color:#94a3b8; }
+    .tarefa-meta { font-size:12px; color:#64748b; margin-top:5px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .tarefa-descricao { font-size:12px; color:#64748b; margin-top:5px; white-space:pre-wrap; line-height:1.5; }
+    .tarefa-del-btn { flex-shrink:0; padding:4px 6px; background:none; border:none; cursor:pointer; color:#cbd5e1; border-radius:4px; font-size:14px; line-height:1; transition:color .15s; }
+    .tarefa-del-btn:hover { color:#ef4444; }
+    .badge-prio { font-size:10px; font-weight:700; padding:2px 7px; border-radius:4px; text-transform:uppercase; letter-spacing:.04em; border:1px solid transparent; }
+    .prio-baixa   { background:#f0fdf4; color:#166534; border-color:#bbf7d0; }
+    .prio-media   { background:#fffbeb; color:#92400e; border-color:#fde68a; }
+    .prio-alta    { background:#fff7ed; color:#9a3412; border-color:#fed7aa; }
+    .prio-urgente { background:#fef2f2; color:#991b1b; border-color:#fecaca; }
+    .badge-stts { font-size:10px; font-weight:600; padding:2px 7px; border-radius:4px; }
+    .st-pend { background:#f1f5f9; color:#475569; }
+    .st-anda { background:#fef3c7; color:#92400e; }
+    .st-conc { background:#f0fdf4; color:#166534; }
+    .nav-badge { display:inline-flex; align-items:center; justify-content:center; background:#ef4444; color:#fff; font-size:10px; font-weight:700; border-radius:10px; padding:1px 6px; min-width:18px; margin-left:auto; line-height:1.5; }
     /* Modal comentários */
     .comment-item { padding:8px 0; border-bottom:1px solid #f1f5f9; }
     .comment-item:last-child { border-bottom:none; }
@@ -1040,6 +1071,14 @@
         </svg>
         CRM
       </button>
+      <button class="nav-item" id="navTarefas" onclick="showView('tarefas')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 11 12 14 22 4"/>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+        TAREFAS
+        <span class="nav-badge" id="navTarefasBadge" style="display:none">0</span>
+      </button>
       <button class="nav-item" id="navServicos" onclick="showView('servicos')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>
@@ -1175,6 +1214,32 @@
         </div>
       </div>
       <div class="kanban-board" id="kanbanBoard"></div>
+    </div>
+
+    <!-- Tarefas -->
+    <div id="tarefasView" style="display:none">
+      <div class="tarefas-toolbar">
+        <h2>TAREFAS</h2>
+        <button class="btn btn-primary" onclick="openTarefaModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Nova Tarefa
+        </button>
+      </div>
+      <div class="tarefas-filters">
+        <select id="tarefaFiltroSel" class="select-filter" onchange="setTarefaFiltro(this.value)">
+          <option value="todas">Todas as tarefas</option>
+          <option value="minhas">Minhas tarefas</option>
+          <option value="hoje">Vencem hoje</option>
+          <option value="atrasadas">Atrasadas</option>
+        </select>
+        <select id="tarefaOrdemSel" class="select-filter" onchange="setTarefaOrdem(this.value)">
+          <option value="vencimento">Ordenar por vencimento</option>
+          <option value="prioridade">Ordenar por prioridade</option>
+        </select>
+      </div>
+      <div class="tarefa-list" id="tarefaList"></div>
     </div>
 
     <!-- Serviços / Produtos -->
@@ -1631,7 +1696,72 @@
   </div>
 </div>
 
-<!-- Modal: Novo Negócio -->
+<!-- Modal: Nova/Editar Tarefa -->
+<div class="modal-overlay" id="tarefaModal" style="z-index:650">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-header">
+      <h2 id="tarefaModalTitle">Nova Tarefa</h2>
+      <button class="modal-close" onclick="closeTarefaModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="tarefaId" />
+      <div class="form-group">
+        <label for="tarefaTitulo">Título <span class="required">*</span></label>
+        <input type="text" id="tarefaTitulo" placeholder="Ex: Ligar para cliente X" />
+        <span class="field-error" id="tarefaTituloError"></span>
+      </div>
+      <div class="form-group">
+        <label for="tarefaDescricao">Descrição</label>
+        <textarea id="tarefaDescricao" rows="3" placeholder="Detalhes da tarefa…" style="resize:vertical"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="tarefaVencimento">Vencimento</label>
+          <input type="date" id="tarefaVencimento" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label for="tarefaHora">Horário</label>
+          <input type="time" id="tarefaHora" class="form-control" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="tarefaPrioridade">Prioridade</label>
+          <select id="tarefaPrioridade">
+            <option value="Baixa">Baixa</option>
+            <option value="Média" selected>Média</option>
+            <option value="Alta">Alta</option>
+            <option value="Urgente">Urgente</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="tarefaStatus">Status</label>
+          <select id="tarefaStatus">
+            <option value="Pendente">Pendente</option>
+            <option value="Em andamento">Em andamento</option>
+            <option value="Concluída">Concluída</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="tarefaResponsavel">Responsável</label>
+        <select id="tarefaResponsavel"></select>
+      </div>
+      <div class="form-group">
+        <label for="tarefaLeadId">Vincular a um Lead (opcional)</label>
+        <select id="tarefaLeadId"></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeTarefaModal()">Cancelar</button>
+      <button class="btn btn-primary" id="tarefaSaveBtn" onclick="saveTarefa()">Salvar Tarefa</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="novaNegocioModal" style="z-index:500">
   <div class="modal" style="max-width:540px">
     <div class="modal-header">
@@ -2577,6 +2707,7 @@ function initApp(session) {
   populateStatusDropdown();
   populateFilterStatus();
   render();
+  updateNavBadge();
 }
 
 document.getElementById('loginForm').addEventListener('submit', async function(e) {
@@ -2777,16 +2908,17 @@ window.toggleUser = toggleUser;
 
 // ── Navegação ──────────────────────────────────────────────────────────────
 function showView(name) {
-  var views = { leads: 'leadsView', crm: 'crmView', servicos: 'servicosView' };
-  var navs  = { leads: 'navLeads', crm: 'navCRM', servicos: 'navServicos' };
+  var views = { leads: 'leadsView', crm: 'crmView', tarefas: 'tarefasView', servicos: 'servicosView' };
+  var navs  = { leads: 'navLeads', crm: 'navCRM', tarefas: 'navTarefas', servicos: 'navServicos' };
   Object.keys(views).forEach(function(k) {
     var el = document.getElementById(views[k]);
     if (el) el.style.display = k === name ? '' : 'none';
     var nav = document.getElementById(navs[k]);
     if (nav) nav.classList.toggle('active', k === name);
   });
-  if (name === 'crm') renderKanban();
+  if (name === 'crm')     renderKanban();
   if (name === 'servicos') renderServicos();
+  if (name === 'tarefas')  renderTarefas();
 }
 window.showView = showView;
 
@@ -3865,10 +3997,214 @@ window.renderDetailPropostas  = renderDetailPropostas;
 window.deletarProposta        = deletarProposta;
 window.editarProposta         = editarProposta;
 
+// ── Tarefas ────────────────────────────────────────────────────────────────
+var TAREFAS_KEY = 'crm_tarefas';
+function loadTarefas()    { return _cfgCache[TAREFAS_KEY] || []; }
+function saveTarefas(arr) { saveConfigBg(TAREFAS_KEY, arr); }
+
+var _tarefaFiltro = 'todas';
+var _tarefaOrdem  = 'vencimento';
+var PRIO_PESO     = { 'Urgente': 4, 'Alta': 3, 'Média': 2, 'Baixa': 1 };
+
+function getTodayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function updateNavBadge() {
+  var today  = getTodayStr();
+  var count  = loadTarefas().filter(function(t) {
+    return t.status !== 'Concluída' && t.vencimento && t.vencimento <= today;
+  }).length;
+  var badge  = document.getElementById('navTarefasBadge');
+  if (!badge) return;
+  badge.textContent  = count;
+  badge.style.display = count > 0 ? '' : 'none';
+}
+
+function renderTarefas() {
+  updateNavBadge();
+  var today   = getTodayStr();
+  var session = getSession();
+  var tarefas = loadTarefas();
+
+  var filtered = tarefas.filter(function(t) {
+    if (_tarefaFiltro === 'minhas')    return session && t.responsavel === session.nome;
+    if (_tarefaFiltro === 'hoje')      return t.vencimento === today && t.status !== 'Concluída';
+    if (_tarefaFiltro === 'atrasadas') return t.vencimento && t.vencimento < today && t.status !== 'Concluída';
+    return true;
+  });
+
+  filtered.sort(function(a, b) {
+    if (_tarefaFiltro !== 'atrasadas' && a.status === 'Concluída' && b.status !== 'Concluída') return 1;
+    if (_tarefaFiltro !== 'atrasadas' && b.status === 'Concluída' && a.status !== 'Concluída') return -1;
+    if (_tarefaOrdem === 'prioridade') {
+      var diff = (PRIO_PESO[b.prioridade] || 0) - (PRIO_PESO[a.prioridade] || 0);
+      if (diff !== 0) return diff;
+    }
+    if (!a.vencimento && !b.vencimento) return 0;
+    if (!a.vencimento) return 1;
+    if (!b.vencimento) return -1;
+    return a.vencimento.localeCompare(b.vencimento);
+  });
+
+  var list = document.getElementById('tarefaList');
+  if (!list) return;
+
+  if (!filtered.length) {
+    list.innerHTML = '<div class="tarefa-empty">Nenhuma tarefa encontrada.</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(function(t) {
+    var isAtrasada = t.vencimento && t.vencimento < today && t.status !== 'Concluída';
+    var isHoje     = t.vencimento === today && t.status !== 'Concluída';
+    var lead       = t.leadId ? leads.find(function(l){ return l.id === t.leadId; }) : null;
+
+    var prioClass   = { 'Baixa':'prio-baixa','Média':'prio-media','Alta':'prio-alta','Urgente':'prio-urgente' }[t.prioridade] || 'prio-baixa';
+    var sttsClass   = { 'Pendente':'st-pend','Em andamento':'st-anda','Concluída':'st-conc' }[t.status] || 'st-pend';
+    var checkClass  = { 'Pendente':'pend','Em andamento':'anda','Concluída':'conc' }[t.status] || 'pend';
+
+    var checkIcon = '';
+    if (t.status === 'Concluída')    checkIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+    if (t.status === 'Em andamento') checkIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+
+    var vencStr = '';
+    if (t.vencimento) {
+      var d = new Date(t.vencimento + 'T12:00:00');
+      vencStr = d.toLocaleDateString('pt-BR') + (t.hora ? ' ' + t.hora : '');
+    }
+    var vencColor = isAtrasada ? '#dc2626' : isHoje ? '#d97706' : '#64748b';
+    var vencIcon  = isAtrasada ? '⚠️ ' : '📅 ';
+
+    return '<div class="tarefa-item' + (t.status === 'Concluída' ? ' concluida' : '') + '" onclick="openTarefaModal(\'' + t.id + '\')">' +
+      '<div class="tarefa-check ' + checkClass + '" onclick="event.stopPropagation();cycleStatus(\'' + t.id + '\')" title="Avançar status">' +
+        checkIcon +
+      '</div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div class="tarefa-titulo">' + esc(t.titulo) + '</div>' +
+        '<div class="tarefa-meta">' +
+          (vencStr ? '<span style="color:' + vencColor + '">' + vencIcon + vencStr + '</span>' : '') +
+          '<span class="badge-prio ' + prioClass + '">' + esc(t.prioridade) + '</span>' +
+          '<span class="badge-stts ' + sttsClass + '">' + esc(t.status) + '</span>' +
+          (t.responsavel ? '<span>👤 ' + esc(t.responsavel) + '</span>' : '') +
+          (lead ? '<span class="link-empresa" style="font-size:12px" onclick="event.stopPropagation();openDetail(\'' + lead.id + '\')" title="Abrir lead">🏢 ' + esc(lead.empresa) + '</span>' : '') +
+        '</div>' +
+        (t.descricao ? '<div class="tarefa-descricao">' + esc(t.descricao) + '</div>' : '') +
+      '</div>' +
+      '<button class="tarefa-del-btn" onclick="event.stopPropagation();deletarTarefa(\'' + t.id + '\')" title="Excluir tarefa">✕</button>' +
+    '</div>';
+  }).join('');
+}
+
+function setTarefaFiltro(v) { _tarefaFiltro = v; renderTarefas(); }
+function setTarefaOrdem(v)  { _tarefaOrdem  = v; renderTarefas(); }
+
+async function openTarefaModal(id) {
+  var t = id ? loadTarefas().find(function(x){ return x.id === id; }) : null;
+  var session = getSession();
+
+  document.getElementById('tarefaModalTitle').textContent = t ? 'Editar Tarefa' : 'Nova Tarefa';
+  document.getElementById('tarefaId').value          = t ? t.id : '';
+  document.getElementById('tarefaTitulo').value      = t ? t.titulo : '';
+  document.getElementById('tarefaTituloError').textContent = '';
+  document.getElementById('tarefaDescricao').value   = t ? (t.descricao || '') : '';
+  document.getElementById('tarefaVencimento').value  = t ? (t.vencimento || '') : '';
+  document.getElementById('tarefaHora').value        = t ? (t.hora || '') : '';
+  document.getElementById('tarefaPrioridade').value  = t ? t.prioridade : 'Média';
+  document.getElementById('tarefaStatus').value      = t ? t.status : 'Pendente';
+
+  // Responsável: lista de usuários
+  var users = await fetchUsers();
+  var respSel = document.getElementById('tarefaResponsavel');
+  var meuNome = session ? session.nome : '';
+  respSel.innerHTML = users.filter(function(u){ return u.ativo !== false; }).map(function(u) {
+    var sel = t ? (t.responsavel === u.nome) : (u.nome === meuNome);
+    return '<option value="' + esc(u.nome) + '"' + (sel ? ' selected' : '') + '>' + esc(u.nome) + '</option>';
+  }).join('');
+
+  // Leads
+  var leadSel = document.getElementById('tarefaLeadId');
+  leadSel.innerHTML = '<option value="">Nenhum lead vinculado</option>' +
+    leads.slice().sort(function(a,b){ return a.empresa.localeCompare(b.empresa); }).map(function(l) {
+      return '<option value="' + l.id + '"' + (t && t.leadId === l.id ? ' selected' : '') + '>' + esc(l.empresa) + '</option>';
+    }).join('');
+
+  document.getElementById('tarefaModal').classList.add('open');
+  document.getElementById('tarefaTitulo').focus();
+}
+
+function closeTarefaModal() {
+  document.getElementById('tarefaModal').classList.remove('open');
+}
+
+function saveTarefa() {
+  var titulo = document.getElementById('tarefaTitulo').value.trim();
+  if (!titulo) {
+    document.getElementById('tarefaTituloError').textContent = 'Informe o título da tarefa.';
+    document.getElementById('tarefaTitulo').focus();
+    return;
+  }
+  document.getElementById('tarefaTituloError').textContent = '';
+
+  var id        = document.getElementById('tarefaId').value;
+  var session   = getSession();
+  var tarefas   = loadTarefas();
+  var isNew     = !id;
+  var tarefa    = {
+    id:          id || generateId(),
+    titulo:      titulo,
+    descricao:   document.getElementById('tarefaDescricao').value.trim(),
+    vencimento:  document.getElementById('tarefaVencimento').value,
+    hora:        document.getElementById('tarefaHora').value,
+    prioridade:  document.getElementById('tarefaPrioridade').value,
+    status:      document.getElementById('tarefaStatus').value,
+    responsavel: document.getElementById('tarefaResponsavel').value,
+    leadId:      document.getElementById('tarefaLeadId').value,
+    criadoPor:   isNew ? (session ? session.nome : '—') : (tarefas.find(function(x){ return x.id === id; }) || {}).criadoPor,
+    criadoEm:    isNew ? Date.now() : (tarefas.find(function(x){ return x.id === id; }) || {}).criadoEm,
+  };
+
+  if (isNew) {
+    tarefas.push(tarefa);
+  } else {
+    var idx = tarefas.findIndex(function(x){ return x.id === id; });
+    if (idx !== -1) tarefas[idx] = tarefa; else tarefas.push(tarefa);
+  }
+  saveTarefas(tarefas);
+  closeTarefaModal();
+  renderTarefas();
+}
+
+function cycleStatus(id) {
+  var tarefas = loadTarefas();
+  var idx     = tarefas.findIndex(function(x){ return x.id === id; });
+  if (idx === -1) return;
+  var ordem   = ['Pendente', 'Em andamento', 'Concluída'];
+  var cur     = tarefas[idx].status;
+  tarefas[idx].status = ordem[(ordem.indexOf(cur) + 1) % ordem.length];
+  saveTarefas(tarefas);
+  renderTarefas();
+}
+
+function deletarTarefa(id) {
+  if (!confirm('Excluir esta tarefa?')) return;
+  var tarefas = loadTarefas().filter(function(x){ return x.id !== id; });
+  saveTarefas(tarefas);
+  renderTarefas();
+}
+
+window.openTarefaModal  = openTarefaModal;
+window.closeTarefaModal = closeTarefaModal;
+window.saveTarefa       = saveTarefa;
+window.cycleStatus      = cycleStatus;
+window.deletarTarefa    = deletarTarefa;
+window.setTarefaFiltro  = setTarefaFiltro;
+window.setTarefaOrdem   = setTarefaOrdem;
+
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
   // Preload all configs from Supabase into memory (single query)
-  var cfgKeys = [STAGES_KEY, NEGOCIOS_KEY, SERVICOS_KEY, LEAD_SERVS_KEY, LEAD_EXTRA_KEY, PROPOSTAS_KEY];
+  var cfgKeys = [STAGES_KEY, NEGOCIOS_KEY, SERVICOS_KEY, LEAD_SERVS_KEY, LEAD_EXTRA_KEY, PROPOSTAS_KEY, TAREFAS_KEY];
   try {
     var { data: cfgRows } = await db.from('configs').select('id,value').in('id', cfgKeys);
     if (cfgRows) cfgRows.forEach(function(row){ _cfgCache[row.id] = row.value; });
@@ -3917,6 +4253,11 @@ async function boot() {
       if (payload.new.id === NEGOCIOS_KEY && _currentDetailNegId) {
         var n = loadNegocios().find(function(x){ return x.id === _currentDetailNegId; });
         if (n) _renderDetailCommentsList(n);
+      }
+      if (payload.new.id === TAREFAS_KEY) {
+        updateNavBadge();
+        var tv = document.getElementById('tarefasView');
+        if (tv && tv.style.display !== 'none') renderTarefas();
       }
     })
     .subscribe();
