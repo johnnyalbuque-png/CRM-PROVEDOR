@@ -859,7 +859,6 @@
     .notif-msg { font-size:12px; color:#64748b; margin-top:2px; }
     .notif-time { font-size:11px; color:#94a3b8; margin-top:3px; }
     .notif-empty { padding:32px 16px; text-align:center; color:#94a3b8; font-size:13px; }
-    .visivel-para-row { display:none; }
     .visivel-check-item { display:flex; align-items:center; gap:8px; font-size:13px; color:#0f172a; cursor:pointer; }
     .visivel-check-item input[type=checkbox] { width:15px; height:15px; cursor:pointer; accent-color:#2563eb; }
     /* Modal comentários */
@@ -1795,13 +1794,13 @@
       </div>
       <div class="form-group">
         <label for="tarefaVisibilidade">Visibilidade</label>
-        <select id="tarefaVisibilidade" onchange="onVisibilidadeChange(this.value)">
+        <select id="tarefaVisibilidade">
           <option value="todos">Todos os usuários visualizam</option>
           <option value="criador">Somente o criador visualiza</option>
           <option value="especifico">Usuários específicos</option>
         </select>
       </div>
-      <div class="form-group visivel-para-row" id="visivelParaRow">
+      <div class="form-group" id="visivelParaRow" style="display:none">
         <label>Usuários que podem visualizar</label>
         <div id="visivelParaChecks" style="display:flex;flex-direction:column;gap:6px;max-height:140px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;background:#f8fafc"></div>
       </div>
@@ -4379,13 +4378,19 @@ async function openTarefaModal(id) {
       return '<option value="' + l.id + '"' + (t && t.leadId === l.id ? ' selected' : '') + '>' + esc(l.empresa) + '</option>';
     }).join('');
 
+  // Listener de visibilidade — recria para evitar duplicatas
+  var visibSel = document.getElementById('tarefaVisibilidade');
+  var novoSel  = visibSel.cloneNode(true);
+  visibSel.parentNode.replaceChild(novoSel, visibSel);
+  novoSel.value = visib;
+  novoSel.addEventListener('change', function() {
+    document.getElementById('visivelParaRow').style.display = this.value === 'especifico' ? 'block' : 'none';
+  });
+
   document.getElementById('tarefaModal').classList.add('open');
   document.getElementById('tarefaTitulo').focus();
 }
 
-function onVisibilidadeChange(val) {
-  document.getElementById('visivelParaRow').style.display = val === 'especifico' ? 'block' : 'none';
-}
 
 function closeTarefaModal() {
   document.getElementById('tarefaModal').classList.remove('open');
@@ -4480,8 +4485,7 @@ function deletarTarefa(id) {
   renderTarefas();
 }
 
-window.openTarefaModal     = openTarefaModal;
-window.onVisibilidadeChange = onVisibilidadeChange;
+window.openTarefaModal = openTarefaModal;
 window.closeTarefaModal = closeTarefaModal;
 window.saveTarefa       = saveTarefa;
 window.cycleStatus      = cycleStatus;
