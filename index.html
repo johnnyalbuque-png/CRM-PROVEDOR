@@ -2025,9 +2025,12 @@ function openEdit(id) {
   openModal();
 }
 
+var _currentDetailLeadId = null;
+
 function openDetail(id) {
   var l = leads.find(function(x){ return x.id === id; });
   if (!l) return;
+  _currentDetailLeadId = id;
   document.getElementById('detailEmpresa').textContent = l.empresa;
   document.getElementById('dEmpresa').textContent   = l.empresa;
   document.getElementById('dCnpj').textContent      = l.cnpj || '—';
@@ -2060,6 +2063,7 @@ function openDetail(id) {
 
 function closeDetail() {
   document.getElementById('detailOverlay').classList.remove('open');
+  _currentDetailLeadId = null;
 }
 
 function openDelete(id) {
@@ -3210,8 +3214,9 @@ function gerarNumProposta() {
 }
 
 function openPropostaModal(leadId) {
-  propostaLeadId = leadId;
-  propostaLinhas = [];
+  propostaLeadId    = leadId;
+  propostaEditingId = null;  // sempre limpa modo edição ao criar nova
+  propostaLinhas    = [];
   var lead = leads.find(function(l){ return l.id === leadId; });
   document.getElementById('propostaLeadName').textContent = lead
     ? (lead.empresa || lead.nome || 'Lead sem nome') : '';
@@ -3229,11 +3234,13 @@ function openPropostaModal(leadId) {
 }
 
 function editarProposta(propostaId) {
-  var p = loadPropostas().find(function(x){ return x.id === propostaId; });
-  if (!p) return;
+  // busca por id; cai no numero como fallback para propostas antigas
+  var p = loadPropostas().find(function(x){ return x.id === propostaId; })
+       || loadPropostas().find(function(x){ return x.numero === propostaId; });
+  if (!p) { console.warn('editarProposta: proposta não encontrada', propostaId); return; }
   propostaLeadId    = p.leadId;
   propostaEditingId = p.id;
-  propostaLinhas    = p.linhas.map(function(l){ return Object.assign({}, l); });
+  propostaLinhas    = (p.linhas || []).map(function(l){ return Object.assign({}, l); });
   var lead = leads.find(function(l){ return l.id === p.leadId; });
   document.getElementById('propostaLeadName').textContent = lead
     ? (lead.empresa || lead.nome || 'Lead sem nome') : '';
@@ -3244,7 +3251,6 @@ function editarProposta(propostaId) {
   document.getElementById('propostaObs').value       = p.obs || '';
   renderPropostaLinhas();
   calcPropostaTotal();
-  // Render installment rows then restore saved due dates
   updatePropostaParcelas();
   var dateInputs = document.querySelectorAll('#propostaParcBody input[type="date"]');
   if (p.vencimentos) {
@@ -3638,15 +3644,17 @@ async function boot() {
     })
     .subscribe();
 
-  // Realtime: sync config data (servicos, negocios, etapas, etc.) between users
+  // Realtime: sync config data (servicos, negocios, etapas, propostas, etc.) between users
   db.channel('crm-configs')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'configs' }, function(payload) {
-      if (payload.new && payload.new.id) {
-        _cfgCache[payload.new.id] = payload.new.value;
-        renderServicos();
-        if (document.getElementById('kanbanView') && !document.getElementById('kanbanView').classList.contains('hidden')) {
-          renderKanban();
-        }
+      if (!payload.new || !payload.new.id) return;
+      _cfgCache[payload.new.id] = payload.new.value;
+      renderServicos();
+      var cv = document.getElementById('crmView');
+      if (cv && cv.style.display !== 'none') renderKanban();
+      // Se a lista de propostas mudou e o painel de detalhes está aberto, atualiza
+      if (payload.new.id === PROPOSTAS_KEY && _currentDetailLeadId) {
+        renderDetailPropostas(_currentDetailLeadId);
       }
     })
     .subscribe();
