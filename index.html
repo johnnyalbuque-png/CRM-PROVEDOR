@@ -836,6 +836,30 @@
     .st-anda { background:#fef3c7; color:#92400e; }
     .st-conc { background:#f0fdf4; color:#166534; }
     .nav-badge { display:inline-flex; align-items:center; justify-content:center; background:#ef4444; color:#fff; font-size:10px; font-weight:700; border-radius:10px; padding:1px 6px; min-width:18px; margin-left:auto; line-height:1.5; }
+
+    /* ── Notificações ── */
+    .notif-wrap { position:relative; }
+    .notif-btn { position:relative; background:none; border:none; cursor:pointer; padding:6px; border-radius:8px; color:#64748b; display:flex; align-items:center; justify-content:center; transition:background .15s; }
+    .notif-btn:hover { background:#f1f5f9; color:#0f172a; }
+    .notif-dot { position:absolute; top:4px; right:4px; width:8px; height:8px; background:#ef4444; border-radius:50%; border:2px solid #fff; display:none; }
+    .notif-count { position:absolute; top:2px; right:2px; background:#ef4444; color:#fff; font-size:9px; font-weight:700; border-radius:8px; padding:0 4px; min-width:16px; text-align:center; line-height:16px; display:none; border:2px solid #fff; }
+    .notif-dropdown { position:absolute; top:calc(100% + 8px); right:0; width:320px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.12); z-index:900; display:none; overflow:hidden; }
+    .notif-dropdown.open { display:block; }
+    .notif-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #f1f5f9; }
+    .notif-header span { font-size:13px; font-weight:700; color:#0f172a; }
+    .notif-header button { font-size:11px; color:#2563eb; background:none; border:none; cursor:pointer; }
+    .notif-list { max-height:320px; overflow-y:auto; }
+    .notif-item { padding:12px 16px; border-bottom:1px solid #f8fafc; cursor:pointer; transition:background .12s; display:flex; gap:10px; align-items:flex-start; }
+    .notif-item:hover { background:#f8fafc; }
+    .notif-item.unread { background:#eff6ff; }
+    .notif-item.unread:hover { background:#dbeafe; }
+    .notif-icon { width:32px; height:32px; border-radius:50%; background:#eff6ff; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:14px; }
+    .notif-body { flex:1; min-width:0; }
+    .notif-title { font-size:13px; font-weight:600; color:#0f172a; }
+    .notif-msg { font-size:12px; color:#64748b; margin-top:2px; }
+    .notif-time { font-size:11px; color:#94a3b8; margin-top:3px; }
+    .notif-empty { padding:32px 16px; text-align:center; color:#94a3b8; font-size:13px; }
+    .visivel-para-row { display:none; }
     /* Modal comentários */
     .comment-item { padding:8px 0; border-bottom:1px solid #f1f5f9; }
     .comment-item:last-child { border-bottom:none; }
@@ -1031,6 +1055,22 @@
     </div>
     <div style="display:flex;align-items:center;gap:12px">
       <span class="stat-badge" id="totalLeads">0 leads</span>
+      <div class="notif-wrap" id="notifWrap">
+        <button class="notif-btn" id="notifBtn" onclick="toggleNotifDropdown()" title="Notificações">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span class="notif-count" id="notifCount">0</span>
+        </button>
+        <div class="notif-dropdown" id="notifDropdown">
+          <div class="notif-header">
+            <span>Notificações</span>
+            <button onclick="markAllNotifsRead()">Marcar todas como lidas</button>
+          </div>
+          <div class="notif-list" id="notifList"></div>
+        </div>
+      </div>
       <div class="user-menu-wrap">
         <button class="user-menu-btn" id="userMenuBtn">
           <span class="user-avatar" id="userAvatar">A</span>
@@ -1750,6 +1790,18 @@
       <div class="form-group">
         <label for="tarefaResponsavel">Responsável</label>
         <select id="tarefaResponsavel"></select>
+      </div>
+      <div class="form-group">
+        <label for="tarefaVisibilidade">Visibilidade</label>
+        <select id="tarefaVisibilidade" onchange="onVisibilidadeChange(this.value)">
+          <option value="todos">Todos os usuários visualizam</option>
+          <option value="criador">Somente o criador visualiza</option>
+          <option value="especifico">Somente um usuário específico</option>
+        </select>
+      </div>
+      <div class="form-group visivel-para-row" id="visivelParaRow">
+        <label for="tarefaVisivelPara">Usuário que pode visualizar</label>
+        <select id="tarefaVisivelPara"></select>
       </div>
       <div class="form-group">
         <label for="tarefaLeadId">Vincular a um Lead (opcional)</label>
@@ -2764,6 +2816,12 @@ function initApp(session) {
   populateFilterStatus();
   render();
   updateNavBadge();
+  // Carrega notificações do usuário logado do Supabase
+  var nKey = NOTIFS_PREFIX + session.id;
+  db.from('configs').select('value').eq('id', nKey).maybeSingle().then(function(r) {
+    if (r.data && r.data.value) _cfgCache[nKey] = r.data.value;
+    updateNotifBadge();
+  });
 }
 
 document.getElementById('loginForm').addEventListener('submit', async function(e) {
@@ -4054,6 +4112,112 @@ window.renderDetailPropostas  = renderDetailPropostas;
 window.deletarProposta        = deletarProposta;
 window.editarProposta         = editarProposta;
 
+// ── Notificações ───────────────────────────────────────────────────────────
+var NOTIFS_PREFIX = 'crm_notifs_';
+
+function myNotifsKey() {
+  var s = getSession();
+  return s ? NOTIFS_PREFIX + s.id : null;
+}
+
+function loadMyNotifs() {
+  var key = myNotifsKey();
+  return key ? (_cfgCache[key] || []) : [];
+}
+
+function saveMyNotifs(arr) {
+  var key = myNotifsKey();
+  if (key) saveConfigBg(key, arr);
+}
+
+function sendNotification(toUserId, toUserNome, tarefa, criadoPorNome) {
+  if (!toUserId) return;
+  var notifKey = NOTIFS_PREFIX + toUserId;
+  var existing = _cfgCache[notifKey] || [];
+  existing.push({
+    id:       generateId(),
+    tipo:     'tarefa',
+    titulo:   'Nova tarefa atribuída',
+    mensagem: (criadoPorNome || 'Alguém') + ' atribuiu a tarefa "' + tarefa.titulo + '" a você.',
+    tarefaId: tarefa.id,
+    lida:     false,
+    criadoEm: Date.now(),
+  });
+  _cfgCache[notifKey] = existing;
+  saveConfigBg(notifKey, existing);
+}
+
+function updateNotifBadge() {
+  var notifs  = loadMyNotifs();
+  var unread  = notifs.filter(function(n){ return !n.lida; }).length;
+  var el      = document.getElementById('notifCount');
+  if (!el) return;
+  el.textContent   = unread;
+  el.style.display = unread > 0 ? '' : 'none';
+}
+
+function renderNotifList() {
+  var notifs  = loadMyNotifs().slice().reverse();
+  var el      = document.getElementById('notifList');
+  if (!el) return;
+  if (!notifs.length) {
+    el.innerHTML = '<div class="notif-empty">Nenhuma notificação.</div>';
+    return;
+  }
+  el.innerHTML = notifs.map(function(n) {
+    var dt  = new Date(n.criadoEm);
+    var str = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+    return '<div class="notif-item' + (n.lida ? '' : ' unread') + '" onclick="openNotif(\'' + n.id + '\',\'' + (n.tarefaId || '') + '\')">' +
+      '<div class="notif-icon">📋</div>' +
+      '<div class="notif-body">' +
+        '<div class="notif-title">' + esc(n.titulo) + '</div>' +
+        '<div class="notif-msg">' + esc(n.mensagem) + '</div>' +
+        '<div class="notif-time">' + str + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function toggleNotifDropdown() {
+  var dd = document.getElementById('notifDropdown');
+  dd.classList.toggle('open');
+  if (dd.classList.contains('open')) renderNotifList();
+}
+
+function openNotif(notifId, tarefaId) {
+  var notifs = loadMyNotifs();
+  var idx    = notifs.findIndex(function(n){ return n.id === notifId; });
+  if (idx !== -1) notifs[idx].lida = true;
+  saveMyNotifs(notifs);
+  updateNotifBadge();
+  renderNotifList();
+  if (tarefaId) {
+    document.getElementById('notifDropdown').classList.remove('open');
+    showView('tarefas');
+    openTarefaModal(tarefaId);
+  }
+}
+
+function markAllNotifsRead() {
+  var notifs = loadMyNotifs().map(function(n){ return Object.assign({}, n, {lida: true}); });
+  saveMyNotifs(notifs);
+  updateNotifBadge();
+  renderNotifList();
+}
+
+// Fecha dropdown ao clicar fora
+document.addEventListener('click', function(e) {
+  var wrap = document.getElementById('notifWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    var dd = document.getElementById('notifDropdown');
+    if (dd) dd.classList.remove('open');
+  }
+});
+
+window.toggleNotifDropdown = toggleNotifDropdown;
+window.openNotif           = openNotif;
+window.markAllNotifsRead   = markAllNotifsRead;
+
 // ── Tarefas ────────────────────────────────────────────────────────────────
 var TAREFAS_KEY = 'crm_tarefas';
 function loadTarefas()    { return _cfgCache[TAREFAS_KEY] || []; }
@@ -4084,8 +4248,16 @@ function renderTarefas() {
   var session = getSession();
   var tarefas = loadTarefas();
 
-  var filtered = tarefas.filter(function(t) {
-    if (_tarefaFiltro === 'minhas')    return session && t.responsavel === session.nome;
+  // Filtra por visibilidade primeiro
+  var myNome = session ? session.nome : '';
+  var visible = tarefas.filter(function(t) {
+    if (t.visibilidade === 'criador')    return t.criadoPor === myNome;
+    if (t.visibilidade === 'especifico') return t.criadoPor === myNome || t.visivelPara === myNome || t.responsavel === myNome;
+    return true; // 'todos' ou sem visibilidade definida
+  });
+
+  var filtered = visible.filter(function(t) {
+    if (_tarefaFiltro === 'minhas')    return t.responsavel === myNome;
     if (_tarefaFiltro === 'hoje')      return t.vencimento === today && t.status !== 'Concluída';
     if (_tarefaFiltro === 'atrasadas') return t.vencimento && t.vencimento < today && t.status !== 'Concluída';
     return true;
@@ -4170,14 +4342,25 @@ async function openTarefaModal(id) {
   document.getElementById('tarefaPrioridade').value  = t ? t.prioridade : 'Média';
   document.getElementById('tarefaStatus').value      = t ? t.status : 'Pendente';
 
-  // Responsável: lista de usuários
-  var users = await fetchUsers();
-  var respSel = document.getElementById('tarefaResponsavel');
+  // Responsável + VisivelPara: lista de usuários
+  var users   = await fetchUsers();
   var meuNome = session ? session.nome : '';
-  respSel.innerHTML = users.filter(function(u){ return u.ativo !== false; }).map(function(u) {
+  var ativos  = users.filter(function(u){ return u.ativo !== false; });
+
+  var respSel = document.getElementById('tarefaResponsavel');
+  respSel.innerHTML = ativos.map(function(u) {
     var sel = t ? (t.responsavel === u.nome) : (u.nome === meuNome);
-    return '<option value="' + esc(u.nome) + '"' + (sel ? ' selected' : '') + '>' + esc(u.nome) + '</option>';
+    return '<option value="' + esc(u.nome) + '" data-id="' + esc(u.id) + '"' + (sel ? ' selected' : '') + '>' + esc(u.nome) + '</option>';
   }).join('');
+
+  var visib = t ? (t.visibilidade || 'todos') : 'todos';
+  document.getElementById('tarefaVisibilidade').value = visib;
+  var vpSel = document.getElementById('tarefaVisivelPara');
+  vpSel.innerHTML = ativos.map(function(u) {
+    var sel = t && t.visivelPara === u.nome;
+    return '<option value="' + esc(u.nome) + '" data-id="' + esc(u.id) + '"' + (sel ? ' selected' : '') + '>' + esc(u.nome) + '</option>';
+  }).join('');
+  document.getElementById('visivelParaRow').style.display = visib === 'especifico' ? '' : 'none';
 
   // Leads
   var leadSel = document.getElementById('tarefaLeadId');
@@ -4188,6 +4371,10 @@ async function openTarefaModal(id) {
 
   document.getElementById('tarefaModal').classList.add('open');
   document.getElementById('tarefaTitulo').focus();
+}
+
+function onVisibilidadeChange(val) {
+  document.getElementById('visivelParaRow').style.display = val === 'especifico' ? '' : 'none';
 }
 
 function closeTarefaModal() {
@@ -4206,19 +4393,31 @@ function saveTarefa() {
   var id        = document.getElementById('tarefaId').value;
   var session   = getSession();
   var tarefas   = loadTarefas();
-  var isNew     = !id;
-  var tarefa    = {
-    id:          id || generateId(),
-    titulo:      titulo,
-    descricao:   document.getElementById('tarefaDescricao').value.trim(),
-    vencimento:  document.getElementById('tarefaVencimento').value,
-    hora:        document.getElementById('tarefaHora').value,
-    prioridade:  document.getElementById('tarefaPrioridade').value,
-    status:      document.getElementById('tarefaStatus').value,
-    responsavel: document.getElementById('tarefaResponsavel').value,
-    leadId:      document.getElementById('tarefaLeadId').value,
-    criadoPor:   isNew ? (session ? session.nome : '—') : (tarefas.find(function(x){ return x.id === id; }) || {}).criadoPor,
-    criadoEm:    isNew ? Date.now() : (tarefas.find(function(x){ return x.id === id; }) || {}).criadoEm,
+  var isNew        = !id;
+  var visib        = document.getElementById('tarefaVisibilidade').value;
+  var respSel      = document.getElementById('tarefaResponsavel');
+  var vpSel        = document.getElementById('tarefaVisivelPara');
+  var respNome     = respSel.value;
+  var respId       = (respSel.options[respSel.selectedIndex] || {}).dataset && respSel.options[respSel.selectedIndex].dataset.id || '';
+  var vpNome       = vpSel.value;
+  var vpId         = (vpSel.options[vpSel.selectedIndex] || {}).dataset && vpSel.options[vpSel.selectedIndex].dataset.id || '';
+  var meuNome      = session ? session.nome : '—';
+  var existing     = isNew ? null : tarefas.find(function(x){ return x.id === id; });
+
+  var tarefa = {
+    id:           id || generateId(),
+    titulo:       titulo,
+    descricao:    document.getElementById('tarefaDescricao').value.trim(),
+    vencimento:   document.getElementById('tarefaVencimento').value,
+    hora:         document.getElementById('tarefaHora').value,
+    prioridade:   document.getElementById('tarefaPrioridade').value,
+    status:       document.getElementById('tarefaStatus').value,
+    responsavel:  respNome,
+    visibilidade: visib,
+    visivelPara:  visib === 'especifico' ? vpNome : '',
+    leadId:       document.getElementById('tarefaLeadId').value,
+    criadoPor:    isNew ? meuNome : (existing || {}).criadoPor,
+    criadoEm:     isNew ? Date.now() : (existing || {}).criadoEm,
   };
 
   if (isNew) {
@@ -4228,6 +4427,21 @@ function saveTarefa() {
     if (idx !== -1) tarefas[idx] = tarefa; else tarefas.push(tarefa);
   }
   saveTarefas(tarefas);
+
+  // Notificar responsável se for diferente do criador
+  var prevResp = existing ? existing.responsavel : null;
+  if (respNome && respNome !== meuNome && respNome !== prevResp) {
+    db.from('usuarios').select('id,nome').eq('nome', respNome).maybeSingle().then(function(r) {
+      if (r.data) sendNotification(r.data.id, r.data.nome, tarefa, meuNome);
+    });
+  }
+  // Notificar usuário específico de visibilidade
+  if (visib === 'especifico' && vpNome && vpNome !== meuNome && vpNome !== respNome) {
+    db.from('usuarios').select('id,nome').eq('nome', vpNome).maybeSingle().then(function(r) {
+      if (r.data) sendNotification(r.data.id, r.data.nome, tarefa, meuNome);
+    });
+  }
+
   closeTarefaModal();
   renderTarefas();
 }
@@ -4250,7 +4464,8 @@ function deletarTarefa(id) {
   renderTarefas();
 }
 
-window.openTarefaModal  = openTarefaModal;
+window.openTarefaModal     = openTarefaModal;
+window.onVisibilidadeChange = onVisibilidadeChange;
 window.closeTarefaModal = closeTarefaModal;
 window.saveTarefa       = saveTarefa;
 window.cycleStatus      = cycleStatus;
@@ -4315,6 +4530,13 @@ async function boot() {
         updateNavBadge();
         var tv = document.getElementById('tarefasView');
         if (tv && tv.style.display !== 'none') renderTarefas();
+      }
+      // Notificação para o usuário logado
+      var myKey = myNotifsKey();
+      if (myKey && payload.new.id === myKey) {
+        updateNotifBadge();
+        var dd = document.getElementById('notifDropdown');
+        if (dd && dd.classList.contains('open')) renderNotifList();
       }
     })
     .subscribe();
