@@ -837,6 +837,52 @@
     .st-conc { background:#f0fdf4; color:#166534; }
     .nav-badge { display:inline-flex; align-items:center; justify-content:center; background:#ef4444; color:#fff; font-size:10px; font-weight:700; border-radius:10px; padding:1px 6px; min-width:18px; margin-left:auto; line-height:1.5; }
 
+    /* ── Financeiro ── */
+    .fin-toolbar { padding:24px 24px 0; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+    .fin-toolbar h2 { font-size:17px; font-weight:700; }
+    .fin-tabs { display:flex; gap:3px; background:#f1f5f9; border-radius:10px; padding:3px; }
+    .fin-tab { padding:6px 18px; border:none; background:none; border-radius:8px; font-size:13px; font-weight:500; color:#64748b; cursor:pointer; transition:all .15s; white-space:nowrap; }
+    .fin-tab.active { background:#fff; color:#0f172a; font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,.1); }
+    .fin-dash { padding:20px 24px 24px; display:flex; flex-direction:column; gap:20px; }
+    .fin-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; }
+    .fin-card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px 16px; }
+    .fin-card-value { font-size:21px; font-weight:700; color:#0f172a; margin-bottom:3px; }
+    .fin-card-label { font-size:12px; color:#64748b; }
+    .fin-card-sub   { font-size:11px; color:#94a3b8; margin-top:4px; }
+    .fin-card.c-green  .fin-card-value { color:#16a34a; }
+    .fin-card.c-red    .fin-card-value { color:#dc2626; }
+    .fin-card.c-blue   .fin-card-value { color:#2563eb; }
+    .fin-card.c-amber  .fin-card-value { color:#d97706; }
+    .fin-card.c-purple .fin-card-value { color:#7c3aed; }
+    .fin-recent { background:#fff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; }
+    .fin-recent-header { padding:14px 16px; border-bottom:1px solid #f1f5f9; font-size:13px; font-weight:700; color:#0f172a; }
+    .fin-recent-row { display:flex; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid #f8fafc; font-size:13px; }
+    .fin-recent-row:last-child { border-bottom:none; }
+    .fin-recent-icon { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+    .fin-recent-icon.entrada { background:#f0fdf4; }
+    .fin-recent-icon.saida   { background:#fef2f2; }
+    .fin-recent-desc { flex:1; min-width:0; }
+    .fin-recent-desc b { display:block; color:#0f172a; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .fin-recent-desc span { font-size:11px; color:#94a3b8; }
+    .fin-recent-valor { font-weight:700; font-size:13px; flex-shrink:0; }
+    .fin-recent-valor.entrada { color:#16a34a; }
+    .fin-recent-valor.saida   { color:#dc2626; }
+    .fin-list-bar { padding:16px 24px 0; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .fin-list-bar h3 { font-size:15px; font-weight:700; }
+    .fin-list-filters { display:flex; gap:8px; padding:10px 24px 0; flex-wrap:wrap; }
+    .fin-tbl-wrap { padding:12px 24px 24px; overflow-x:auto; }
+    .fin-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+    .fin-tbl th { text-align:left; padding:8px 12px; font-size:11px; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:.04em; border-bottom:2px solid #e2e8f0; white-space:nowrap; }
+    .fin-tbl td { padding:10px 12px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+    .fin-tbl tr:hover td { background:#f8fafc; }
+    .fin-tbl tr.row-atrasado td { background:#fff5f5; }
+    .fin-tbl .col-acoes { display:flex; gap:6px; }
+    .badge-fin { font-size:10px; font-weight:700; padding:2px 8px; border-radius:4px; white-space:nowrap; }
+    .fin-st-pendente  { background:#fef3c7; color:#92400e; }
+    .fin-st-pago      { background:#f0fdf4; color:#166534; }
+    .fin-st-recebido  { background:#f0fdf4; color:#166534; }
+    .fin-st-atrasado  { background:#fef2f2; color:#991b1b; }
+
     /* ── Notificações ── */
     .notif-wrap { position:relative; }
     .notif-btn { position:relative; background:none; border:none; cursor:pointer; padding:6px; border-radius:8px; color:#64748b; display:flex; align-items:center; justify-content:center; transition:background .15s; }
@@ -1120,6 +1166,13 @@
         TAREFAS
         <span class="nav-badge" id="navTarefasBadge" style="display:none">0</span>
       </button>
+      <button class="nav-item" id="navFinanceiro" onclick="showView('financeiro')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+        FINANCEIRO
+        <span class="nav-badge" id="navFinBadge" style="display:none">0</span>
+      </button>
       <button class="nav-item" id="navServicos" onclick="showView('servicos')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>
@@ -1281,6 +1334,91 @@
         </select>
       </div>
       <div class="tarefa-list" id="tarefaList"></div>
+    </div>
+
+    <!-- Financeiro -->
+    <div id="financeiroView" style="display:none">
+      <div class="fin-toolbar">
+        <h2>FINANCEIRO</h2>
+        <div class="fin-tabs">
+          <button class="fin-tab active" id="finTabDash"    onclick="showFinTab('dash')">Dashboard</button>
+          <button class="fin-tab"        id="finTabPagar"   onclick="showFinTab('pagar')">Contas a Pagar</button>
+          <button class="fin-tab"        id="finTabReceita" onclick="showFinTab('receita')">Receita</button>
+        </div>
+      </div>
+
+      <!-- Dashboard financeiro -->
+      <div id="finDashPanel" class="fin-dash">
+        <div class="fin-cards" id="finCards"></div>
+        <div class="fin-recent">
+          <div class="fin-recent-header">Últimas movimentações</div>
+          <div id="finRecentList"></div>
+        </div>
+      </div>
+
+      <!-- Contas a Pagar -->
+      <div id="finPagarPanel" style="display:none">
+        <div class="fin-list-bar">
+          <h3>Contas a Pagar</h3>
+          <button class="btn btn-primary" onclick="openContaPagarModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nova Conta
+          </button>
+        </div>
+        <div class="fin-list-filters">
+          <select id="filterPagarStatus" class="select-filter" onchange="renderContasPagar()">
+            <option value="">Todas</option>
+            <option value="Pendente">Pendentes</option>
+            <option value="Pago">Pagas</option>
+            <option value="Atrasado">Atrasadas</option>
+          </select>
+          <select id="filterPagarCat" class="select-filter" onchange="renderContasPagar()">
+            <option value="">Todas as categorias</option>
+            <option>Fornecedor</option><option>Aluguel</option><option>Pessoal</option>
+            <option>Infraestrutura</option><option>Marketing</option><option>Outros</option>
+          </select>
+        </div>
+        <div class="fin-tbl-wrap">
+          <table class="fin-tbl">
+            <thead><tr>
+              <th>Descrição</th><th>Categoria</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ações</th>
+            </tr></thead>
+            <tbody id="pagarTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Receita -->
+      <div id="finReceitaPanel" style="display:none">
+        <div class="fin-list-bar">
+          <h3>Receita</h3>
+          <button class="btn btn-primary" onclick="openReceitaModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nova Receita
+          </button>
+        </div>
+        <div class="fin-list-filters">
+          <select id="filterReceitaStatus" class="select-filter" onchange="renderReceita()">
+            <option value="">Todas</option>
+            <option value="Pendente">Pendentes</option>
+            <option value="Recebido">Recebidas</option>
+            <option value="Atrasado">Atrasadas</option>
+          </select>
+          <select id="filterReceitaCat" class="select-filter" onchange="renderReceita()">
+            <option value="">Todas as categorias</option>
+            <option>Contrato Mensal</option><option>Instalação</option><option>Suporte</option>
+            <option>Proposta</option><option>Avulso</option><option>Outros</option>
+          </select>
+        </div>
+        <div class="fin-tbl-wrap">
+          <table class="fin-tbl">
+            <thead><tr>
+              <th>Descrição</th><th>Cliente</th><th>Categoria</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ações</th>
+            </tr></thead>
+            <tbody id="receitaTbody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- Serviços / Produtos -->
@@ -1815,6 +1953,128 @@
     </div>
   </div>
 </div>
+<!-- Modal: Nova/Editar Conta a Pagar -->
+<div class="modal-overlay" id="contaPagarModal" style="z-index:650">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <h2 id="contaPagarModalTitle">Nova Conta a Pagar</h2>
+      <button class="modal-close" onclick="closeContaPagarModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="contaPagarId"/>
+      <div class="form-group">
+        <label>Descrição <span class="required">*</span></label>
+        <input type="text" id="contaPagarDesc" placeholder="Ex: Aluguel do escritório"/>
+        <span class="field-error" id="contaPagarDescError"></span>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Categoria</label>
+          <select id="contaPagarCat">
+            <option>Fornecedor</option><option>Aluguel</option><option>Pessoal</option>
+            <option>Infraestrutura</option><option>Marketing</option><option>Outros</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="contaPagarStatus">
+            <option value="Pendente">Pendente</option>
+            <option value="Pago">Pago</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Valor (R$) <span class="required">*</span></label>
+          <input type="number" id="contaPagarValor" min="0" step="0.01" placeholder="0,00"/>
+          <span class="field-error" id="contaPagarValorError"></span>
+        </div>
+        <div class="form-group">
+          <label>Vencimento</label>
+          <input type="date" id="contaPagarVenc" class="form-control"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Data do Pagamento</label>
+        <input type="date" id="contaPagarDataPag" class="form-control"/>
+      </div>
+      <div class="form-group">
+        <label>Observação</label>
+        <textarea id="contaPagarObs" rows="2" style="resize:vertical"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeContaPagarModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveContaPagar()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nova/Editar Receita -->
+<div class="modal-overlay" id="receitaModal" style="z-index:650">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <h2 id="receitaModalTitle">Nova Receita</h2>
+      <button class="modal-close" onclick="closeReceitaModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="receitaId"/>
+      <div class="form-group">
+        <label>Descrição <span class="required">*</span></label>
+        <input type="text" id="receitaDesc" placeholder="Ex: Mensalidade cliente X"/>
+        <span class="field-error" id="receitaDescError"></span>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Categoria</label>
+          <select id="receitaCat">
+            <option>Contrato Mensal</option><option>Instalação</option><option>Suporte</option>
+            <option>Proposta</option><option>Avulso</option><option>Outros</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="receitaStatus">
+            <option value="Pendente">Pendente</option>
+            <option value="Recebido">Recebido</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Valor (R$) <span class="required">*</span></label>
+          <input type="number" id="receitaValor" min="0" step="0.01" placeholder="0,00"/>
+          <span class="field-error" id="receitaValorError"></span>
+        </div>
+        <div class="form-group">
+          <label>Vencimento / Previsão</label>
+          <input type="date" id="receitaVenc" class="form-control"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Data do Recebimento</label>
+        <input type="date" id="receitaDataRec" class="form-control"/>
+      </div>
+      <div class="form-group">
+        <label>Vincular a um Lead (opcional)</label>
+        <select id="receitaLeadId"></select>
+      </div>
+      <div class="form-group">
+        <label>Observação</label>
+        <textarea id="receitaObs" rows="2" style="resize:vertical"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeReceitaModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveReceita()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="novaNegocioModal" style="z-index:500">
   <div class="modal" style="max-width:540px">
     <div class="modal-header">
@@ -2817,6 +3077,7 @@ function initApp(session) {
   populateFilterStatus();
   render();
   updateNavBadge();
+  updateNavFinBadge();
   // Carrega notificações do usuário logado do Supabase
   var nKey = NOTIFS_PREFIX + session.id;
   db.from('configs').select('value').eq('id', nKey).maybeSingle().then(function(r) {
@@ -3023,17 +3284,18 @@ window.toggleUser = toggleUser;
 
 // ── Navegação ──────────────────────────────────────────────────────────────
 function showView(name) {
-  var views = { leads: 'leadsView', crm: 'crmView', tarefas: 'tarefasView', servicos: 'servicosView' };
-  var navs  = { leads: 'navLeads', crm: 'navCRM', tarefas: 'navTarefas', servicos: 'navServicos' };
+  var views = { leads: 'leadsView', crm: 'crmView', tarefas: 'tarefasView', financeiro: 'financeiroView', servicos: 'servicosView' };
+  var navs  = { leads: 'navLeads', crm: 'navCRM', tarefas: 'navTarefas', financeiro: 'navFinanceiro', servicos: 'navServicos' };
   Object.keys(views).forEach(function(k) {
     var el = document.getElementById(views[k]);
     if (el) el.style.display = k === name ? '' : 'none';
     var nav = document.getElementById(navs[k]);
     if (nav) nav.classList.toggle('active', k === name);
   });
-  if (name === 'crm')     renderKanban();
-  if (name === 'servicos') renderServicos();
-  if (name === 'tarefas')  renderTarefas();
+  if (name === 'crm')        renderKanban();
+  if (name === 'servicos')   renderServicos();
+  if (name === 'tarefas')    renderTarefas();
+  if (name === 'financeiro') renderFinanceiro();
 }
 window.showView = showView;
 
@@ -4493,10 +4755,312 @@ window.deletarTarefa    = deletarTarefa;
 window.setTarefaFiltro  = setTarefaFiltro;
 window.setTarefaOrdem   = setTarefaOrdem;
 
+// ── Financeiro ─────────────────────────────────────────────────────────────
+var CONTAS_PAGAR_KEY = 'crm_contas_pagar';
+var RECEITA_KEY      = 'crm_receita';
+
+function loadContasPagar() { return _cfgCache[CONTAS_PAGAR_KEY] || []; }
+function saveContasPagar(a){ saveConfigBg(CONTAS_PAGAR_KEY, a); }
+function loadReceita()     { return _cfgCache[RECEITA_KEY] || []; }
+function saveReceita2(a)   { saveConfigBg(RECEITA_KEY, a); }
+
+var _finTab = 'dash';
+
+function finStatus(item, tipoPago) {
+  if (item.status === tipoPago) return tipoPago;
+  var today = getTodayStr();
+  if (item.vencimento && item.vencimento < today) return 'Atrasado';
+  return 'Pendente';
+}
+
+function updateNavFinBadge() {
+  var today   = getTodayStr();
+  var pagar   = loadContasPagar().filter(function(i){ return i.status !== 'Pago'     && i.vencimento && i.vencimento < today; }).length;
+  var receita = loadReceita()    .filter(function(i){ return i.status !== 'Recebido' && i.vencimento && i.vencimento < today; }).length;
+  var count   = pagar + receita;
+  var badge   = document.getElementById('navFinBadge');
+  if (!badge) return;
+  badge.textContent   = count;
+  badge.style.display = count > 0 ? '' : 'none';
+}
+
+function showFinTab(tab) {
+  _finTab = tab;
+  ['dash','pagar','receita'].forEach(function(t) {
+    document.getElementById('finTab' + (t === 'dash' ? 'Dash' : t === 'pagar' ? 'Pagar' : 'Receita')).classList.toggle('active', t === tab);
+    document.getElementById('fin' + (t === 'dash' ? 'Dash' : t === 'pagar' ? 'Pagar' : 'Receita') + 'Panel').style.display = t === tab ? '' : 'none';
+  });
+  if (tab === 'dash')    renderFinDash();
+  if (tab === 'pagar')   renderContasPagar();
+  if (tab === 'receita') renderReceita();
+}
+
+function renderFinanceiro() {
+  updateNavFinBadge();
+  showFinTab(_finTab);
+}
+
+function renderFinDash() {
+  var today    = getTodayStr();
+  var mesIni   = today.slice(0,7) + '-01';
+  var mesFim   = today.slice(0,7) + '-31';
+  var pagar    = loadContasPagar();
+  var receita  = loadReceita();
+
+  var aPagar    = pagar  .filter(function(i){ return i.status !== 'Pago';    }).reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+  var aReceber  = receita.filter(function(i){ return i.status !== 'Recebido';}).reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+  var pagoMes   = pagar  .filter(function(i){ return i.status === 'Pago'     && i.dataPagamento >= mesIni && i.dataPagamento <= mesFim; }).reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+  var recebMes  = receita.filter(function(i){ return i.status === 'Recebido' && i.dataRecebimento >= mesIni && i.dataRecebimento <= mesFim; }).reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+  var atrasados = pagar  .filter(function(i){ return i.status !== 'Pago'     && i.vencimento && i.vencimento < today; }).length
+                + receita.filter(function(i){ return i.status !== 'Recebido' && i.vencimento && i.vencimento < today; }).length;
+  var saldo     = aReceber - aPagar;
+
+  document.getElementById('finCards').innerHTML = [
+    { label:'A Receber',        value: fmtMoney(aReceber),  sub:'em aberto',          cls:'c-blue'   },
+    { label:'A Pagar',          value: fmtMoney(aPagar),    sub:'em aberto',          cls:'c-amber'  },
+    { label:'Saldo Projetado',  value: fmtMoney(saldo),     sub:'receita − despesas', cls: saldo >= 0 ? 'c-green' : 'c-red' },
+    { label:'Recebido este mês',value: fmtMoney(recebMes),  sub: today.slice(0,7).split('-').reverse().join('/'), cls:'c-green'  },
+    { label:'Pago este mês',    value: fmtMoney(pagoMes),   sub: today.slice(0,7).split('-').reverse().join('/'), cls:'c-red'    },
+    { label:'Em Atraso',        value: atrasados + (atrasados === 1 ? ' item' : ' itens'), sub:'vencidos não quitados', cls: atrasados > 0 ? 'c-red' : 'c-green' },
+  ].map(function(c) {
+    return '<div class="fin-card ' + c.cls + '">' +
+      '<div class="fin-card-value">' + c.value + '</div>' +
+      '<div class="fin-card-label">' + c.label + '</div>' +
+      '<div class="fin-card-sub">'   + c.sub   + '</div>' +
+    '</div>';
+  }).join('');
+
+  // Últimas movimentações (10 mais recentes de ambos)
+  var todos = pagar.map(function(i){ return Object.assign({},i,{_tipo:'saida'}); })
+    .concat(receita.map(function(i){ return Object.assign({},i,{_tipo:'entrada'}); }));
+  todos.sort(function(a,b){ return (b.criadoEm||0) - (a.criadoEm||0); });
+  var recent = todos.slice(0,10);
+  var recEl  = document.getElementById('finRecentList');
+  if (!recent.length) { recEl.innerHTML = '<div style="padding:24px 16px;text-align:center;color:#94a3b8;font-size:13px">Nenhuma movimentação ainda.</div>'; return; }
+  recEl.innerHTML = recent.map(function(i) {
+    var st  = i._tipo === 'saida' ? finStatus(i,'Pago') : finStatus(i,'Recebido');
+    var stClass = { 'Pago':'fin-st-pago','Recebido':'fin-st-recebido','Atrasado':'fin-st-atrasado','Pendente':'fin-st-pendente' }[st] || 'fin-st-pendente';
+    var icon    = i._tipo === 'entrada' ? '💰' : '💸';
+    var vencStr = i.vencimento ? new Date(i.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    return '<div class="fin-recent-row">' +
+      '<div class="fin-recent-icon ' + i._tipo + '">' + icon + '</div>' +
+      '<div class="fin-recent-desc"><b>' + esc(i.descricao) + '</b><span>' + esc(i.categoria||'') + ' · ' + vencStr + '</span></div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">' +
+        '<span class="fin-recent-valor ' + i._tipo + '">' + (i._tipo==='entrada'?'+':'-') + fmtMoney(+i.valor||0) + '</span>' +
+        '<span class="badge-fin ' + stClass + '">' + st + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderContasPagar() {
+  var today  = getTodayStr();
+  var filtSt = (document.getElementById('filterPagarStatus') || {}).value || '';
+  var filtCt = (document.getElementById('filterPagarCat')    || {}).value || '';
+  var lista  = loadContasPagar().filter(function(i) {
+    var st = finStatus(i,'Pago');
+    if (filtSt && st !== filtSt) return false;
+    if (filtCt && i.categoria !== filtCt) return false;
+    return true;
+  }).sort(function(a,b){ return (a.vencimento||'').localeCompare(b.vencimento||''); });
+  var tbody = document.getElementById('pagarTbody');
+  if (!tbody) return;
+  if (!lista.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:32px">Nenhuma conta encontrada.</td></tr>'; return; }
+  tbody.innerHTML = lista.map(function(i) {
+    var st      = finStatus(i,'Pago');
+    var stClass = { 'Pago':'fin-st-pago','Atrasado':'fin-st-atrasado','Pendente':'fin-st-pendente' }[st] || 'fin-st-pendente';
+    var vencStr = i.vencimento ? new Date(i.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    return '<tr class="' + (st==='Atrasado'?'row-atrasado':'') + '">' +
+      '<td>' + esc(i.descricao) + (i.observacao ? '<br><small style="color:#94a3b8">' + esc(i.observacao) + '</small>' : '') + '</td>' +
+      '<td>' + esc(i.categoria||'—') + '</td>' +
+      '<td style="white-space:nowrap">' + vencStr + '</td>' +
+      '<td style="font-weight:600;white-space:nowrap">' + fmtMoney(+i.valor||0) + '</td>' +
+      '<td><span class="badge-fin ' + stClass + '">' + st + '</span></td>' +
+      '<td><div class="fin-tbl col-acoes">' +
+        '<button class="btn btn-outline" style="padding:3px 10px;font-size:12px" onclick="openContaPagarModal(\'' + i.id + '\')">✏️</button>' +
+        (st !== 'Pago' ? '<button class="btn btn-primary" style="padding:3px 10px;font-size:12px" onclick="marcarPago(\'' + i.id + '\')">✔ Pago</button>' : '') +
+        '<button class="btn btn-ghost" style="padding:3px 10px;font-size:12px;color:#ef4444" onclick="deletarContaPagar(\'' + i.id + '\')">✕</button>' +
+      '</div></td>' +
+    '</tr>';
+  }).join('');
+}
+
+function renderReceita() {
+  var filtSt = (document.getElementById('filterReceitaStatus') || {}).value || '';
+  var filtCt = (document.getElementById('filterReceitaCat')    || {}).value || '';
+  var lista  = loadReceita().filter(function(i) {
+    var st = finStatus(i,'Recebido');
+    if (filtSt && st !== filtSt) return false;
+    if (filtCt && i.categoria !== filtCt) return false;
+    return true;
+  }).sort(function(a,b){ return (a.vencimento||'').localeCompare(b.vencimento||''); });
+  var tbody = document.getElementById('receitaTbody');
+  if (!tbody) return;
+  if (!lista.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:32px">Nenhuma receita encontrada.</td></tr>'; return; }
+  tbody.innerHTML = lista.map(function(i) {
+    var st      = finStatus(i,'Recebido');
+    var stClass = { 'Recebido':'fin-st-recebido','Atrasado':'fin-st-atrasado','Pendente':'fin-st-pendente' }[st] || 'fin-st-pendente';
+    var vencStr = i.vencimento ? new Date(i.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    var lead    = i.leadId ? leads.find(function(l){ return l.id===i.leadId; }) : null;
+    return '<tr class="' + (st==='Atrasado'?'row-atrasado':'') + '">' +
+      '<td>' + esc(i.descricao) + (i.observacao ? '<br><small style="color:#94a3b8">' + esc(i.observacao) + '</small>' : '') + '</td>' +
+      '<td>' + (lead ? '<span class="link-empresa" style="font-size:12px" onclick="openDetail(\'' + lead.id + '\')">' + esc(lead.empresa) + '</span>' : '—') + '</td>' +
+      '<td>' + esc(i.categoria||'—') + '</td>' +
+      '<td style="white-space:nowrap">' + vencStr + '</td>' +
+      '<td style="font-weight:600;white-space:nowrap;color:#16a34a">' + fmtMoney(+i.valor||0) + '</td>' +
+      '<td><span class="badge-fin ' + stClass + '">' + st + '</span></td>' +
+      '<td><div class="fin-tbl col-acoes">' +
+        '<button class="btn btn-outline" style="padding:3px 10px;font-size:12px" onclick="openReceitaModal(\'' + i.id + '\')">✏️</button>' +
+        (st !== 'Recebido' ? '<button class="btn btn-primary" style="padding:3px 10px;font-size:12px;background:#16a34a;border-color:#16a34a" onclick="marcarRecebido(\'' + i.id + '\')">✔ Recebido</button>' : '') +
+        '<button class="btn btn-ghost" style="padding:3px 10px;font-size:12px;color:#ef4444" onclick="deletarReceita(\'' + i.id + '\')">✕</button>' +
+      '</div></td>' +
+    '</tr>';
+  }).join('');
+}
+
+// ── Modais Financeiro ──
+function openContaPagarModal(id) {
+  var i = id ? loadContasPagar().find(function(x){ return x.id===id; }) : null;
+  document.getElementById('contaPagarModalTitle').textContent = i ? 'Editar Conta a Pagar' : 'Nova Conta a Pagar';
+  document.getElementById('contaPagarId').value      = i ? i.id : '';
+  document.getElementById('contaPagarDesc').value    = i ? i.descricao : '';
+  document.getElementById('contaPagarDescError').textContent = '';
+  document.getElementById('contaPagarCat').value     = i ? (i.categoria||'Outros') : 'Outros';
+  document.getElementById('contaPagarStatus').value  = i ? i.status : 'Pendente';
+  document.getElementById('contaPagarValor').value   = i ? i.valor : '';
+  document.getElementById('contaPagarValorError').textContent = '';
+  document.getElementById('contaPagarVenc').value    = i ? (i.vencimento||'') : '';
+  document.getElementById('contaPagarDataPag').value = i ? (i.dataPagamento||'') : '';
+  document.getElementById('contaPagarObs').value     = i ? (i.observacao||'') : '';
+  document.getElementById('contaPagarModal').classList.add('open');
+}
+function closeContaPagarModal() { document.getElementById('contaPagarModal').classList.remove('open'); }
+
+function saveContaPagar() {
+  var desc  = document.getElementById('contaPagarDesc').value.trim();
+  var valor = parseFloat(document.getElementById('contaPagarValor').value);
+  if (!desc)       { document.getElementById('contaPagarDescError').textContent  = 'Informe a descrição.'; return; }
+  if (isNaN(valor)){ document.getElementById('contaPagarValorError').textContent = 'Informe o valor.';     return; }
+  var session = getSession();
+  var id      = document.getElementById('contaPagarId').value;
+  var lista   = loadContasPagar();
+  var isNew   = !id;
+  var item    = {
+    id:           id || generateId(),
+    descricao:    desc,
+    categoria:    document.getElementById('contaPagarCat').value,
+    status:       document.getElementById('contaPagarStatus').value,
+    valor:        valor,
+    vencimento:   document.getElementById('contaPagarVenc').value,
+    dataPagamento:document.getElementById('contaPagarDataPag').value,
+    observacao:   document.getElementById('contaPagarObs').value.trim(),
+    criadoPor:    isNew ? (session ? session.nome : '—') : (lista.find(function(x){ return x.id===id; })||{}).criadoPor,
+    criadoEm:     isNew ? Date.now() : (lista.find(function(x){ return x.id===id; })||{}).criadoEm,
+  };
+  if (isNew) { lista.push(item); } else { var idx=lista.findIndex(function(x){return x.id===id;}); if(idx!==-1)lista[idx]=item; else lista.push(item); }
+  saveContasPagar(lista);
+  closeContaPagarModal();
+  renderFinanceiro();
+}
+
+function marcarPago(id) {
+  var lista = loadContasPagar();
+  var idx   = lista.findIndex(function(x){ return x.id===id; });
+  if (idx === -1) return;
+  lista[idx].status       = 'Pago';
+  lista[idx].dataPagamento = getTodayStr();
+  saveContasPagar(lista);
+  renderFinanceiro();
+}
+function deletarContaPagar(id) {
+  if (!confirm('Excluir esta conta?')) return;
+  saveContasPagar(loadContasPagar().filter(function(x){ return x.id!==id; }));
+  renderFinanceiro();
+}
+
+function openReceitaModal(id) {
+  var i = id ? loadReceita().find(function(x){ return x.id===id; }) : null;
+  document.getElementById('receitaModalTitle').textContent = i ? 'Editar Receita' : 'Nova Receita';
+  document.getElementById('receitaId').value       = i ? i.id : '';
+  document.getElementById('receitaDesc').value     = i ? i.descricao : '';
+  document.getElementById('receitaDescError').textContent = '';
+  document.getElementById('receitaCat').value      = i ? (i.categoria||'Avulso') : 'Avulso';
+  document.getElementById('receitaStatus').value   = i ? i.status : 'Pendente';
+  document.getElementById('receitaValor').value    = i ? i.valor : '';
+  document.getElementById('receitaValorError').textContent = '';
+  document.getElementById('receitaVenc').value     = i ? (i.vencimento||'') : '';
+  document.getElementById('receitaDataRec').value  = i ? (i.dataRecebimento||'') : '';
+  document.getElementById('receitaObs').value      = i ? (i.observacao||'') : '';
+  var leadSel = document.getElementById('receitaLeadId');
+  leadSel.innerHTML = '<option value="">Nenhum lead vinculado</option>' +
+    leads.slice().sort(function(a,b){ return a.empresa.localeCompare(b.empresa); }).map(function(l) {
+      return '<option value="'+l.id+'"'+(i&&i.leadId===l.id?' selected':'')+'>'+esc(l.empresa)+'</option>';
+    }).join('');
+  document.getElementById('receitaModal').classList.add('open');
+}
+function closeReceitaModal() { document.getElementById('receitaModal').classList.remove('open'); }
+
+function saveReceita() {
+  var desc  = document.getElementById('receitaDesc').value.trim();
+  var valor = parseFloat(document.getElementById('receitaValor').value);
+  if (!desc)       { document.getElementById('receitaDescError').textContent  = 'Informe a descrição.'; return; }
+  if (isNaN(valor)){ document.getElementById('receitaValorError').textContent = 'Informe o valor.';     return; }
+  var session = getSession();
+  var id      = document.getElementById('receitaId').value;
+  var lista   = loadReceita();
+  var isNew   = !id;
+  var item    = {
+    id:              id || generateId(),
+    descricao:       desc,
+    categoria:       document.getElementById('receitaCat').value,
+    status:          document.getElementById('receitaStatus').value,
+    valor:           valor,
+    vencimento:      document.getElementById('receitaVenc').value,
+    dataRecebimento: document.getElementById('receitaDataRec').value,
+    leadId:          document.getElementById('receitaLeadId').value,
+    observacao:      document.getElementById('receitaObs').value.trim(),
+    criadoPor:       isNew ? (session ? session.nome : '—') : (lista.find(function(x){ return x.id===id; })||{}).criadoPor,
+    criadoEm:        isNew ? Date.now() : (lista.find(function(x){ return x.id===id; })||{}).criadoEm,
+  };
+  if (isNew) { lista.push(item); } else { var idx=lista.findIndex(function(x){return x.id===id;}); if(idx!==-1)lista[idx]=item; else lista.push(item); }
+  saveReceita2(lista);
+  closeReceitaModal();
+  renderFinanceiro();
+}
+
+function marcarRecebido(id) {
+  var lista = loadReceita();
+  var idx   = lista.findIndex(function(x){ return x.id===id; });
+  if (idx === -1) return;
+  lista[idx].status          = 'Recebido';
+  lista[idx].dataRecebimento = getTodayStr();
+  saveReceita2(lista);
+  renderFinanceiro();
+}
+function deletarReceita(id) {
+  if (!confirm('Excluir esta receita?')) return;
+  saveReceita2(loadReceita().filter(function(x){ return x.id!==id; }));
+  renderFinanceiro();
+}
+
+window.showFinTab          = showFinTab;
+window.openContaPagarModal = openContaPagarModal;
+window.closeContaPagarModal= closeContaPagarModal;
+window.saveContaPagar      = saveContaPagar;
+window.marcarPago          = marcarPago;
+window.deletarContaPagar   = deletarContaPagar;
+window.openReceitaModal    = openReceitaModal;
+window.closeReceitaModal   = closeReceitaModal;
+window.saveReceita         = saveReceita;
+window.marcarRecebido      = marcarRecebido;
+window.deletarReceita      = deletarReceita;
+window.renderContasPagar   = renderContasPagar;
+window.renderReceita       = renderReceita;
+
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
   // Preload all configs from Supabase into memory (single query)
-  var cfgKeys = [STAGES_KEY, NEGOCIOS_KEY, SERVICOS_KEY, LEAD_SERVS_KEY, LEAD_EXTRA_KEY, PROPOSTAS_KEY, TAREFAS_KEY];
+  var cfgKeys = [STAGES_KEY, NEGOCIOS_KEY, SERVICOS_KEY, LEAD_SERVS_KEY, LEAD_EXTRA_KEY, PROPOSTAS_KEY, TAREFAS_KEY, CONTAS_PAGAR_KEY, RECEITA_KEY];
   try {
     var { data: cfgRows } = await db.from('configs').select('id,value').in('id', cfgKeys);
     if (cfgRows) cfgRows.forEach(function(row){ _cfgCache[row.id] = row.value; });
@@ -4550,6 +5114,11 @@ async function boot() {
         updateNavBadge();
         var tv = document.getElementById('tarefasView');
         if (tv && tv.style.display !== 'none') renderTarefas();
+      }
+      if (payload.new.id === CONTAS_PAGAR_KEY || payload.new.id === RECEITA_KEY) {
+        updateNavFinBadge();
+        var fv = document.getElementById('financeiroView');
+        if (fv && fv.style.display !== 'none') renderFinanceiro();
       }
       // Notificação para o usuário logado
       var myKey = myNotifsKey();
