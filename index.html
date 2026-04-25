@@ -2226,7 +2226,14 @@
       </div>
       <div class="form-group">
         <label>Vincular a um Evento (opcional)</label>
-        <select id="receitaEventoId"></select>
+        <select id="receitaEventoId" onchange="onReceitaEventoChange()"></select>
+      </div>
+      <div id="receitaEventoOnlyGrp" style="display:none;margin-top:-4px;margin-bottom:12px">
+        <label class="visivel-check-item" style="cursor:pointer;gap:8px;font-size:13px">
+          <input type="checkbox" id="receitaLancarEmReceitas" style="width:15px;height:15px;cursor:pointer;accent-color:#2563eb"/>
+          Lançar também na aba Receitas
+        </label>
+        <div style="font-size:11px;color:#94a3b8;margin-top:3px;margin-left:23px">Desmarcado: o valor aparece somente no P&L do evento</div>
       </div>
       <div class="form-group">
         <label>Observação</label>
@@ -5059,7 +5066,7 @@ function renderFinDash() {
   var mesFim   = mesSel + '-31';
   var mesLabel = mesSel.split('-').reverse().join('/');
   var pagar    = loadContasPagar();
-  var receita  = loadReceita();
+  var receita  = loadReceita().filter(function(i){ return !i.eventoOnly; });
 
   // Dados do mês selecionado
   var recPrevMes  = receita.filter(function(i){ return (i.vencimento||'').startsWith(mesSel); }).reduce(function(s,i){ return s + (+i.valor||0); }, 0);
@@ -5153,6 +5160,7 @@ function renderReceita() {
   var filtCt = (document.getElementById('filterReceitaCat')    || {}).value || '';
   var filtMs = (document.getElementById('filterReceitaMes')    || {}).value || '';
   var lista  = loadReceita().filter(function(i) {
+    if (i.eventoOnly) return false;
     var st = finStatus(i,'Recebido');
     if (filtSt && st !== filtSt) return false;
     if (filtCt && i.categoria !== filtCt) return false;
@@ -5444,10 +5452,30 @@ function openReceitaModal(id, preselEvento) {
     leads.slice().sort(function(a,b){ return a.empresa.localeCompare(b.empresa); }).map(function(l) {
       return '<option value="'+l.id+'"'+(i&&i.leadId===l.id?' selected':'')+'>'+esc(l.empresa)+'</option>';
     }).join('');
-  populateEventoSelect('receitaEventoId', i ? (i.eventoId||'') : (preselEvento||''));
+  var evSel = i ? (i.eventoId||'') : (preselEvento||'');
+  populateEventoSelect('receitaEventoId', evSel);
+  // Checkbox: shown when evento is selected; default unchecked (evento-only) for new entries from event context
+  var hasEvento = !!evSel;
+  document.getElementById('receitaEventoOnlyGrp').style.display = hasEvento ? '' : 'none';
+  document.getElementById('receitaLancarEmReceitas').checked = i ? !i.eventoOnly : false;
   document.getElementById('receitaModal').classList.add('open');
 }
 function closeReceitaModal() { document.getElementById('receitaModal').classList.remove('open'); }
+
+function onReceitaEventoChange() {
+  var evId = document.getElementById('receitaEventoId').value;
+  var grp  = document.getElementById('receitaEventoOnlyGrp');
+  if (evId) {
+    grp.style.display = '';
+    // Only auto-uncheck if this is a new form (id empty)
+    if (!document.getElementById('receitaId').value) {
+      document.getElementById('receitaLancarEmReceitas').checked = false;
+    }
+  } else {
+    grp.style.display = 'none';
+    document.getElementById('receitaLancarEmReceitas').checked = true;
+  }
+}
 
 function saveReceita() {
   var desc  = strToTitleCase(document.getElementById('receitaDesc').value.trim());
@@ -5460,7 +5488,8 @@ function saveReceita() {
   var cat      = document.getElementById('receitaCat').value;
   var obs      = document.getElementById('receitaObs').value.trim();
   var leadId   = document.getElementById('receitaLeadId').value;
-  var eventoId = document.getElementById('receitaEventoId').value || '';
+  var eventoId  = document.getElementById('receitaEventoId').value || '';
+  var eventoOnly = eventoId ? !document.getElementById('receitaLancarEmReceitas').checked : false;
   var criadoPor = isNew ? (session ? session.nome : '—') : (lista.find(function(x){ return x.id===id; })||{}).criadoPor;
   var criadoEm  = isNew ? Date.now() : (lista.find(function(x){ return x.id===id; })||{}).criadoEm;
 
@@ -5480,7 +5509,7 @@ function saveReceita() {
       } else {
         valParc = p < nParc - 1 ? Math.floor(valTotal / nParc * 100) / 100 : Math.round((valTotal - Math.floor(valTotal / nParc * 100) / 100 * (nParc - 1)) * 100) / 100;
       }
-      lista.push({ id: generateId(), descricao: desc + ' (' + (p+1) + '/' + nParc + ')', categoria: cat, status: 'Pendente', valor: valParc, vencimento: nextVencimentoN(vencIni, p), dataRecebimento: '', leadId: leadId, eventoId: eventoId, observacao: obs, recorrencia: 'nenhuma', parcelaGrupoId: grupoId, parcelaSeq: p+1, parcelas: nParc, criadoPor: criadoPor, criadoEm: Date.now() });
+      lista.push({ id: generateId(), descricao: desc + ' (' + (p+1) + '/' + nParc + ')', categoria: cat, status: 'Pendente', valor: valParc, vencimento: nextVencimentoN(vencIni, p), dataRecebimento: '', leadId: leadId, eventoId: eventoId, eventoOnly: eventoOnly, observacao: obs, recorrencia: 'nenhuma', parcelaGrupoId: grupoId, parcelaSeq: p+1, parcelas: nParc, criadoPor: criadoPor, criadoEm: Date.now() });
     }
   } else {
     var valor = parseFloat(document.getElementById('receitaValor').value);
@@ -5493,10 +5522,10 @@ function saveReceita() {
       var grupoId2 = generateId();
       var vencBase = document.getElementById('receitaVenc').value;
       for (var m = 0; m < totalM; m++) {
-        lista.push({ id: generateId(), descricao: desc, categoria: cat, status: 'Pendente', valor: valor, vencimento: nextVencimentoN(vencBase, m), dataRecebimento: '', leadId: leadId, eventoId: eventoId, observacao: obs, recorrencia: 'mensal', recorrenciaMeses: recMeses, recorrenciaSeq: m+1, recorrenciaGrupoId: grupoId2, recorrenciaIndefinido: indef, criadoPor: criadoPor, criadoEm: Date.now() });
+        lista.push({ id: generateId(), descricao: desc, categoria: cat, status: 'Pendente', valor: valor, vencimento: nextVencimentoN(vencBase, m), dataRecebimento: '', leadId: leadId, eventoId: eventoId, eventoOnly: eventoOnly, observacao: obs, recorrencia: 'mensal', recorrenciaMeses: recMeses, recorrenciaSeq: m+1, recorrenciaGrupoId: grupoId2, recorrenciaIndefinido: indef, criadoPor: criadoPor, criadoEm: Date.now() });
       }
     } else {
-      var item = { id: id||generateId(), descricao: desc, categoria: cat, status: document.getElementById('receitaStatus').value, valor: valor, vencimento: document.getElementById('receitaVenc').value, dataRecebimento: document.getElementById('receitaDataRec').value, leadId: leadId, eventoId: eventoId, observacao: obs, recorrencia: rec, criadoPor: criadoPor, criadoEm: criadoEm };
+      var item = { id: id||generateId(), descricao: desc, categoria: cat, status: document.getElementById('receitaStatus').value, valor: valor, vencimento: document.getElementById('receitaVenc').value, dataRecebimento: document.getElementById('receitaDataRec').value, leadId: leadId, eventoId: eventoId, eventoOnly: eventoOnly, observacao: obs, recorrencia: rec, criadoPor: criadoPor, criadoEm: criadoEm };
       if (isNew) { lista.push(item); } else { var idx2=lista.findIndex(function(x){return x.id===id;}); if(idx2!==-1)lista[idx2]=item; else lista.push(item); }
     }
   }
@@ -5932,6 +5961,7 @@ window.renderReceita           = renderReceita;
 window.onContaPagarRecChange   = onContaPagarRecChange;
 window.onReceitaTipoChange     = onReceitaTipoChange;
 window.onReceitaRecChange      = onReceitaRecChange;
+window.onReceitaEventoChange   = onReceitaEventoChange;
 window.onReceitaParceladoCalc  = onReceitaParceladoCalc;
 window.populateCatSelect       = populateCatSelect;
 window.populateFilterCat       = populateFilterCat;
