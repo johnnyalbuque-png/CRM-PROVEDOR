@@ -882,6 +882,7 @@
     .fin-st-pago      { background:#f0fdf4; color:#166534; }
     .fin-st-recebido  { background:#f0fdf4; color:#166534; }
     .fin-st-atrasado  { background:#fef2f2; color:#991b1b; }
+    .fin-st-parcial   { background:#eff6ff; color:#1d4ed8; }
 
     /* ── Notificações ── */
     .notif-wrap { position:relative; }
@@ -1349,6 +1350,11 @@
 
       <!-- Dashboard financeiro -->
       <div id="finDashPanel" class="fin-dash">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:-8px">
+          <h3 style="font-size:14px;font-weight:700;flex:1;margin:0;color:#0f172a">Previsão por Mês</h3>
+          <label style="font-size:12px;color:#64748b;font-weight:500">Mês:</label>
+          <input type="month" id="dashMesSel" class="select-filter" style="padding:5px 10px;font-size:13px" onchange="renderFinDash()" />
+        </div>
         <div class="fin-cards" id="finCards"></div>
         <div class="fin-recent">
           <div class="fin-recent-header">Últimas movimentações</div>
@@ -2003,17 +2009,25 @@
       <div class="form-row">
         <div class="form-group">
           <label>Recorrência</label>
-          <select id="contaPagarRec">
+          <select id="contaPagarRec" onchange="onContaPagarRecChange()">
             <option value="nenhuma">Sem recorrência</option>
             <option value="semanal">Semanal</option>
             <option value="quinzenal">Quinzenal</option>
-            <option value="mensal">Mensal</option>
+            <option value="mensal">Mensal (indefinido)</option>
+            <option value="mensal_x">Mensal por X meses</option>
             <option value="anual">Anual</option>
           </select>
         </div>
         <div class="form-group">
           <label>Data do Pagamento</label>
           <input type="date" id="contaPagarDataPag" class="form-control"/>
+        </div>
+      </div>
+      <div class="form-row" id="contaPagarRecMesesRow" style="display:none">
+        <div class="form-group">
+          <label>Nº de meses</label>
+          <input type="number" id="contaPagarRecMeses" min="1" max="120" value="12" class="form-control" style="max-width:120px"/>
+          <small style="color:#94a3b8;font-size:11px">Gera todas as parcelas ao salvar</small>
         </div>
       </div>
       <div class="form-group">
@@ -2030,7 +2044,7 @@
 
 <!-- Modal: Nova/Editar Receita -->
 <div class="modal-overlay" id="receitaModal" style="z-index:650">
-  <div class="modal" style="max-width:500px">
+  <div class="modal" style="max-width:520px">
     <div class="modal-header">
       <h2 id="receitaModalTitle">Nova Receita</h2>
       <button class="modal-close" onclick="closeReceitaModal()">
@@ -2039,10 +2053,19 @@
     </div>
     <div class="modal-body">
       <input type="hidden" id="receitaId"/>
-      <div class="form-group">
-        <label>Descrição <span class="required">*</span></label>
-        <input type="text" id="receitaDesc" placeholder="Ex: Mensalidade cliente X"/>
-        <span class="field-error" id="receitaDescError"></span>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Descrição <span class="required">*</span></label>
+          <input type="text" id="receitaDesc" placeholder="Ex: Mensalidade cliente X"/>
+          <span class="field-error" id="receitaDescError"></span>
+        </div>
+        <div class="form-group" style="max-width:160px">
+          <label>Tipo de lançamento</label>
+          <select id="receitaTipo" onchange="onReceitaTipoChange()">
+            <option value="simples">Simples</option>
+            <option value="parcelado">Parcelado</option>
+          </select>
+        </div>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -2060,33 +2083,75 @@
           </select>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Valor (R$) <span class="required">*</span></label>
-          <input type="number" id="receitaValor" min="0" step="0.01" placeholder="0,00"/>
-          <span class="field-error" id="receitaValorError"></span>
+
+      <!-- Seção SIMPLES -->
+      <div id="receitaSimplesSection">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Valor (R$) <span class="required">*</span></label>
+            <input type="number" id="receitaValor" min="0" step="0.01" placeholder="0,00"/>
+            <span class="field-error" id="receitaValorError"></span>
+          </div>
+          <div class="form-group">
+            <label>Vencimento / Previsão</label>
+            <input type="date" id="receitaVenc" class="form-control"/>
+          </div>
         </div>
-        <div class="form-group">
-          <label>Vencimento / Previsão</label>
-          <input type="date" id="receitaVenc" class="form-control"/>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Recorrência</label>
+            <select id="receitaRec" onchange="onReceitaRecChange()">
+              <option value="nenhuma">Sem recorrência</option>
+              <option value="semanal">Semanal</option>
+              <option value="quinzenal">Quinzenal</option>
+              <option value="mensal">Mensal (indefinido)</option>
+              <option value="mensal_x">Mensal por X meses</option>
+              <option value="anual">Anual</option>
+            </select>
+          </div>
+          <div class="form-group" id="receitaRecMesesGrp" style="display:none">
+            <label>Nº de meses</label>
+            <input type="number" id="receitaRecMeses" min="1" max="120" value="12" class="form-control" style="max-width:100px"/>
+            <small style="color:#94a3b8;font-size:11px">Gera todas ao salvar</small>
+          </div>
+          <div class="form-group">
+            <label>Data do Recebimento</label>
+            <input type="date" id="receitaDataRec" class="form-control"/>
+          </div>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Recorrência</label>
-          <select id="receitaRec">
-            <option value="nenhuma">Sem recorrência</option>
-            <option value="semanal">Semanal</option>
-            <option value="quinzenal">Quinzenal</option>
-            <option value="mensal">Mensal</option>
-            <option value="anual">Anual</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Data do Recebimento</label>
-          <input type="date" id="receitaDataRec" class="form-control"/>
+
+      <!-- Seção PARCELADO -->
+      <div id="receitaParceladoSection" style="display:none">
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;margin-bottom:12px">
+          <div class="form-row" style="margin-bottom:10px">
+            <div class="form-group">
+              <label>Valor Total (R$) <span class="required">*</span></label>
+              <input type="number" id="receitaValorTotal" min="0" step="0.01" placeholder="0,00" oninput="onReceitaParceladoCalc()"/>
+            </div>
+            <div class="form-group">
+              <label>Nº de Parcelas <span class="required">*</span></label>
+              <input type="number" id="receitaNParcelas" min="1" max="120" value="12" oninput="onReceitaParceladoCalc()"/>
+            </div>
+          </div>
+          <div class="form-row" style="margin-bottom:10px">
+            <div class="form-group">
+              <label>Mês Inicial <span class="required">*</span></label>
+              <input type="month" id="receitaMesInicial" class="form-control" style="padding:6px 10px"/>
+            </div>
+            <div class="form-group">
+              <label>Valores das parcelas</label>
+              <select id="receitaModoParc" onchange="onReceitaParceladoCalc()">
+                <option value="auto">Automático (igual)</option>
+                <option value="manual">Manual (por parcela)</option>
+              </select>
+            </div>
+          </div>
+          <div id="receitaParcelasAutoInfo" style="font-size:12px;color:#64748b;padding:2px 0"></div>
+          <div id="receitaParcelasManualList" style="display:none;margin-top:10px;max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
         </div>
       </div>
+
       <div class="form-group">
         <label>Vincular a um Lead (opcional)</label>
         <select id="receitaLeadId"></select>
@@ -2099,6 +2164,32 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeReceitaModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="saveReceita()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Pagamento Parcial -->
+<div class="modal-overlay" id="pagarParcialModal" style="z-index:700">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <h2>Registrar Pagamento</h2>
+      <button class="modal-close" onclick="closePagarParcialModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="pagarParcialId"/>
+      <div id="pagarParcialInfo" style="background:#f8fafc;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px"></div>
+      <div class="form-group">
+        <label>Valor Pago (R$)</label>
+        <input type="number" id="pagarParcialValor" min="0.01" step="0.01" placeholder="0,00"/>
+        <span class="field-error" id="pagarParcialValorError"></span>
+      </div>
+    </div>
+    <div class="modal-footer" style="gap:8px">
+      <button class="btn btn-ghost" onclick="closePagarParcialModal()">Cancelar</button>
+      <button class="btn btn-outline" onclick="confirmarPagamentoTotal()">✔ Pagar Total</button>
+      <button class="btn btn-primary" onclick="confirmarPagamentoParcial()">💳 Pagar Parcial</button>
     </div>
   </div>
 </div>
@@ -4830,6 +4921,7 @@ var _finTab = 'dash';
 
 function finStatus(item, tipoPago) {
   if (item.status === tipoPago) return tipoPago;
+  if (item.status === 'Pago Parcial') return 'Pago Parcial';
   var today = getTodayStr();
   if (item.vencimento && item.vencimento < today) return 'Atrasado';
   return 'Pendente';
@@ -4864,26 +4956,32 @@ function renderFinanceiro() {
 
 function renderFinDash() {
   var today    = getTodayStr();
-  var mesIni   = today.slice(0,7) + '-01';
-  var mesFim   = today.slice(0,7) + '-31';
+  var selEl    = document.getElementById('dashMesSel');
+  if (selEl && !selEl.value) selEl.value = today.slice(0, 7);
+  var mesSel   = (selEl && selEl.value) ? selEl.value : today.slice(0, 7);
+  var mesIni   = mesSel + '-01';
+  var mesFim   = mesSel + '-31';
+  var mesLabel = mesSel.split('-').reverse().join('/');
   var pagar    = loadContasPagar();
   var receita  = loadReceita();
 
-  var aPagar    = pagar  .filter(function(i){ return i.status !== 'Pago';    }).reduce(function(s,i){ return s + (+i.valor||0); }, 0);
-  var aReceber  = receita.filter(function(i){ return i.status !== 'Recebido';}).reduce(function(s,i){ return s + (+i.valor||0); }, 0);
-  var pagoMes   = pagar  .filter(function(i){ return i.status === 'Pago'     && i.dataPagamento >= mesIni && i.dataPagamento <= mesFim; }).reduce(function(s,i){ return s + (+i.valor||0); }, 0);
-  var recebMes  = receita.filter(function(i){ return i.status === 'Recebido' && i.dataRecebimento >= mesIni && i.dataRecebimento <= mesFim; }).reduce(function(s,i){ return s + (+i.valor||0); }, 0);
-  var atrasados = pagar  .filter(function(i){ return i.status !== 'Pago'     && i.vencimento && i.vencimento < today; }).length
-                + receita.filter(function(i){ return i.status !== 'Recebido' && i.vencimento && i.vencimento < today; }).length;
-  var saldo     = aReceber - aPagar;
+  // Dados do mês selecionado
+  var recPrevMes  = receita.filter(function(i){ return (i.vencimento||'').startsWith(mesSel); }).reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+  var pagPrevMes  = pagar  .filter(function(i){ return (i.vencimento||'').startsWith(mesSel); }).reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+  var recebMes    = receita.filter(function(i){ return i.status === 'Recebido' && (i.dataRecebimento||'').startsWith(mesSel); }).reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+  var pagoMes     = pagar  .filter(function(i){ return i.status === 'Pago'     && (i.dataPagamento||'').startsWith(mesSel); }).reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+  var saldoPrev   = recPrevMes - pagPrevMes;
+  var today2      = getTodayStr();
+  var atrasados   = pagar  .filter(function(i){ return i.status !== 'Pago'     && i.vencimento && i.vencimento < today2; }).length
+                  + receita.filter(function(i){ return i.status !== 'Recebido' && i.vencimento && i.vencimento < today2; }).length;
 
   document.getElementById('finCards').innerHTML = [
-    { label:'A Receber',        value: fmtMoney(aReceber),  sub:'em aberto',          cls:'c-blue'   },
-    { label:'A Pagar',          value: fmtMoney(aPagar),    sub:'em aberto',          cls:'c-amber'  },
-    { label:'Saldo Projetado',  value: fmtMoney(saldo),     sub:'receita − despesas', cls: saldo >= 0 ? 'c-green' : 'c-red' },
-    { label:'Recebido este mês',value: fmtMoney(recebMes),  sub: today.slice(0,7).split('-').reverse().join('/'), cls:'c-green'  },
-    { label:'Pago este mês',    value: fmtMoney(pagoMes),   sub: today.slice(0,7).split('-').reverse().join('/'), cls:'c-red'    },
-    { label:'Em Atraso',        value: atrasados + (atrasados === 1 ? ' item' : ' itens'), sub:'vencidos não quitados', cls: atrasados > 0 ? 'c-red' : 'c-green' },
+    { label:'Receita Prevista',  value: fmtMoney(recPrevMes), sub: mesLabel,             cls:'c-blue'   },
+    { label:'Custo Previsto',    value: fmtMoney(pagPrevMes), sub: mesLabel,             cls:'c-amber'  },
+    { label:'Saldo Projetado',   value: fmtMoney(saldoPrev),  sub: 'entrada − saída',    cls: saldoPrev >= 0 ? 'c-green' : 'c-red' },
+    { label:'Recebido',          value: fmtMoney(recebMes),   sub: mesLabel,             cls:'c-green'  },
+    { label:'Pago',              value: fmtMoney(pagoMes),    sub: mesLabel,             cls:'c-red'    },
+    { label:'Em Atraso',         value: atrasados + (atrasados === 1 ? ' item' : ' itens'), sub:'vencidos não quitados', cls: atrasados > 0 ? 'c-red' : 'c-green' },
   ].map(function(c) {
     return '<div class="fin-card ' + c.cls + '">' +
       '<div class="fin-card-value">' + c.value + '</div>' +
@@ -4934,18 +5032,18 @@ function renderContasPagar() {
   if (!lista.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:32px">Nenhuma conta encontrada.</td></tr>'; return; }
   tbody.innerHTML = lista.map(function(i) {
     var st      = finStatus(i,'Pago');
-    var stClass = { 'Pago':'fin-st-pago','Atrasado':'fin-st-atrasado','Pendente':'fin-st-pendente' }[st] || 'fin-st-pendente';
+    var stClass = { 'Pago':'fin-st-pago','Atrasado':'fin-st-atrasado','Pendente':'fin-st-pendente','Pago Parcial':'fin-st-parcial' }[st] || 'fin-st-pendente';
     var vencStr = i.vencimento ? new Date(i.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
     var recLabel = i.recorrencia && i.recorrencia !== 'nenhuma' ? ' <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:#eff6ff;color:#2563eb;margin-left:4px">🔄 ' + (REC_LABELS[i.recorrencia]||i.recorrencia) + '</span>' : '';
     return '<tr class="' + (st==='Atrasado'?'row-atrasado':'') + '">' +
       '<td>' + esc(i.descricao) + recLabel + (i.observacao ? '<br><small style="color:#94a3b8">' + esc(i.observacao) + '</small>' : '') + '</td>' +
       '<td>' + esc(i.categoria||'—') + '</td>' +
       '<td style="white-space:nowrap">' + vencStr + '</td>' +
-      '<td style="font-weight:600;white-space:nowrap">' + fmtMoney(+i.valor||0) + '</td>' +
+      '<td style="font-weight:600;white-space:nowrap">' + fmtMoney(+i.valor||0) + (i.saldoRestante && i.saldoRestante < i.valor ? '<br><small style="color:#1d4ed8;font-size:10px">Restante: ' + fmtMoney(+i.saldoRestante) + '</small>' : '') + '</td>' +
       '<td><span class="badge-fin ' + stClass + '">' + st + '</span></td>' +
       '<td><div class="fin-tbl col-acoes">' +
         '<button class="btn btn-outline" style="padding:3px 10px;font-size:12px" onclick="openContaPagarModal(\'' + i.id + '\')">✏️</button>' +
-        (st !== 'Pago' ? '<button class="btn btn-primary" style="padding:3px 10px;font-size:12px" onclick="marcarPago(\'' + i.id + '\')">✔ Pago</button>' : '') +
+        (st !== 'Pago' ? '<button class="btn btn-primary" style="padding:3px 10px;font-size:12px" onclick="openPagarParcialModal(\'' + i.id + '\')">✔ Pagar</button>' : '') +
         '<button class="btn btn-ghost" style="padding:3px 10px;font-size:12px;color:#ef4444" onclick="deletarContaPagar(\'' + i.id + '\')">✕</button>' +
       '</div></td>' +
     '</tr>';
@@ -5002,7 +5100,10 @@ function openContaPagarModal(id) {
   document.getElementById('contaPagarVenc').value    = i ? (i.vencimento||'') : '';
   document.getElementById('contaPagarDataPag').value = i ? (i.dataPagamento||'') : '';
   document.getElementById('contaPagarObs').value     = i ? (i.observacao||'') : '';
-  document.getElementById('contaPagarRec').value     = i ? (i.recorrencia||'nenhuma') : 'nenhuma';
+  var rec = i ? (i.recorrencia||'nenhuma') : 'nenhuma';
+  document.getElementById('contaPagarRec').value     = rec;
+  document.getElementById('contaPagarRecMeses').value = i ? (i.recorrenciaMeses||12) : 12;
+  document.getElementById('contaPagarRecMesesRow').style.display = rec === 'mensal_x' ? '' : 'none';
   document.getElementById('contaPagarModal').classList.add('open');
 }
 function closeContaPagarModal() { document.getElementById('contaPagarModal').classList.remove('open'); }
@@ -5012,12 +5113,13 @@ function saveContaPagar() {
   var valor = parseFloat(document.getElementById('contaPagarValor').value);
   if (!desc)       { document.getElementById('contaPagarDescError').textContent  = 'Informe a descrição.'; return; }
   if (isNaN(valor)){ document.getElementById('contaPagarValorError').textContent = 'Informe o valor.';     return; }
-  var session = getSession();
-  var id      = document.getElementById('contaPagarId').value;
-  var lista   = loadContasPagar();
-  var isNew   = !id;
-  var item    = {
-    id:           id || generateId(),
+  var session   = getSession();
+  var id        = document.getElementById('contaPagarId').value;
+  var lista     = loadContasPagar();
+  var isNew     = !id;
+  var rec       = document.getElementById('contaPagarRec').value || 'nenhuma';
+  var recMeses  = parseInt(document.getElementById('contaPagarRecMeses').value) || 12;
+  var base = {
     descricao:    desc,
     categoria:    document.getElementById('contaPagarCat').value,
     status:       document.getElementById('contaPagarStatus').value,
@@ -5025,11 +5127,25 @@ function saveContaPagar() {
     vencimento:   document.getElementById('contaPagarVenc').value,
     dataPagamento:document.getElementById('contaPagarDataPag').value,
     observacao:   document.getElementById('contaPagarObs').value.trim(),
-    recorrencia:  document.getElementById('contaPagarRec').value || 'nenhuma',
+    recorrencia:  rec,
     criadoPor:    isNew ? (session ? session.nome : '—') : (lista.find(function(x){ return x.id===id; })||{}).criadoPor,
     criadoEm:     isNew ? Date.now() : (lista.find(function(x){ return x.id===id; })||{}).criadoEm,
   };
-  if (isNew) { lista.push(item); } else { var idx=lista.findIndex(function(x){return x.id===id;}); if(idx!==-1)lista[idx]=item; else lista.push(item); }
+  if (isNew && rec === 'mensal_x' && recMeses > 0) {
+    var grupoId = generateId();
+    var venc = base.vencimento;
+    for (var m = 0; m < recMeses; m++) {
+      lista.push(Object.assign({}, base, {
+        id: generateId(), recorrencia: 'mensal_x', recorrenciaMeses: recMeses,
+        recorrenciaSeq: m + 1, recorrenciaGrupoId: grupoId,
+        vencimento: m === 0 ? venc : nextVencimentoN(venc, m),
+        status: 'Pendente', dataPagamento: '',
+      }));
+    }
+  } else {
+    var item = Object.assign({ id: id || generateId() }, base, rec === 'mensal_x' ? { recorrenciaMeses: recMeses } : {});
+    if (isNew) { lista.push(item); } else { var idx=lista.findIndex(function(x){return x.id===id;}); if(idx!==-1)lista[idx]=item; else lista.push(item); }
+  }
   saveContasPagar(lista);
   closeContaPagarModal();
   renderFinanceiro();
@@ -5040,12 +5156,60 @@ function nextVencimento(dateStr, rec) {
   var d = new Date(dateStr + 'T12:00:00');
   if (rec === 'semanal')   d.setDate(d.getDate() + 7);
   if (rec === 'quinzenal') d.setDate(d.getDate() + 15);
-  if (rec === 'mensal')    d.setMonth(d.getMonth() + 1);
+  if (rec === 'mensal' || rec === 'mensal_x') d.setMonth(d.getMonth() + 1);
   if (rec === 'anual')     d.setFullYear(d.getFullYear() + 1);
   return d.toISOString().slice(0, 10);
 }
 
-var REC_LABELS = { semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal', anual:'Anual' };
+function nextVencimentoN(dateStr, n) {
+  var d = new Date(dateStr + 'T12:00:00');
+  d.setMonth(d.getMonth() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+var REC_LABELS = { semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal (indefinido)', mensal_x:'Mensal', anual:'Anual' };
+
+function openPagarParcialModal(id) {
+  var item = loadContasPagar().find(function(x){ return x.id===id; });
+  if (!item) return;
+  document.getElementById('pagarParcialId').value = id;
+  var saldo = item.saldoRestante != null ? +item.saldoRestante : +item.valor;
+  document.getElementById('pagarParcialInfo').innerHTML =
+    '<b>' + esc(item.descricao) + '</b><br>' +
+    'Vencimento: ' + (item.vencimento ? new Date(item.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—') +
+    ' &nbsp;|&nbsp; Valor total: <b>' + fmtMoney(+item.valor) + '</b>' +
+    (item.saldoRestante != null && item.saldoRestante < item.valor ? ' &nbsp;|&nbsp; Saldo restante: <b style="color:#1d4ed8">' + fmtMoney(+item.saldoRestante) + '</b>' : '');
+  document.getElementById('pagarParcialValor').value = saldo.toFixed(2);
+  document.getElementById('pagarParcialValorError').textContent = '';
+  document.getElementById('pagarParcialModal').classList.add('open');
+}
+function closePagarParcialModal() { document.getElementById('pagarParcialModal').classList.remove('open'); }
+
+function confirmarPagamentoTotal() {
+  var id = document.getElementById('pagarParcialId').value;
+  marcarPago(id);
+  closePagarParcialModal();
+}
+
+function confirmarPagamentoParcial() {
+  var id   = document.getElementById('pagarParcialId').value;
+  var pago = parseFloat(document.getElementById('pagarParcialValor').value);
+  if (isNaN(pago) || pago <= 0) { document.getElementById('pagarParcialValorError').textContent = 'Informe o valor pago.'; return; }
+  var lista = loadContasPagar();
+  var idx   = lista.findIndex(function(x){ return x.id===id; });
+  if (idx === -1) return;
+  var item  = lista[idx];
+  var saldo = item.saldoRestante != null ? +item.saldoRestante : +item.valor;
+  if (pago >= saldo - 0.005) { marcarPago(id); closePagarParcialModal(); return; }
+  var restante = saldo - pago;
+  lista[idx] = Object.assign({}, item, {
+    status: 'Pago Parcial', saldoRestante: restante,
+    valorPago: (+item.valorPago||0) + pago, dataPagamento: getTodayStr(),
+  });
+  saveContasPagar(lista);
+  renderFinanceiro();
+  closePagarParcialModal();
+}
 
 function marcarPago(id) {
   var lista = loadContasPagar();
@@ -5053,14 +5217,17 @@ function marcarPago(id) {
   if (idx === -1) return;
   lista[idx].status        = 'Pago';
   lista[idx].dataPagamento = getTodayStr();
-  if (lista[idx].recorrencia && lista[idx].recorrencia !== 'nenhuma') {
+  delete lista[idx].saldoRestante;
+  // Gera próxima apenas para recorrência indefinida (mensal/semanal/etc)
+  var rec = lista[idx].recorrencia;
+  if (rec && rec !== 'nenhuma' && rec !== 'mensal_x') {
     var orig = lista[idx];
     lista.push({
       id: generateId(), descricao: orig.descricao, categoria: orig.categoria,
       status: 'Pendente', valor: orig.valor,
-      vencimento: nextVencimento(orig.vencimento, orig.recorrencia),
+      vencimento: nextVencimento(orig.vencimento, rec),
       dataPagamento: '', observacao: orig.observacao,
-      recorrencia: orig.recorrencia,
+      recorrencia: rec,
       recorrenciaOrigemId: orig.recorrenciaOrigemId || orig.id,
       criadoPor: orig.criadoPor, criadoEm: Date.now(),
     });
@@ -5087,7 +5254,14 @@ function openReceitaModal(id) {
   document.getElementById('receitaVenc').value     = i ? (i.vencimento||'') : '';
   document.getElementById('receitaDataRec').value  = i ? (i.dataRecebimento||'') : '';
   document.getElementById('receitaObs').value      = i ? (i.observacao||'') : '';
-  document.getElementById('receitaRec').value      = i ? (i.recorrencia||'nenhuma') : 'nenhuma';
+  var rec = i ? (i.recorrencia||'nenhuma') : 'nenhuma';
+  document.getElementById('receitaRec').value      = rec;
+  document.getElementById('receitaRecMeses').value = i ? (i.recorrenciaMeses||12) : 12;
+  document.getElementById('receitaRecMesesGrp').style.display = rec === 'mensal_x' ? '' : 'none';
+  // Tipo simples sempre ao editar
+  document.getElementById('receitaTipo').value = 'simples';
+  document.getElementById('receitaSimplesSection').style.display = '';
+  document.getElementById('receitaParceladoSection').style.display = 'none';
   var leadSel = document.getElementById('receitaLeadId');
   leadSel.innerHTML = '<option value="">Nenhum lead vinculado</option>' +
     leads.slice().sort(function(a,b){ return a.empresa.localeCompare(b.empresa); }).map(function(l) {
@@ -5099,28 +5273,56 @@ function closeReceitaModal() { document.getElementById('receitaModal').classList
 
 function saveReceita() {
   var desc  = document.getElementById('receitaDesc').value.trim();
-  var valor = parseFloat(document.getElementById('receitaValor').value);
-  if (!desc)       { document.getElementById('receitaDescError').textContent  = 'Informe a descrição.'; return; }
-  if (isNaN(valor)){ document.getElementById('receitaValorError').textContent = 'Informe o valor.';     return; }
+  if (!desc) { document.getElementById('receitaDescError').textContent = 'Informe a descrição.'; return; }
+  var tipo    = document.getElementById('receitaTipo').value;
   var session = getSession();
   var id      = document.getElementById('receitaId').value;
   var lista   = loadReceita();
   var isNew   = !id;
-  var item    = {
-    id:              id || generateId(),
-    descricao:       desc,
-    categoria:       document.getElementById('receitaCat').value,
-    status:          document.getElementById('receitaStatus').value,
-    valor:           valor,
-    vencimento:      document.getElementById('receitaVenc').value,
-    dataRecebimento: document.getElementById('receitaDataRec').value,
-    leadId:          document.getElementById('receitaLeadId').value,
-    observacao:      document.getElementById('receitaObs').value.trim(),
-    recorrencia:     document.getElementById('receitaRec').value || 'nenhuma',
-    criadoPor:       isNew ? (session ? session.nome : '—') : (lista.find(function(x){ return x.id===id; })||{}).criadoPor,
-    criadoEm:        isNew ? Date.now() : (lista.find(function(x){ return x.id===id; })||{}).criadoEm,
-  };
-  if (isNew) { lista.push(item); } else { var idx=lista.findIndex(function(x){return x.id===id;}); if(idx!==-1)lista[idx]=item; else lista.push(item); }
+  var cat     = document.getElementById('receitaCat').value;
+  var obs     = document.getElementById('receitaObs').value.trim();
+  var leadId  = document.getElementById('receitaLeadId').value;
+  var criadoPor = isNew ? (session ? session.nome : '—') : (lista.find(function(x){ return x.id===id; })||{}).criadoPor;
+  var criadoEm  = isNew ? Date.now() : (lista.find(function(x){ return x.id===id; })||{}).criadoEm;
+
+  if (isNew && tipo === 'parcelado') {
+    var valTotal = parseFloat(document.getElementById('receitaValorTotal').value);
+    var nParc    = parseInt(document.getElementById('receitaNParcelas').value) || 0;
+    var mesIni   = document.getElementById('receitaMesInicial').value;
+    if (isNaN(valTotal) || valTotal <= 0) { alert('Informe o valor total.'); return; }
+    if (nParc < 1) { alert('Informe o número de parcelas.'); return; }
+    if (!mesIni) { alert('Informe o mês inicial.'); return; }
+    var modo  = document.getElementById('receitaModoParc').value;
+    var grupoId = generateId();
+    for (var p = 0; p < nParc; p++) {
+      var valParc;
+      if (modo === 'manual') {
+        valParc = parseFloat((document.getElementById('recParcVal_' + p)||{}).value) || 0;
+      } else {
+        valParc = p < nParc - 1 ? Math.floor(valTotal / nParc * 100) / 100 : Math.round((valTotal - Math.floor(valTotal / nParc * 100) / 100 * (nParc - 1)) * 100) / 100;
+      }
+      var d = new Date(mesIni + '-01T12:00:00');
+      d.setMonth(d.getMonth() + p);
+      var venc = d.toISOString().slice(0, 10);
+      lista.push({ id: generateId(), descricao: desc + ' (' + (p+1) + '/' + nParc + ')', categoria: cat, status: 'Pendente', valor: valParc, vencimento: venc, dataRecebimento: '', leadId: leadId, observacao: obs, recorrencia: 'nenhuma', parcelaGrupoId: grupoId, parcelaSeq: p+1, parcelas: nParc, criadoPor: criadoPor, criadoEm: Date.now() });
+    }
+  } else {
+    var valor = parseFloat(document.getElementById('receitaValor').value);
+    if (isNaN(valor)) { document.getElementById('receitaValorError').textContent = 'Informe o valor.'; return; }
+    var rec      = document.getElementById('receitaRec').value || 'nenhuma';
+    var recMeses = parseInt(document.getElementById('receitaRecMeses').value) || 12;
+    if (isNew && rec === 'mensal_x' && recMeses > 0) {
+      var grupoId2 = generateId();
+      var vencBase = document.getElementById('receitaVenc').value;
+      for (var m = 0; m < recMeses; m++) {
+        lista.push({ id: generateId(), descricao: desc, categoria: cat, status: 'Pendente', valor: valor, vencimento: m === 0 ? vencBase : nextVencimentoN(vencBase, m), dataRecebimento: '', leadId: leadId, observacao: obs, recorrencia: 'mensal_x', recorrenciaMeses: recMeses, recorrenciaSeq: m+1, recorrenciaGrupoId: grupoId2, criadoPor: criadoPor, criadoEm: Date.now() });
+      }
+    } else {
+      var item = { id: id||generateId(), descricao: desc, categoria: cat, status: document.getElementById('receitaStatus').value, valor: valor, vencimento: document.getElementById('receitaVenc').value, dataRecebimento: document.getElementById('receitaDataRec').value, leadId: leadId, observacao: obs, recorrencia: rec, criadoPor: criadoPor, criadoEm: criadoEm };
+      if (rec === 'mensal_x') item.recorrenciaMeses = recMeses;
+      if (isNew) { lista.push(item); } else { var idx=lista.findIndex(function(x){return x.id===id;}); if(idx!==-1)lista[idx]=item; else lista.push(item); }
+    }
+  }
   saveReceita2(lista);
   closeReceitaModal();
   renderFinanceiro();
@@ -5132,14 +5334,15 @@ function marcarRecebido(id) {
   if (idx === -1) return;
   lista[idx].status          = 'Recebido';
   lista[idx].dataRecebimento = getTodayStr();
-  if (lista[idx].recorrencia && lista[idx].recorrencia !== 'nenhuma') {
+  var rec = lista[idx].recorrencia;
+  if (rec && rec !== 'nenhuma' && rec !== 'mensal_x') {
     var orig = lista[idx];
     lista.push({
       id: generateId(), descricao: orig.descricao, categoria: orig.categoria,
       status: 'Pendente', valor: orig.valor,
-      vencimento: nextVencimento(orig.vencimento, orig.recorrencia),
+      vencimento: nextVencimento(orig.vencimento, rec),
       dataRecebimento: '', leadId: orig.leadId, observacao: orig.observacao,
-      recorrencia: orig.recorrencia,
+      recorrencia: rec,
       recorrenciaOrigemId: orig.recorrenciaOrigemId || orig.id,
       criadoPor: orig.criadoPor, criadoEm: Date.now(),
     });
@@ -5153,19 +5356,71 @@ function deletarReceita(id) {
   renderFinanceiro();
 }
 
-window.showFinTab          = showFinTab;
-window.openContaPagarModal = openContaPagarModal;
-window.closeContaPagarModal= closeContaPagarModal;
-window.saveContaPagar      = saveContaPagar;
-window.marcarPago          = marcarPago;
-window.deletarContaPagar   = deletarContaPagar;
-window.openReceitaModal    = openReceitaModal;
-window.closeReceitaModal   = closeReceitaModal;
-window.saveReceita         = saveReceita;
-window.marcarRecebido      = marcarRecebido;
-window.deletarReceita      = deletarReceita;
-window.renderContasPagar   = renderContasPagar;
-window.renderReceita       = renderReceita;
+function onContaPagarRecChange() {
+  var rec = document.getElementById('contaPagarRec').value;
+  document.getElementById('contaPagarRecMesesRow').style.display = rec === 'mensal_x' ? '' : 'none';
+}
+
+function onReceitaTipoChange() {
+  var tipo = document.getElementById('receitaTipo').value;
+  document.getElementById('receitaSimplesSection').style.display    = tipo === 'simples'   ? '' : 'none';
+  document.getElementById('receitaParceladoSection').style.display  = tipo === 'parcelado' ? '' : 'none';
+}
+
+function onReceitaRecChange() {
+  var rec = document.getElementById('receitaRec').value;
+  document.getElementById('receitaRecMesesGrp').style.display = rec === 'mensal_x' ? '' : 'none';
+}
+
+function onReceitaParceladoCalc() {
+  var total = parseFloat(document.getElementById('receitaValorTotal').value) || 0;
+  var n     = parseInt(document.getElementById('receitaNParcelas').value) || 0;
+  var modo  = document.getElementById('receitaModoParc').value;
+  var infoEl = document.getElementById('receitaParcelasAutoInfo');
+  var manualEl = document.getElementById('receitaParcelasManualList');
+  if (total > 0 && n > 0) {
+    var valParc = total / n;
+    infoEl.textContent = n + 'x de ' + fmtMoney(valParc) + ' = ' + fmtMoney(total);
+    if (modo === 'manual') {
+      manualEl.style.display = 'flex';
+      var mesIni = document.getElementById('receitaMesInicial').value;
+      var html = '';
+      for (var p = 0; p < n; p++) {
+        var labelMes = '';
+        if (mesIni) { var d2 = new Date(mesIni+'-01T12:00:00'); d2.setMonth(d2.getMonth()+p); labelMes = ' (' + (d2.getMonth()+1).toString().padStart(2,'0') + '/' + d2.getFullYear() + ')'; }
+        html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px"><span style="min-width:70px;color:#64748b">Parcela '+(p+1)+labelMes+'</span><input id="recParcVal_'+p+'" type="number" min="0" step="0.01" value="'+valParc.toFixed(2)+'" style="flex:1;border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px;font-size:12px"/></div>';
+      }
+      manualEl.innerHTML = html;
+    } else {
+      manualEl.style.display = 'none';
+    }
+  } else {
+    infoEl.textContent = '';
+    manualEl.style.display = 'none';
+  }
+}
+
+window.showFinTab              = showFinTab;
+window.openContaPagarModal     = openContaPagarModal;
+window.closeContaPagarModal    = closeContaPagarModal;
+window.saveContaPagar          = saveContaPagar;
+window.marcarPago              = marcarPago;
+window.deletarContaPagar       = deletarContaPagar;
+window.openPagarParcialModal   = openPagarParcialModal;
+window.closePagarParcialModal  = closePagarParcialModal;
+window.confirmarPagamentoTotal = confirmarPagamentoTotal;
+window.confirmarPagamentoParcial = confirmarPagamentoParcial;
+window.openReceitaModal        = openReceitaModal;
+window.closeReceitaModal       = closeReceitaModal;
+window.saveReceita             = saveReceita;
+window.marcarRecebido          = marcarRecebido;
+window.deletarReceita          = deletarReceita;
+window.renderContasPagar       = renderContasPagar;
+window.renderReceita           = renderReceita;
+window.onContaPagarRecChange   = onContaPagarRecChange;
+window.onReceitaTipoChange     = onReceitaTipoChange;
+window.onReceitaRecChange      = onReceitaRecChange;
+window.onReceitaParceladoCalc  = onReceitaParceladoCalc;
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
