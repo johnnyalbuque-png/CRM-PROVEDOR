@@ -1366,8 +1366,9 @@
           </button>
         </div>
         <div class="fin-list-filters">
+          <input type="month" id="filterPagarMes" class="select-filter" onchange="renderContasPagar()" style="padding:5px 10px;font-size:13px" />
           <select id="filterPagarStatus" class="select-filter" onchange="renderContasPagar()">
-            <option value="">Todas</option>
+            <option value="">Todos os status</option>
             <option value="Pendente">Pendentes</option>
             <option value="Pago">Pagas</option>
             <option value="Atrasado">Atrasadas</option>
@@ -1377,6 +1378,7 @@
             <option>Fornecedor</option><option>Aluguel</option><option>Pessoal</option>
             <option>Infraestrutura</option><option>Marketing</option><option>Outros</option>
           </select>
+          <button class="btn btn-ghost" style="font-size:12px;padding:5px 10px" onclick="document.getElementById('filterPagarMes').value='';renderContasPagar()">Todos os meses</button>
         </div>
         <div class="fin-tbl-wrap">
           <table class="fin-tbl">
@@ -1398,8 +1400,9 @@
           </button>
         </div>
         <div class="fin-list-filters">
+          <input type="month" id="filterReceitaMes" class="select-filter" onchange="renderReceita()" style="padding:5px 10px;font-size:13px" />
           <select id="filterReceitaStatus" class="select-filter" onchange="renderReceita()">
-            <option value="">Todas</option>
+            <option value="">Todos os status</option>
             <option value="Pendente">Pendentes</option>
             <option value="Recebido">Recebidas</option>
             <option value="Atrasado">Atrasadas</option>
@@ -1409,6 +1412,7 @@
             <option>Contrato Mensal</option><option>Instalação</option><option>Suporte</option>
             <option>Proposta</option><option>Avulso</option><option>Outros</option>
           </select>
+          <button class="btn btn-ghost" style="font-size:12px;padding:5px 10px" onclick="document.getElementById('filterReceitaMes').value='';renderReceita()">Todos os meses</button>
         </div>
         <div class="fin-tbl-wrap">
           <table class="fin-tbl">
@@ -1996,9 +2000,21 @@
           <input type="date" id="contaPagarVenc" class="form-control"/>
         </div>
       </div>
-      <div class="form-group">
-        <label>Data do Pagamento</label>
-        <input type="date" id="contaPagarDataPag" class="form-control"/>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Recorrência</label>
+          <select id="contaPagarRec">
+            <option value="nenhuma">Sem recorrência</option>
+            <option value="semanal">Semanal</option>
+            <option value="quinzenal">Quinzenal</option>
+            <option value="mensal">Mensal</option>
+            <option value="anual">Anual</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Data do Pagamento</label>
+          <input type="date" id="contaPagarDataPag" class="form-control"/>
+        </div>
       </div>
       <div class="form-group">
         <label>Observação</label>
@@ -2055,9 +2071,21 @@
           <input type="date" id="receitaVenc" class="form-control"/>
         </div>
       </div>
-      <div class="form-group">
-        <label>Data do Recebimento</label>
-        <input type="date" id="receitaDataRec" class="form-control"/>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Recorrência</label>
+          <select id="receitaRec">
+            <option value="nenhuma">Sem recorrência</option>
+            <option value="semanal">Semanal</option>
+            <option value="quinzenal">Quinzenal</option>
+            <option value="mensal">Mensal</option>
+            <option value="anual">Anual</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Data do Recebimento</label>
+          <input type="date" id="receitaDataRec" class="form-control"/>
+        </div>
       </div>
       <div class="form-group">
         <label>Vincular a um Lead (opcional)</label>
@@ -4857,10 +4885,12 @@ function renderContasPagar() {
   var today  = getTodayStr();
   var filtSt = (document.getElementById('filterPagarStatus') || {}).value || '';
   var filtCt = (document.getElementById('filterPagarCat')    || {}).value || '';
+  var filtMs = (document.getElementById('filterPagarMes')    || {}).value || '';
   var lista  = loadContasPagar().filter(function(i) {
     var st = finStatus(i,'Pago');
     if (filtSt && st !== filtSt) return false;
     if (filtCt && i.categoria !== filtCt) return false;
+    if (filtMs && !(i.vencimento||'').startsWith(filtMs)) return false;
     return true;
   }).sort(function(a,b){ return (a.vencimento||'').localeCompare(b.vencimento||''); });
   var tbody = document.getElementById('pagarTbody');
@@ -4870,8 +4900,9 @@ function renderContasPagar() {
     var st      = finStatus(i,'Pago');
     var stClass = { 'Pago':'fin-st-pago','Atrasado':'fin-st-atrasado','Pendente':'fin-st-pendente' }[st] || 'fin-st-pendente';
     var vencStr = i.vencimento ? new Date(i.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    var recLabel = i.recorrencia && i.recorrencia !== 'nenhuma' ? ' <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:#eff6ff;color:#2563eb;margin-left:4px">🔄 ' + (REC_LABELS[i.recorrencia]||i.recorrencia) + '</span>' : '';
     return '<tr class="' + (st==='Atrasado'?'row-atrasado':'') + '">' +
-      '<td>' + esc(i.descricao) + (i.observacao ? '<br><small style="color:#94a3b8">' + esc(i.observacao) + '</small>' : '') + '</td>' +
+      '<td>' + esc(i.descricao) + recLabel + (i.observacao ? '<br><small style="color:#94a3b8">' + esc(i.observacao) + '</small>' : '') + '</td>' +
       '<td>' + esc(i.categoria||'—') + '</td>' +
       '<td style="white-space:nowrap">' + vencStr + '</td>' +
       '<td style="font-weight:600;white-space:nowrap">' + fmtMoney(+i.valor||0) + '</td>' +
@@ -4963,12 +4994,36 @@ function saveContaPagar() {
   renderFinanceiro();
 }
 
+function nextVencimento(dateStr, rec) {
+  if (!dateStr || !rec || rec === 'nenhuma') return dateStr;
+  var d = new Date(dateStr + 'T12:00:00');
+  if (rec === 'semanal')   d.setDate(d.getDate() + 7);
+  if (rec === 'quinzenal') d.setDate(d.getDate() + 15);
+  if (rec === 'mensal')    d.setMonth(d.getMonth() + 1);
+  if (rec === 'anual')     d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+var REC_LABELS = { semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal', anual:'Anual' };
+
 function marcarPago(id) {
   var lista = loadContasPagar();
   var idx   = lista.findIndex(function(x){ return x.id===id; });
   if (idx === -1) return;
-  lista[idx].status       = 'Pago';
+  lista[idx].status        = 'Pago';
   lista[idx].dataPagamento = getTodayStr();
+  if (lista[idx].recorrencia && lista[idx].recorrencia !== 'nenhuma') {
+    var orig = lista[idx];
+    lista.push({
+      id: generateId(), descricao: orig.descricao, categoria: orig.categoria,
+      status: 'Pendente', valor: orig.valor,
+      vencimento: nextVencimento(orig.vencimento, orig.recorrencia),
+      dataPagamento: '', observacao: orig.observacao,
+      recorrencia: orig.recorrencia,
+      recorrenciaOrigemId: orig.recorrenciaOrigemId || orig.id,
+      criadoPor: orig.criadoPor, criadoEm: Date.now(),
+    });
+  }
   saveContasPagar(lista);
   renderFinanceiro();
 }
@@ -5034,6 +5089,18 @@ function marcarRecebido(id) {
   if (idx === -1) return;
   lista[idx].status          = 'Recebido';
   lista[idx].dataRecebimento = getTodayStr();
+  if (lista[idx].recorrencia && lista[idx].recorrencia !== 'nenhuma') {
+    var orig = lista[idx];
+    lista.push({
+      id: generateId(), descricao: orig.descricao, categoria: orig.categoria,
+      status: 'Pendente', valor: orig.valor,
+      vencimento: nextVencimento(orig.vencimento, orig.recorrencia),
+      dataRecebimento: '', leadId: orig.leadId, observacao: orig.observacao,
+      recorrencia: orig.recorrencia,
+      recorrenciaOrigemId: orig.recorrenciaOrigemId || orig.id,
+      criadoPor: orig.criadoPor, criadoEm: Date.now(),
+    });
+  }
   saveReceita2(lista);
   renderFinanceiro();
 }
