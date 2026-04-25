@@ -1835,6 +1835,10 @@
           <input type="text" id="servPrecoFinal" readonly style="background:#f8fafc;font-weight:700;color:#15803d;cursor:default" />
         </div>
       </div>
+      <div class="form-group">
+        <label>Vincular a um Evento (opcional)</label>
+        <select id="servEventoId"></select>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeServModal()">Cancelar</button>
@@ -3928,12 +3932,15 @@ function renderServicos() {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:40px 0;font-size:13px">Nenhum serviço cadastrado. Clique em "Novo Serviço" para começar.</td></tr>';
     return;
   }
+  var eventosMap = {};
+  loadEventos().forEach(function(e){ eventosMap[e.id] = e.nome; });
   tbody.innerHTML = servicos.map(function(s) {
     var descInfo = '';
     if (s.descontoR   > 0) descInfo = '− ' + fmtMoney(s.descontoR);
     else if (s.descontoPct > 0) descInfo = '− ' + s.descontoPct + '%';
+    var evLabel = s.eventoId && eventosMap[s.eventoId] ? '<br><span style="font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;background:#faf5ff;color:#7c3aed">🎪 '+esc(eventosMap[s.eventoId])+'</span>' : '';
     return '<tr>' +
-      '<td><strong>' + esc(s.nome) + '</strong></td>' +
+      '<td><strong>' + esc(s.nome) + '</strong>' + evLabel + '</td>' +
       '<td style="max-width:180px;color:#64748b;white-space:pre-wrap">' + esc(s.descricao || '—') + '</td>' +
       '<td class="serv-preco">' + fmtMoney(s.preco) + '</td>' +
       '<td class="serv-desconto">' + (descInfo || '—') + '</td>' +
@@ -3944,6 +3951,14 @@ function renderServicos() {
       '</td>' +
     '</tr>';
   }).join('');
+}
+
+function _populateServEventoSelect(selected) {
+  var sel = document.getElementById('servEventoId');
+  if (!sel) return;
+  var evs = loadEventos().slice().sort(function(a,b){ return (a.data||'9999').localeCompare(b.data||'9999'); });
+  sel.innerHTML = '<option value="">Nenhum evento</option>' +
+    evs.map(function(e){ return '<option value="'+e.id+'"'+(e.id===selected?' selected':'')+'>'+esc(e.nome)+'</option>'; }).join('');
 }
 
 function openNewServModal() {
@@ -3958,6 +3973,7 @@ function openNewServModal() {
   document.getElementById('servPrecoFinal').value = '';
   document.getElementById('servNomeError').textContent  = '';
   document.getElementById('servPrecoError').textContent = '';
+  _populateServEventoSelect('');
   document.getElementById('servModal').classList.add('open');
   document.getElementById('servNome').focus();
 }
@@ -3976,6 +3992,7 @@ function editServico(id) {
   document.getElementById('servPrecoFinal').value = fmtMoney(s.precoFinal);
   document.getElementById('servNomeError').textContent  = '';
   document.getElementById('servPrecoError').textContent = '';
+  _populateServEventoSelect(s.eventoId || '');
   document.getElementById('servModal').classList.add('open');
   document.getElementById('servNome').focus();
 }
@@ -4001,18 +4018,21 @@ function saveServ() {
   else if (descPct > 0) precoFinal = Math.max(0, preco * (1 - descPct / 100));
   else                  precoFinal = preco;
 
+  var eventoIdServ = document.getElementById('servEventoId').value || '';
   var servicos = loadServicos();
   if (editingServId) {
     var idx = servicos.findIndex(function(x){ return x.id === editingServId; });
     if (idx !== -1) servicos[idx] = Object.assign(servicos[idx], {
       nome: nome, descricao: document.getElementById('servDescricao').value.trim(),
       preco: preco, descontoR: descR, descontoPct: descPct, precoFinal: precoFinal,
+      eventoId: eventoIdServ,
     });
   } else {
     servicos.push({
       id: generateId(), nome: nome,
       descricao: document.getElementById('servDescricao').value.trim(),
       preco: preco, descontoR: descR, descontoPct: descPct, precoFinal: precoFinal,
+      eventoId: eventoIdServ,
     });
   }
   saveServicos(servicos);
@@ -5573,12 +5593,26 @@ function lancarPropostaFinanceiro(leadId, negId) {
   }
 }
 
+function _resolvePropostaEventoId(p) {
+  // Find the first service in the proposal that has an eventoId linked
+  var servicos = loadServicos();
+  var linhas   = p.linhas || [];
+  for (var l = 0; l < linhas.length; l++) {
+    var s = servicos.find(function(x){ return x.id === linhas[l].servId; });
+    if (s && s.eventoId) return s.eventoId;
+  }
+  return '';
+}
+
 function _confirmarLancarProposta(p, negId) {
-  var lead   = leads.find(function(l){ return l.id === p.leadId; }) || {};
-  var linhas = (p.parcelas > 1) ? p.parcelas + 'x de ' + fmtMoney(p.valorParcela) : 'à vista';
-  var msg    = 'Lançar no Financeiro — Receita?\n\n' +
+  var lead    = leads.find(function(l){ return l.id === p.leadId; }) || {};
+  var linhas  = (p.parcelas > 1) ? p.parcelas + 'x de ' + fmtMoney(p.valorParcela) : 'à vista';
+  var evId    = _resolvePropostaEventoId(p);
+  var ev      = evId ? loadEventos().find(function(e){ return e.id === evId; }) : null;
+  var msg     = 'Lançar no Financeiro — Receita?\n\n' +
     'Proposta: ' + p.numero + '\n' +
-    'Total: ' + fmtMoney(p.total) + '  (' + linhas + ')\n\n' +
+    'Total: ' + fmtMoney(p.total) + '  (' + linhas + ')\n' +
+    (ev ? 'Evento: ' + ev.nome + '\n' : '') + '\n' +
     (p.parcelas > 1 ? 'Serão criadas ' + p.parcelas + ' entradas de receita.' : 'Será criada 1 entrada de receita.');
   if (!confirm(msg)) return;
   var session = getSession();
@@ -5591,7 +5625,7 @@ function _confirmarLancarProposta(p, negId) {
       id: generateId(), descricao: desc, categoria: 'Eventos',
       status: 'Pendente', valor: p.total,
       vencimento: (p.vencimentos && p.vencimentos[0]) || '',
-      dataRecebimento: '', leadId: p.leadId,
+      dataRecebimento: '', leadId: p.leadId, eventoId: evId,
       observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
       criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
     });
@@ -5603,7 +5637,7 @@ function _confirmarLancarProposta(p, negId) {
         categoria: 'Eventos', status: 'Pendente',
         valor: p.valorParcela,
         vencimento: (p.vencimentos && p.vencimentos[i]) || '',
-        dataRecebimento: '', leadId: p.leadId,
+        dataRecebimento: '', leadId: p.leadId, eventoId: evId,
         observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
         parcelaGrupoId: grupoId, parcelaSeq: i + 1, parcelas: p.parcelas,
         criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
@@ -5661,7 +5695,7 @@ function renderEventos() {
   }
   document.getElementById('finEventosListView').style.display   = '';
   document.getElementById('finEventosDetailView').style.display = 'none';
-  var eventos = loadEventos().slice().sort(function(a,b){ return (b.data||'').localeCompare(a.data||''); });
+  var eventos = loadEventos().slice().sort(function(a,b){ return (a.data||'9999').localeCompare(b.data||'9999'); });
   var pagar   = loadContasPagar();
   var receita = loadReceita();
   var cont    = document.getElementById('eventosListContainer');
