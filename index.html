@@ -5481,7 +5481,7 @@ function _confirmarLancarProposta(p, negId) {
   var desc    = empresa + ' — ' + p.numero;
   if (p.parcelas <= 1) {
     lista.push({
-      id: generateId(), descricao: desc, categoria: 'Outros',
+      id: generateId(), descricao: desc, categoria: 'Eventos',
       status: 'Pendente', valor: p.total,
       vencimento: (p.vencimentos && p.vencimentos[0]) || '',
       dataRecebimento: '', leadId: p.leadId,
@@ -5493,7 +5493,7 @@ function _confirmarLancarProposta(p, negId) {
       lista.push({
         id: generateId(),
         descricao: desc + ' (' + (i+1) + '/' + p.parcelas + ')',
-        categoria: 'Outros', status: 'Pendente',
+        categoria: 'Eventos', status: 'Pendente',
         valor: p.valorParcela,
         vencimento: (p.vencimentos && p.vencimentos[i]) || '',
         dataRecebimento: '', leadId: p.leadId,
