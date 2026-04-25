@@ -2266,14 +2266,14 @@
     <div class="modal-footer" style="justify-content:space-between">
       <button class="btn btn-ghost" onclick="closePropostaModal()">Cancelar</button>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-outline" onclick="salvarRascunhoProposta()">💾 Salvar Rascunho</button>
-        <button class="btn btn-primary" onclick="gerarPropostaPDF()">
+        <button class="btn btn-primary" onclick="salvarRascunhoProposta()">💾 Salvar</button>
+        <button class="btn btn-outline" onclick="gerarPropostaPDF()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
             <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
           </svg>
-          Gerar PDF
+          Salvar e Gerar PDF
         </button>
       </div>
     </div>
@@ -4200,6 +4200,7 @@ function salvarProposta(p) {
 function salvarRascunhoProposta() {
   var p = coletarPropostaData();
   salvarProposta(p);
+  closePropostaModal();
   alert('Proposta "' + p.numero + '" salva com sucesso!');
 }
 
@@ -4456,10 +4457,12 @@ function renderNotifList() {
     return;
   }
   el.innerHTML = notifs.map(function(n) {
-    var dt  = new Date(n.criadoEm);
-    var str = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-    return '<div class="notif-item' + (n.lida ? '' : ' unread') + '" onclick="openNotif(\'' + n.id + '\',\'' + (n.tarefaId || '') + '\')">' +
-      '<div class="notif-icon">📋</div>' +
+    var dt   = new Date(n.criadoEm);
+    var str  = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+    var icon = n.tipo === 'vencimento' ? '💸' : n.tipo === 'vencimento_receita' ? '💰' : '📋';
+    var fnTp = (n.tipo === 'vencimento' || n.tipo === 'vencimento_receita') ? n.tipo : '';
+    return '<div class="notif-item' + (n.lida ? '' : ' unread') + '" onclick="openNotif(\'' + n.id + '\',\'' + (n.tarefaId || '') + '\',\'' + fnTp + '\')">' +
+      '<div class="notif-icon">' + icon + '</div>' +
       '<div class="notif-body">' +
         '<div class="notif-title">' + esc(n.titulo) + '</div>' +
         '<div class="notif-msg">' + esc(n.mensagem) + '</div>' +
@@ -4475,18 +4478,48 @@ function toggleNotifDropdown() {
   if (dd.classList.contains('open')) renderNotifList();
 }
 
-function openNotif(notifId, tarefaId) {
+function openNotif(notifId, tarefaId, finTipo) {
   var notifs = loadMyNotifs();
   var idx    = notifs.findIndex(function(n){ return n.id === notifId; });
   if (idx !== -1) notifs[idx].lida = true;
   saveMyNotifs(notifs);
   updateNotifBadge();
   renderNotifList();
-  if (tarefaId) {
-    document.getElementById('notifDropdown').classList.remove('open');
+  document.getElementById('notifDropdown').classList.remove('open');
+  if (finTipo) {
+    showView('financeiro');
+    showFinTab(finTipo === 'vencimento_receita' ? 'receita' : 'pagar');
+  } else if (tarefaId) {
     showView('tarefas');
     openTarefaModal(tarefaId);
   }
+}
+
+async function checkVencimentos() {
+  var today   = getTodayStr();
+  var session = getSession();
+  if (!session) return;
+  var users   = await fetchUsers();
+  var admins  = users.filter(function(u){ return u.perfil === 'admin' && u.ativo !== false; });
+  if (!admins.length) return;
+  var pagar   = loadContasPagar().filter(function(i){ return i.status !== 'Pago'     && i.vencimento === today; });
+  var receita = loadReceita()   .filter(function(i){ return i.status !== 'Recebido'  && i.vencimento === today; });
+  if (!pagar.length && !receita.length) return;
+  admins.forEach(function(admin) {
+    var notifKey = NOTIFS_PREFIX + admin.id;
+    var existing = (_cfgCache[notifKey] || []).slice();
+    pagar.forEach(function(conta) {
+      var already = existing.some(function(n){ return n.tipo === 'vencimento' && n.refId === conta.id && n.data === today; });
+      if (!already) existing.push({ id: generateId(), tipo: 'vencimento', titulo: '⚠️ Conta vence hoje', mensagem: conta.descricao + ' — ' + fmtMoney(+conta.valor||0), refId: conta.id, data: today, lida: false, criadoEm: Date.now() });
+    });
+    receita.forEach(function(rec) {
+      var already = existing.some(function(n){ return n.tipo === 'vencimento_receita' && n.refId === rec.id && n.data === today; });
+      if (!already) existing.push({ id: generateId(), tipo: 'vencimento_receita', titulo: '💰 Receita vence hoje', mensagem: rec.descricao + ' — ' + fmtMoney(+rec.valor||0), refId: rec.id, data: today, lida: false, criadoEm: Date.now() });
+    });
+    _cfgCache[notifKey] = existing;
+    saveConfigBg(notifKey, existing);
+  });
+  updateNotifBadge();
 }
 
 function markAllNotifsRead() {
@@ -4508,6 +4541,7 @@ document.addEventListener('click', function(e) {
 window.toggleNotifDropdown = toggleNotifDropdown;
 window.openNotif           = openNotif;
 window.markAllNotifsRead   = markAllNotifsRead;
+window.checkVencimentos    = checkVencimentos;
 
 // ── Tarefas ────────────────────────────────────────────────────────────────
 var TAREFAS_KEY = 'crm_tarefas';
@@ -4858,10 +4892,12 @@ function renderFinDash() {
     '</div>';
   }).join('');
 
-  // Últimas movimentações (10 mais recentes de ambos)
-  var todos = pagar.map(function(i){ return Object.assign({},i,{_tipo:'saida'}); })
-    .concat(receita.map(function(i){ return Object.assign({},i,{_tipo:'entrada'}); }));
-  todos.sort(function(a,b){ return (b.criadoEm||0) - (a.criadoEm||0); });
+  // Últimas movimentações – apenas itens concluídos (Pago / Recebido)
+  var todos = pagar.filter(function(i){ return i.status === 'Pago'; })
+    .map(function(i){ return Object.assign({},i,{_tipo:'saida', _ts: new Date((i.dataPagamento||'') + 'T12:00:00').getTime() || i.criadoEm||0}); })
+    .concat(receita.filter(function(i){ return i.status === 'Recebido'; })
+    .map(function(i){ return Object.assign({},i,{_tipo:'entrada', _ts: new Date((i.dataRecebimento||'') + 'T12:00:00').getTime() || i.criadoEm||0}); }));
+  todos.sort(function(a,b){ return b._ts - a._ts; });
   var recent = todos.slice(0,10);
   var recEl  = document.getElementById('finRecentList');
   if (!recent.length) { recEl.innerHTML = '<div style="padding:24px 16px;text-align:center;color:#94a3b8;font-size:13px">Nenhuma movimentação ainda.</div>'; return; }
@@ -4919,10 +4955,12 @@ function renderContasPagar() {
 function renderReceita() {
   var filtSt = (document.getElementById('filterReceitaStatus') || {}).value || '';
   var filtCt = (document.getElementById('filterReceitaCat')    || {}).value || '';
+  var filtMs = (document.getElementById('filterReceitaMes')    || {}).value || '';
   var lista  = loadReceita().filter(function(i) {
     var st = finStatus(i,'Recebido');
     if (filtSt && st !== filtSt) return false;
     if (filtCt && i.categoria !== filtCt) return false;
+    if (filtMs && !(i.vencimento||'').startsWith(filtMs)) return false;
     return true;
   }).sort(function(a,b){ return (a.vencimento||'').localeCompare(b.vencimento||''); });
   var tbody = document.getElementById('receitaTbody');
@@ -4933,8 +4971,9 @@ function renderReceita() {
     var stClass = { 'Recebido':'fin-st-recebido','Atrasado':'fin-st-atrasado','Pendente':'fin-st-pendente' }[st] || 'fin-st-pendente';
     var vencStr = i.vencimento ? new Date(i.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
     var lead    = i.leadId ? leads.find(function(l){ return l.id===i.leadId; }) : null;
+    var recLabel = i.recorrencia && i.recorrencia !== 'nenhuma' ? ' <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:#f0fdf4;color:#16a34a;margin-left:4px">🔄 ' + (REC_LABELS[i.recorrencia]||i.recorrencia) + '</span>' : '';
     return '<tr class="' + (st==='Atrasado'?'row-atrasado':'') + '">' +
-      '<td>' + esc(i.descricao) + (i.observacao ? '<br><small style="color:#94a3b8">' + esc(i.observacao) + '</small>' : '') + '</td>' +
+      '<td>' + esc(i.descricao) + recLabel + (i.observacao ? '<br><small style="color:#94a3b8">' + esc(i.observacao) + '</small>' : '') + '</td>' +
       '<td>' + (lead ? '<span class="link-empresa" style="font-size:12px" onclick="openDetail(\'' + lead.id + '\')">' + esc(lead.empresa) + '</span>' : '—') + '</td>' +
       '<td>' + esc(i.categoria||'—') + '</td>' +
       '<td style="white-space:nowrap">' + vencStr + '</td>' +
@@ -4963,6 +5002,7 @@ function openContaPagarModal(id) {
   document.getElementById('contaPagarVenc').value    = i ? (i.vencimento||'') : '';
   document.getElementById('contaPagarDataPag').value = i ? (i.dataPagamento||'') : '';
   document.getElementById('contaPagarObs').value     = i ? (i.observacao||'') : '';
+  document.getElementById('contaPagarRec').value     = i ? (i.recorrencia||'nenhuma') : 'nenhuma';
   document.getElementById('contaPagarModal').classList.add('open');
 }
 function closeContaPagarModal() { document.getElementById('contaPagarModal').classList.remove('open'); }
@@ -4985,6 +5025,7 @@ function saveContaPagar() {
     vencimento:   document.getElementById('contaPagarVenc').value,
     dataPagamento:document.getElementById('contaPagarDataPag').value,
     observacao:   document.getElementById('contaPagarObs').value.trim(),
+    recorrencia:  document.getElementById('contaPagarRec').value || 'nenhuma',
     criadoPor:    isNew ? (session ? session.nome : '—') : (lista.find(function(x){ return x.id===id; })||{}).criadoPor,
     criadoEm:     isNew ? Date.now() : (lista.find(function(x){ return x.id===id; })||{}).criadoEm,
   };
@@ -5046,6 +5087,7 @@ function openReceitaModal(id) {
   document.getElementById('receitaVenc').value     = i ? (i.vencimento||'') : '';
   document.getElementById('receitaDataRec').value  = i ? (i.dataRecebimento||'') : '';
   document.getElementById('receitaObs').value      = i ? (i.observacao||'') : '';
+  document.getElementById('receitaRec').value      = i ? (i.recorrencia||'nenhuma') : 'nenhuma';
   var leadSel = document.getElementById('receitaLeadId');
   leadSel.innerHTML = '<option value="">Nenhum lead vinculado</option>' +
     leads.slice().sort(function(a,b){ return a.empresa.localeCompare(b.empresa); }).map(function(l) {
@@ -5074,6 +5116,7 @@ function saveReceita() {
     dataRecebimento: document.getElementById('receitaDataRec').value,
     leadId:          document.getElementById('receitaLeadId').value,
     observacao:      document.getElementById('receitaObs').value.trim(),
+    recorrencia:     document.getElementById('receitaRec').value || 'nenhuma',
     criadoPor:       isNew ? (session ? session.nome : '—') : (lista.find(function(x){ return x.id===id; })||{}).criadoPor,
     criadoEm:        isNew ? Date.now() : (lista.find(function(x){ return x.id===id; })||{}).criadoEm,
   };
@@ -5150,7 +5193,10 @@ async function boot() {
   await ensureDefaultAdmin();
   leads = await fetchLeads();
   var session = getSession();
-  if (session) initApp(session);
+  if (session) {
+    initApp(session);
+    checkVencimentos();
+  }
 
   // Realtime: sync leads between users
   db.channel('crm-leads')
