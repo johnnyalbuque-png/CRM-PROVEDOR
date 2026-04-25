@@ -3663,10 +3663,6 @@ function renderKanban() {
               (lead.porte ? '<span class="badge-porte porte-' + lead.porte.toLowerCase().replace('é','e') + '">' + esc(lead.porte) + '</span>' : '<span></span>') +
               (wa ? '<a class="kcard-wa" href="https://wa.me/55' + wa + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="WhatsApp">📱</a>' : '') +
             '</div>' +
-            '<button class="kcard-serv-btn" onclick="event.stopPropagation();openLeadServPicker(\'' + n.leadId + '\')">' +
-              '📦 <span class="kcard-serv-count">' + sCount + '</span> Serviço' + (sCount !== 1 ? 's' : '') +
-              (sCount > 0 ? ' · ' + fmtMoney(sTotal) : '') +
-            '</button>' +
             '<button class="kcard-prop-btn" onclick="event.stopPropagation();openPropostaModal(\'' + n.leadId + '\')">' +
               '📄 Proposta' +
             '</button>' +
