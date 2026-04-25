@@ -4794,7 +4794,7 @@ function closeTarefaModal() {
 }
 
 function saveTarefa() {
-  var titulo = document.getElementById('tarefaTitulo').value.trim();
+  var titulo = document.getElementById('tarefaTitulo').value.trim().toUpperCase();
   if (!titulo) {
     document.getElementById('tarefaTituloError').textContent = 'Informe o título da tarefa.';
     document.getElementById('tarefaTitulo').focus();
@@ -5092,7 +5092,7 @@ function openContaPagarModal(id) {
 function closeContaPagarModal() { document.getElementById('contaPagarModal').classList.remove('open'); }
 
 function saveContaPagar() {
-  var desc  = document.getElementById('contaPagarDesc').value.trim();
+  var desc  = strToTitleCase(document.getElementById('contaPagarDesc').value.trim());
   var valor = parseFloat(document.getElementById('contaPagarValor').value);
   if (!desc)       { document.getElementById('contaPagarDescError').textContent  = 'Informe a descrição.'; return; }
   if (isNaN(valor)){ document.getElementById('contaPagarValorError').textContent = 'Informe o valor.';     return; }
@@ -5160,8 +5160,8 @@ var REC_LABELS = { semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal', me
 // ── Categorias ─────────────────────────────────────────────────────────────
 var CAT_PAGAR_KEY   = 'crm_cat_pagar_custom';
 var CAT_RECEITA_KEY = 'crm_cat_receita_custom';
-var DEFAULT_CAT_PAGAR   = ['Fornecedor','Aluguel','Pessoal','Infraestrutura','Marketing','Eventos','Outros'];
-var DEFAULT_CAT_RECEITA = ['Contrato Mensal','Instalação','Suporte','Proposta','Avulso','Eventos','Outros'];
+var DEFAULT_CAT_PAGAR   = ['Fornecedor','Pessoal','Marketing','Eventos','Outros'];
+var DEFAULT_CAT_RECEITA = ['Eventos','Outros'];
 
 function getCatList(tipo) {
   var defs   = tipo === 'pagar' ? DEFAULT_CAT_PAGAR : DEFAULT_CAT_RECEITA;
@@ -5321,7 +5321,7 @@ function openReceitaModal(id) {
 function closeReceitaModal() { document.getElementById('receitaModal').classList.remove('open'); }
 
 function saveReceita() {
-  var desc  = document.getElementById('receitaDesc').value.trim();
+  var desc  = strToTitleCase(document.getElementById('receitaDesc').value.trim());
   if (!desc) { document.getElementById('receitaDescError').textContent = 'Informe a descrição.'; return; }
   var tipo    = document.getElementById('receitaTipo').value;
   var session = getSession();
