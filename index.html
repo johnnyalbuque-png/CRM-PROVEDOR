@@ -1379,11 +1379,7 @@
             <option value="Pago">Pagas</option>
             <option value="Atrasado">Atrasadas</option>
           </select>
-          <select id="filterPagarCat" class="select-filter" onchange="renderContasPagar()">
-            <option value="">Todas as categorias</option>
-            <option>Fornecedor</option><option>Aluguel</option><option>Pessoal</option>
-            <option>Infraestrutura</option><option>Marketing</option><option>Outros</option>
-          </select>
+          <select id="filterPagarCat" class="select-filter" onchange="renderContasPagar()"></select>
           <button class="btn btn-ghost" style="font-size:12px;padding:5px 10px" onclick="document.getElementById('filterPagarMes').value='';renderContasPagar()">Todos os meses</button>
         </div>
         <div class="fin-tbl-wrap">
@@ -1413,11 +1409,7 @@
             <option value="Recebido">Recebidas</option>
             <option value="Atrasado">Atrasadas</option>
           </select>
-          <select id="filterReceitaCat" class="select-filter" onchange="renderReceita()">
-            <option value="">Todas as categorias</option>
-            <option>Contrato Mensal</option><option>Instalação</option><option>Suporte</option>
-            <option>Proposta</option><option>Avulso</option><option>Outros</option>
-          </select>
+          <select id="filterReceitaCat" class="select-filter" onchange="renderReceita()"></select>
           <button class="btn btn-ghost" style="font-size:12px;padding:5px 10px" onclick="document.getElementById('filterReceitaMes').value='';renderReceita()">Todos os meses</button>
         </div>
         <div class="fin-tbl-wrap">
@@ -1982,10 +1974,7 @@
       <div class="form-row">
         <div class="form-group">
           <label>Categoria</label>
-          <select id="contaPagarCat">
-            <option>Fornecedor</option><option>Aluguel</option><option>Pessoal</option>
-            <option>Infraestrutura</option><option>Marketing</option><option>Outros</option>
-          </select>
+          <select id="contaPagarCat" onchange="onCatChange('contaPagarCat','pagar')"></select>
         </div>
         <div class="form-group">
           <label>Status</label>
@@ -2013,21 +2002,18 @@
             <option value="nenhuma">Sem recorrência</option>
             <option value="semanal">Semanal</option>
             <option value="quinzenal">Quinzenal</option>
-            <option value="mensal">Mensal (indefinido)</option>
-            <option value="mensal_x">Mensal por X meses</option>
+            <option value="mensal">Mensal</option>
             <option value="anual">Anual</option>
           </select>
+        </div>
+        <div class="form-group" id="contaPagarRecMesesGrp" style="display:none">
+          <label>Repetir por (meses)</label>
+          <input type="number" id="contaPagarRecMeses" min="0" max="240" value="12" class="form-control" style="max-width:100px"/>
+          <small style="color:#94a3b8;font-size:11px">0 = sem limite (gera 12 por vez)</small>
         </div>
         <div class="form-group">
           <label>Data do Pagamento</label>
           <input type="date" id="contaPagarDataPag" class="form-control"/>
-        </div>
-      </div>
-      <div class="form-row" id="contaPagarRecMesesRow" style="display:none">
-        <div class="form-group">
-          <label>Nº de meses</label>
-          <input type="number" id="contaPagarRecMeses" min="1" max="120" value="12" class="form-control" style="max-width:120px"/>
-          <small style="color:#94a3b8;font-size:11px">Gera todas as parcelas ao salvar</small>
         </div>
       </div>
       <div class="form-group">
@@ -2070,10 +2056,7 @@
       <div class="form-row">
         <div class="form-group">
           <label>Categoria</label>
-          <select id="receitaCat">
-            <option>Contrato Mensal</option><option>Instalação</option><option>Suporte</option>
-            <option>Proposta</option><option>Avulso</option><option>Outros</option>
-          </select>
+          <select id="receitaCat" onchange="onCatChange('receitaCat','receita')"></select>
         </div>
         <div class="form-group">
           <label>Status</label>
@@ -2104,15 +2087,14 @@
               <option value="nenhuma">Sem recorrência</option>
               <option value="semanal">Semanal</option>
               <option value="quinzenal">Quinzenal</option>
-              <option value="mensal">Mensal (indefinido)</option>
-              <option value="mensal_x">Mensal por X meses</option>
+              <option value="mensal">Mensal</option>
               <option value="anual">Anual</option>
             </select>
           </div>
           <div class="form-group" id="receitaRecMesesGrp" style="display:none">
-            <label>Nº de meses</label>
-            <input type="number" id="receitaRecMeses" min="1" max="120" value="12" class="form-control" style="max-width:100px"/>
-            <small style="color:#94a3b8;font-size:11px">Gera todas ao salvar</small>
+            <label>Repetir por (meses)</label>
+            <input type="number" id="receitaRecMeses" min="0" max="240" value="12" class="form-control" style="max-width:100px"/>
+            <small style="color:#94a3b8;font-size:11px">0 = sem limite</small>
           </div>
           <div class="form-group">
             <label>Data do Recebimento</label>
@@ -2136,8 +2118,8 @@
           </div>
           <div class="form-row" style="margin-bottom:10px">
             <div class="form-group">
-              <label>Mês Inicial <span class="required">*</span></label>
-              <input type="month" id="receitaMesInicial" class="form-control" style="padding:6px 10px"/>
+              <label>Data do 1º vencimento <span class="required">*</span></label>
+              <input type="date" id="receitaVencInicial" class="form-control" onchange="onReceitaParceladoCalc()"/>
             </div>
             <div class="form-group">
               <label>Valores das parcelas</label>
@@ -4945,8 +4927,8 @@ function showFinTab(tab) {
     document.getElementById('fin' + (t === 'dash' ? 'Dash' : t === 'pagar' ? 'Pagar' : 'Receita') + 'Panel').style.display = t === tab ? '' : 'none';
   });
   if (tab === 'dash')    renderFinDash();
-  if (tab === 'pagar')   renderContasPagar();
-  if (tab === 'receita') renderReceita();
+  if (tab === 'pagar')   { populateFilterCat('filterPagarCat','pagar');   renderContasPagar(); }
+  if (tab === 'receita') { populateFilterCat('filterReceitaCat','receita'); renderReceita(); }
 }
 
 function renderFinanceiro() {
@@ -5093,17 +5075,18 @@ function openContaPagarModal(id) {
   document.getElementById('contaPagarId').value      = i ? i.id : '';
   document.getElementById('contaPagarDesc').value    = i ? i.descricao : '';
   document.getElementById('contaPagarDescError').textContent = '';
-  document.getElementById('contaPagarCat').value     = i ? (i.categoria||'Outros') : 'Outros';
+  populateCatSelect('contaPagarCat', 'pagar', i ? (i.categoria||'Outros') : 'Outros');
   document.getElementById('contaPagarStatus').value  = i ? i.status : 'Pendente';
   document.getElementById('contaPagarValor').value   = i ? i.valor : '';
   document.getElementById('contaPagarValorError').textContent = '';
   document.getElementById('contaPagarVenc').value    = i ? (i.vencimento||'') : '';
   document.getElementById('contaPagarDataPag').value = i ? (i.dataPagamento||'') : '';
   document.getElementById('contaPagarObs').value     = i ? (i.observacao||'') : '';
-  var rec = i ? (i.recorrencia||'nenhuma') : 'nenhuma';
-  document.getElementById('contaPagarRec').value     = rec;
-  document.getElementById('contaPagarRecMeses').value = i ? (i.recorrenciaMeses||12) : 12;
-  document.getElementById('contaPagarRecMesesRow').style.display = rec === 'mensal_x' ? '' : 'none';
+  var rec = i ? (i.recorrencia === 'mensal_x' ? 'mensal' : (i.recorrencia||'nenhuma')) : 'nenhuma';
+  document.getElementById('contaPagarRec').value      = rec;
+  var meses = i ? (i.recorrenciaMeses != null ? i.recorrenciaMeses : 12) : 12;
+  document.getElementById('contaPagarRecMeses').value = meses;
+  document.getElementById('contaPagarRecMesesGrp').style.display = rec === 'mensal' ? '' : 'none';
   document.getElementById('contaPagarModal').classList.add('open');
 }
 function closeContaPagarModal() { document.getElementById('contaPagarModal').classList.remove('open'); }
@@ -5117,8 +5100,10 @@ function saveContaPagar() {
   var id        = document.getElementById('contaPagarId').value;
   var lista     = loadContasPagar();
   var isNew     = !id;
-  var rec       = document.getElementById('contaPagarRec').value || 'nenhuma';
-  var recMeses  = parseInt(document.getElementById('contaPagarRecMeses').value) || 12;
+  var rec      = document.getElementById('contaPagarRec').value || 'nenhuma';
+  var recMeses = rec === 'mensal' ? (parseInt(document.getElementById('contaPagarRecMeses').value) || 0) : 0;
+  var criadoPor = isNew ? (session ? session.nome : '—') : (lista.find(function(x){ return x.id===id; })||{}).criadoPor;
+  var criadoEm  = isNew ? Date.now() : (lista.find(function(x){ return x.id===id; })||{}).criadoEm;
   var base = {
     descricao:    desc,
     categoria:    document.getElementById('contaPagarCat').value,
@@ -5128,22 +5113,25 @@ function saveContaPagar() {
     dataPagamento:document.getElementById('contaPagarDataPag').value,
     observacao:   document.getElementById('contaPagarObs').value.trim(),
     recorrencia:  rec,
-    criadoPor:    isNew ? (session ? session.nome : '—') : (lista.find(function(x){ return x.id===id; })||{}).criadoPor,
-    criadoEm:     isNew ? Date.now() : (lista.find(function(x){ return x.id===id; })||{}).criadoEm,
+    criadoPor:    criadoPor,
+    criadoEm:     criadoEm,
   };
-  if (isNew && rec === 'mensal_x' && recMeses > 0) {
+  if (isNew && rec === 'mensal') {
+    var totalMeses = recMeses > 0 ? recMeses : 12;
+    var indefinido = recMeses === 0;
     var grupoId = generateId();
     var venc = base.vencimento;
-    for (var m = 0; m < recMeses; m++) {
+    for (var m = 0; m < totalMeses; m++) {
       lista.push(Object.assign({}, base, {
-        id: generateId(), recorrencia: 'mensal_x', recorrenciaMeses: recMeses,
+        id: generateId(), recorrencia: 'mensal', recorrenciaMeses: recMeses,
         recorrenciaSeq: m + 1, recorrenciaGrupoId: grupoId,
+        recorrenciaIndefinido: indefinido,
         vencimento: m === 0 ? venc : nextVencimentoN(venc, m),
         status: 'Pendente', dataPagamento: '',
       }));
     }
   } else {
-    var item = Object.assign({ id: id || generateId() }, base, rec === 'mensal_x' ? { recorrenciaMeses: recMeses } : {});
+    var item = Object.assign({ id: id || generateId() }, base);
     if (isNew) { lista.push(item); } else { var idx=lista.findIndex(function(x){return x.id===id;}); if(idx!==-1)lista[idx]=item; else lista.push(item); }
   }
   saveContasPagar(lista);
@@ -5167,7 +5155,53 @@ function nextVencimentoN(dateStr, n) {
   return d.toISOString().slice(0, 10);
 }
 
-var REC_LABELS = { semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal (indefinido)', mensal_x:'Mensal', anual:'Anual' };
+var REC_LABELS = { semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal', mensal_x:'Mensal', anual:'Anual' };
+
+// ── Categorias ─────────────────────────────────────────────────────────────
+var CAT_PAGAR_KEY   = 'crm_cat_pagar_custom';
+var CAT_RECEITA_KEY = 'crm_cat_receita_custom';
+var DEFAULT_CAT_PAGAR   = ['Fornecedor','Aluguel','Pessoal','Infraestrutura','Marketing','Eventos','Outros'];
+var DEFAULT_CAT_RECEITA = ['Contrato Mensal','Instalação','Suporte','Proposta','Avulso','Eventos','Outros'];
+
+function getCatList(tipo) {
+  var defs   = tipo === 'pagar' ? DEFAULT_CAT_PAGAR : DEFAULT_CAT_RECEITA;
+  var key    = tipo === 'pagar' ? CAT_PAGAR_KEY : CAT_RECEITA_KEY;
+  var custom = _cfgCache[key] || [];
+  return defs.concat(custom.filter(function(c){ return defs.indexOf(c) === -1; }));
+}
+
+function populateCatSelect(selectId, tipo, selected) {
+  var sel = document.getElementById(selectId);
+  if (!sel) return;
+  var cats = getCatList(tipo);
+  sel.innerHTML = cats.map(function(c){
+    return '<option value="'+esc(c)+'"'+(c===(selected||'')?' selected':'')+'>'+esc(c)+'</option>';
+  }).join('') + '<option value="__nova__">+ Nova categoria...</option>';
+}
+
+function populateFilterCat(selectId, tipo) {
+  var sel = document.getElementById(selectId);
+  if (!sel) return;
+  var prev = sel.value;
+  var cats = getCatList(tipo);
+  sel.innerHTML = '<option value="">Todas as categorias</option>' +
+    cats.map(function(c){ return '<option value="'+esc(c)+'">'+esc(c)+'</option>'; }).join('');
+  if (prev) sel.value = prev;
+}
+
+function onCatChange(selectId, tipo) {
+  var sel = document.getElementById(selectId);
+  if (!sel || sel.value !== '__nova__') return;
+  var nome = prompt('Nome da nova categoria:');
+  if (!nome || !nome.trim()) { sel.value = getCatList(tipo)[0] || 'Outros'; return; }
+  nome = nome.trim();
+  var key  = tipo === 'pagar' ? CAT_PAGAR_KEY : CAT_RECEITA_KEY;
+  var cats = (_cfgCache[key] || []).slice();
+  if (cats.indexOf(nome) === -1) { cats.push(nome); _cfgCache[key] = cats; saveConfigBg(key, cats); }
+  populateCatSelect(selectId, tipo, nome);
+  sel.value = nome;
+}
+window.onCatChange = onCatChange;
 
 function openPagarParcialModal(id) {
   var item = loadContasPagar().find(function(x){ return x.id===id; });
@@ -5218,16 +5252,30 @@ function marcarPago(id) {
   lista[idx].status        = 'Pago';
   lista[idx].dataPagamento = getTodayStr();
   delete lista[idx].saldoRestante;
-  // Gera próxima apenas para recorrência indefinida (mensal/semanal/etc)
-  var rec = lista[idx].recorrencia;
-  if (rec && rec !== 'nenhuma' && rec !== 'mensal_x') {
-    var orig = lista[idx];
+  var orig = lista[idx];
+  var rec  = orig.recorrencia;
+  if (rec === 'mensal' && orig.recorrenciaIndefinido && orig.recorrenciaGrupoId) {
+    // Indefinite group: check if this is the last pending entry; if so, generate 12 more
+    var grupoId = orig.recorrenciaGrupoId;
+    var hasFuture = lista.some(function(x){ return x.recorrenciaGrupoId === grupoId && x.status === 'Pendente'; });
+    if (!hasFuture) {
+      var lastVenc = lista.filter(function(x){ return x.recorrenciaGrupoId === grupoId; })
+        .reduce(function(max, x){ return (x.vencimento||'') > max ? (x.vencimento||'') : max; }, '');
+      for (var m = 1; m <= 12; m++) {
+        lista.push(Object.assign({}, orig, {
+          id: generateId(), status: 'Pendente', dataPagamento: '', saldoRestante: undefined,
+          vencimento: nextVencimentoN(lastVenc, m),
+          recorrenciaSeq: (orig.recorrenciaSeq||0) + m, criadoEm: Date.now(),
+        }));
+      }
+    }
+  } else if (rec && rec !== 'nenhuma' && rec !== 'mensal' && rec !== 'mensal_x') {
+    // semanal / quinzenal / anual: gera o próximo
     lista.push({
       id: generateId(), descricao: orig.descricao, categoria: orig.categoria,
       status: 'Pendente', valor: orig.valor,
       vencimento: nextVencimento(orig.vencimento, rec),
-      dataPagamento: '', observacao: orig.observacao,
-      recorrencia: rec,
+      dataPagamento: '', observacao: orig.observacao, recorrencia: rec,
       recorrenciaOrigemId: orig.recorrenciaOrigemId || orig.id,
       criadoPor: orig.criadoPor, criadoEm: Date.now(),
     });
@@ -5247,17 +5295,18 @@ function openReceitaModal(id) {
   document.getElementById('receitaId').value       = i ? i.id : '';
   document.getElementById('receitaDesc').value     = i ? i.descricao : '';
   document.getElementById('receitaDescError').textContent = '';
-  document.getElementById('receitaCat').value      = i ? (i.categoria||'Avulso') : 'Avulso';
+  populateCatSelect('receitaCat', 'receita', i ? (i.categoria||'Avulso') : 'Avulso');
   document.getElementById('receitaStatus').value   = i ? i.status : 'Pendente';
   document.getElementById('receitaValor').value    = i ? i.valor : '';
   document.getElementById('receitaValorError').textContent = '';
   document.getElementById('receitaVenc').value     = i ? (i.vencimento||'') : '';
   document.getElementById('receitaDataRec').value  = i ? (i.dataRecebimento||'') : '';
   document.getElementById('receitaObs').value      = i ? (i.observacao||'') : '';
-  var rec = i ? (i.recorrencia||'nenhuma') : 'nenhuma';
+  var rec = i ? (i.recorrencia === 'mensal_x' ? 'mensal' : (i.recorrencia||'nenhuma')) : 'nenhuma';
   document.getElementById('receitaRec').value      = rec;
-  document.getElementById('receitaRecMeses').value = i ? (i.recorrenciaMeses||12) : 12;
-  document.getElementById('receitaRecMesesGrp').style.display = rec === 'mensal_x' ? '' : 'none';
+  var recM = i ? (i.recorrenciaMeses != null ? i.recorrenciaMeses : 12) : 12;
+  document.getElementById('receitaRecMeses').value = recM;
+  document.getElementById('receitaRecMesesGrp').style.display = rec === 'mensal' ? '' : 'none';
   // Tipo simples sempre ao editar
   document.getElementById('receitaTipo').value = 'simples';
   document.getElementById('receitaSimplesSection').style.display = '';
@@ -5286,41 +5335,39 @@ function saveReceita() {
   var criadoEm  = isNew ? Date.now() : (lista.find(function(x){ return x.id===id; })||{}).criadoEm;
 
   if (isNew && tipo === 'parcelado') {
-    var valTotal = parseFloat(document.getElementById('receitaValorTotal').value);
-    var nParc    = parseInt(document.getElementById('receitaNParcelas').value) || 0;
-    var mesIni   = document.getElementById('receitaMesInicial').value;
+    var valTotal  = parseFloat(document.getElementById('receitaValorTotal').value);
+    var nParc     = parseInt(document.getElementById('receitaNParcelas').value) || 0;
+    var vencIni   = document.getElementById('receitaVencInicial').value;
     if (isNaN(valTotal) || valTotal <= 0) { alert('Informe o valor total.'); return; }
-    if (nParc < 1) { alert('Informe o número de parcelas.'); return; }
-    if (!mesIni) { alert('Informe o mês inicial.'); return; }
-    var modo  = document.getElementById('receitaModoParc').value;
+    if (nParc < 1)  { alert('Informe o número de parcelas.'); return; }
+    if (!vencIni)   { alert('Informe a data do 1º vencimento.'); return; }
+    var modo    = document.getElementById('receitaModoParc').value;
     var grupoId = generateId();
     for (var p = 0; p < nParc; p++) {
       var valParc;
       if (modo === 'manual') {
-        valParc = parseFloat((document.getElementById('recParcVal_' + p)||{}).value) || 0;
+        valParc = parseFloat(((document.getElementById('recParcVal_' + p))||{}).value) || 0;
       } else {
         valParc = p < nParc - 1 ? Math.floor(valTotal / nParc * 100) / 100 : Math.round((valTotal - Math.floor(valTotal / nParc * 100) / 100 * (nParc - 1)) * 100) / 100;
       }
-      var d = new Date(mesIni + '-01T12:00:00');
-      d.setMonth(d.getMonth() + p);
-      var venc = d.toISOString().slice(0, 10);
-      lista.push({ id: generateId(), descricao: desc + ' (' + (p+1) + '/' + nParc + ')', categoria: cat, status: 'Pendente', valor: valParc, vencimento: venc, dataRecebimento: '', leadId: leadId, observacao: obs, recorrencia: 'nenhuma', parcelaGrupoId: grupoId, parcelaSeq: p+1, parcelas: nParc, criadoPor: criadoPor, criadoEm: Date.now() });
+      lista.push({ id: generateId(), descricao: desc + ' (' + (p+1) + '/' + nParc + ')', categoria: cat, status: 'Pendente', valor: valParc, vencimento: nextVencimentoN(vencIni, p), dataRecebimento: '', leadId: leadId, observacao: obs, recorrencia: 'nenhuma', parcelaGrupoId: grupoId, parcelaSeq: p+1, parcelas: nParc, criadoPor: criadoPor, criadoEm: Date.now() });
     }
   } else {
     var valor = parseFloat(document.getElementById('receitaValor').value);
     if (isNaN(valor)) { document.getElementById('receitaValorError').textContent = 'Informe o valor.'; return; }
     var rec      = document.getElementById('receitaRec').value || 'nenhuma';
-    var recMeses = parseInt(document.getElementById('receitaRecMeses').value) || 12;
-    if (isNew && rec === 'mensal_x' && recMeses > 0) {
+    var recMeses = rec === 'mensal' ? (parseInt(document.getElementById('receitaRecMeses').value) || 0) : 0;
+    if (isNew && rec === 'mensal') {
+      var totalM   = recMeses > 0 ? recMeses : 12;
+      var indef    = recMeses === 0;
       var grupoId2 = generateId();
       var vencBase = document.getElementById('receitaVenc').value;
-      for (var m = 0; m < recMeses; m++) {
-        lista.push({ id: generateId(), descricao: desc, categoria: cat, status: 'Pendente', valor: valor, vencimento: m === 0 ? vencBase : nextVencimentoN(vencBase, m), dataRecebimento: '', leadId: leadId, observacao: obs, recorrencia: 'mensal_x', recorrenciaMeses: recMeses, recorrenciaSeq: m+1, recorrenciaGrupoId: grupoId2, criadoPor: criadoPor, criadoEm: Date.now() });
+      for (var m = 0; m < totalM; m++) {
+        lista.push({ id: generateId(), descricao: desc, categoria: cat, status: 'Pendente', valor: valor, vencimento: nextVencimentoN(vencBase, m), dataRecebimento: '', leadId: leadId, observacao: obs, recorrencia: 'mensal', recorrenciaMeses: recMeses, recorrenciaSeq: m+1, recorrenciaGrupoId: grupoId2, recorrenciaIndefinido: indef, criadoPor: criadoPor, criadoEm: Date.now() });
       }
     } else {
       var item = { id: id||generateId(), descricao: desc, categoria: cat, status: document.getElementById('receitaStatus').value, valor: valor, vencimento: document.getElementById('receitaVenc').value, dataRecebimento: document.getElementById('receitaDataRec').value, leadId: leadId, observacao: obs, recorrencia: rec, criadoPor: criadoPor, criadoEm: criadoEm };
-      if (rec === 'mensal_x') item.recorrenciaMeses = recMeses;
-      if (isNew) { lista.push(item); } else { var idx=lista.findIndex(function(x){return x.id===id;}); if(idx!==-1)lista[idx]=item; else lista.push(item); }
+      if (isNew) { lista.push(item); } else { var idx2=lista.findIndex(function(x){return x.id===id;}); if(idx2!==-1)lista[idx2]=item; else lista.push(item); }
     }
   }
   saveReceita2(lista);
@@ -5334,18 +5381,20 @@ function marcarRecebido(id) {
   if (idx === -1) return;
   lista[idx].status          = 'Recebido';
   lista[idx].dataRecebimento = getTodayStr();
-  var rec = lista[idx].recorrencia;
-  if (rec && rec !== 'nenhuma' && rec !== 'mensal_x') {
-    var orig = lista[idx];
-    lista.push({
-      id: generateId(), descricao: orig.descricao, categoria: orig.categoria,
-      status: 'Pendente', valor: orig.valor,
-      vencimento: nextVencimento(orig.vencimento, rec),
-      dataRecebimento: '', leadId: orig.leadId, observacao: orig.observacao,
-      recorrencia: rec,
-      recorrenciaOrigemId: orig.recorrenciaOrigemId || orig.id,
-      criadoPor: orig.criadoPor, criadoEm: Date.now(),
-    });
+  var origR = lista[idx];
+  var rec   = origR.recorrencia;
+  if (rec === 'mensal' && origR.recorrenciaIndefinido && origR.recorrenciaGrupoId) {
+    var grupoIdR = origR.recorrenciaGrupoId;
+    var hasFutureR = lista.some(function(x){ return x.recorrenciaGrupoId === grupoIdR && x.status === 'Pendente'; });
+    if (!hasFutureR) {
+      var lastVencR = lista.filter(function(x){ return x.recorrenciaGrupoId === grupoIdR; })
+        .reduce(function(max, x){ return (x.vencimento||'') > max ? (x.vencimento||'') : max; }, '');
+      for (var mr = 1; mr <= 12; mr++) {
+        lista.push(Object.assign({}, origR, { id: generateId(), status: 'Pendente', dataRecebimento: '', vencimento: nextVencimentoN(lastVencR, mr), recorrenciaSeq: (origR.recorrenciaSeq||0) + mr, criadoEm: Date.now() }));
+      }
+    }
+  } else if (rec && rec !== 'nenhuma' && rec !== 'mensal') {
+    lista.push({ id: generateId(), descricao: origR.descricao, categoria: origR.categoria, status: 'Pendente', valor: origR.valor, vencimento: nextVencimento(origR.vencimento, rec), dataRecebimento: '', leadId: origR.leadId, observacao: origR.observacao, recorrencia: rec, recorrenciaOrigemId: origR.recorrenciaOrigemId || origR.id, criadoPor: origR.criadoPor, criadoEm: Date.now() });
   }
   saveReceita2(lista);
   renderFinanceiro();
@@ -5358,7 +5407,7 @@ function deletarReceita(id) {
 
 function onContaPagarRecChange() {
   var rec = document.getElementById('contaPagarRec').value;
-  document.getElementById('contaPagarRecMesesRow').style.display = rec === 'mensal_x' ? '' : 'none';
+  document.getElementById('contaPagarRecMesesGrp').style.display = rec === 'mensal' ? '' : 'none';
 }
 
 function onReceitaTipoChange() {
@@ -5369,26 +5418,26 @@ function onReceitaTipoChange() {
 
 function onReceitaRecChange() {
   var rec = document.getElementById('receitaRec').value;
-  document.getElementById('receitaRecMesesGrp').style.display = rec === 'mensal_x' ? '' : 'none';
+  document.getElementById('receitaRecMesesGrp').style.display = rec === 'mensal' ? '' : 'none';
 }
 
 function onReceitaParceladoCalc() {
-  var total = parseFloat(document.getElementById('receitaValorTotal').value) || 0;
-  var n     = parseInt(document.getElementById('receitaNParcelas').value) || 0;
-  var modo  = document.getElementById('receitaModoParc').value;
-  var infoEl = document.getElementById('receitaParcelasAutoInfo');
+  var total    = parseFloat(document.getElementById('receitaValorTotal').value) || 0;
+  var n        = parseInt(document.getElementById('receitaNParcelas').value) || 0;
+  var modo     = document.getElementById('receitaModoParc').value;
+  var vencIni  = document.getElementById('receitaVencInicial').value;
+  var infoEl   = document.getElementById('receitaParcelasAutoInfo');
   var manualEl = document.getElementById('receitaParcelasManualList');
   if (total > 0 && n > 0) {
     var valParc = total / n;
     infoEl.textContent = n + 'x de ' + fmtMoney(valParc) + ' = ' + fmtMoney(total);
     if (modo === 'manual') {
       manualEl.style.display = 'flex';
-      var mesIni = document.getElementById('receitaMesInicial').value;
       var html = '';
       for (var p = 0; p < n; p++) {
-        var labelMes = '';
-        if (mesIni) { var d2 = new Date(mesIni+'-01T12:00:00'); d2.setMonth(d2.getMonth()+p); labelMes = ' (' + (d2.getMonth()+1).toString().padStart(2,'0') + '/' + d2.getFullYear() + ')'; }
-        html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px"><span style="min-width:70px;color:#64748b">Parcela '+(p+1)+labelMes+'</span><input id="recParcVal_'+p+'" type="number" min="0" step="0.01" value="'+valParc.toFixed(2)+'" style="flex:1;border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px;font-size:12px"/></div>';
+        var labelData = '';
+        if (vencIni) { var dv = new Date(nextVencimentoN(vencIni, p)+'T12:00:00'); labelData = ' (' + dv.toLocaleDateString('pt-BR') + ')'; }
+        html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px"><span style="min-width:80px;color:#64748b">Parcela '+(p+1)+labelData+'</span><input id="recParcVal_'+p+'" type="number" min="0" step="0.01" value="'+valParc.toFixed(2)+'" style="flex:1;border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px;font-size:12px"/></div>';
       }
       manualEl.innerHTML = html;
     } else {
@@ -5421,6 +5470,8 @@ window.onContaPagarRecChange   = onContaPagarRecChange;
 window.onReceitaTipoChange     = onReceitaTipoChange;
 window.onReceitaRecChange      = onReceitaRecChange;
 window.onReceitaParceladoCalc  = onReceitaParceladoCalc;
+window.populateCatSelect       = populateCatSelect;
+window.populateFilterCat       = populateFilterCat;
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
