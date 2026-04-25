@@ -5816,22 +5816,50 @@ function renderEventoDetalhe() {
   if (!receita.length) {
     html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;text-align:center;color:#94a3b8;font-size:13px">Nenhuma receita vinculada.</div>';
   } else {
-    html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden"><table class="fin-tbl"><thead><tr><th>Descrição</th><th>Cliente</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+    // Group parcelas by parcelaGrupoId; individual entries stay as-is
+    var recRows = [];
+    var gruposVistos = {};
     receita.slice().sort(function(a,b){ return (a.vencimento||'').localeCompare(b.vencimento||''); }).forEach(function(i) {
-      var st      = finStatus(i,'Recebido');
-      var stCls   = { 'Recebido':'fin-st-recebido','Atrasado':'fin-st-atrasado','Pendente':'fin-st-pendente' }[st] || 'fin-st-pendente';
-      var vencStr = i.vencimento ? new Date(i.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
-      var lead    = i.leadId ? leads.find(function(l){ return l.id===i.leadId; }) : null;
-      html += '<tr><td>'+esc(i.descricao)+'</td>';
-      html += '<td>'+(lead ? '<span class="link-empresa" style="font-size:12px" onclick="openDetail(\''+lead.id+'\')">'+esc(lead.empresa)+'</span>' : '—')+'</td>';
-      html += '<td>'+vencStr+'</td><td style="font-weight:600;color:#16a34a">'+fmtMoney(+i.valor||0)+'</td>';
-      html += '<td><span class="badge-fin '+stCls+'">'+st+'</span></td>';
-      html += '<td><div class="fin-tbl col-acoes">';
-      html += '<button class="btn btn-outline" style="padding:3px 10px;font-size:12px" onclick="openReceitaModal(\''+i.id+'\')">✏️</button>';
-      if (st !== 'Recebido') html += '<button class="btn btn-primary" style="padding:3px 10px;font-size:12px;background:#16a34a;border-color:#16a34a" onclick="marcarRecebido(\''+i.id+'\')">✔ Recebido</button>';
-      html += '<button class="btn btn-ghost" style="padding:3px 10px;font-size:12px;color:#ef4444" onclick="deletarReceita(\''+i.id+'\')">✕</button>';
-      html += '</div></td></tr>';
+      if (i.parcelaGrupoId) {
+        if (!gruposVistos[i.parcelaGrupoId]) {
+          gruposVistos[i.parcelaGrupoId] = true;
+          var grupo = receita.filter(function(x){ return x.parcelaGrupoId === i.parcelaGrupoId; });
+          var totGrupo   = grupo.reduce(function(s,x){ return s+(+x.valor||0); }, 0);
+          var pagas      = grupo.filter(function(x){ return x.status==='Recebido'; }).length;
+          var stGrupo    = pagas === grupo.length ? 'Recebido' : (pagas > 0 ? 'Parcial' : finStatus(i,'Recebido'));
+          var stClsGrupo = { 'Recebido':'fin-st-recebido','Parcial':'fin-st-parcial','Atrasado':'fin-st-atrasado','Pendente':'fin-st-pendente' }[stGrupo] || 'fin-st-pendente';
+          var descBase   = i.descricao.replace(/\s*\(\d+\/\d+\)$/, '');
+          var vencStr    = i.vencimento ? new Date(i.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+          var lead       = i.leadId ? leads.find(function(l){ return l.id===i.leadId; }) : null;
+          recRows.push('<tr>' +
+            '<td>'+esc(descBase)+'<br><small style="color:#94a3b8">'+pagas+'/'+grupo.length+' parcelas recebidas</small></td>' +
+            '<td>'+(lead ? '<span class="link-empresa" style="font-size:12px" onclick="openDetail(\''+lead.id+'\')">'+esc(lead.empresa)+'</span>' : '—')+'</td>' +
+            '<td>'+vencStr+'</td>' +
+            '<td style="font-weight:600;color:#16a34a">'+fmtMoney(totGrupo)+'</td>' +
+            '<td><span class="badge-fin '+stClsGrupo+'">'+stGrupo+'</span></td>' +
+            '<td>—</td>' +
+          '</tr>');
+        }
+      } else {
+        var st      = finStatus(i,'Recebido');
+        var stCls   = { 'Recebido':'fin-st-recebido','Atrasado':'fin-st-atrasado','Pendente':'fin-st-pendente' }[st] || 'fin-st-pendente';
+        var vencStr2 = i.vencimento ? new Date(i.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+        var lead2   = i.leadId ? leads.find(function(l){ return l.id===i.leadId; }) : null;
+        recRows.push('<tr>' +
+          '<td>'+esc(i.descricao)+'</td>' +
+          '<td>'+(lead2 ? '<span class="link-empresa" style="font-size:12px" onclick="openDetail(\''+lead2.id+'\')">'+esc(lead2.empresa)+'</span>' : '—')+'</td>' +
+          '<td>'+vencStr2+'</td><td style="font-weight:600;color:#16a34a">'+fmtMoney(+i.valor||0)+'</td>' +
+          '<td><span class="badge-fin '+stCls+'">'+st+'</span></td>' +
+          '<td><div class="fin-tbl col-acoes">' +
+            '<button class="btn btn-outline" style="padding:3px 10px;font-size:12px" onclick="openReceitaModal(\''+i.id+'\')">✏️</button>' +
+            (st !== 'Recebido' ? '<button class="btn btn-primary" style="padding:3px 10px;font-size:12px;background:#16a34a;border-color:#16a34a" onclick="marcarRecebido(\''+i.id+'\')">✔ Recebido</button>' : '') +
+            '<button class="btn btn-ghost" style="padding:3px 10px;font-size:12px;color:#ef4444" onclick="deletarReceita(\''+i.id+'\')">✕</button>' +
+          '</div></td>' +
+        '</tr>');
+      }
     });
+    html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden"><table class="fin-tbl"><thead><tr><th>Descrição</th><th>Cliente</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+    html += recRows.join('');
     html += '</tbody></table></div>';
   }
   document.getElementById('eventoDetalheBody').innerHTML = html;
