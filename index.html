@@ -801,7 +801,9 @@
     /* ── Proposta button no card ── */
     .kcard-prop-btn { display:inline-flex; align-items:center; justify-content:center; gap:4px; font-size:11px; color:#7c3aed; background:#ede9fe; border:none; border-radius:6px; padding:2px 8px; cursor:pointer; margin-top:4px; line-height:1.8; width:100%; }
     .kcard-prop-btn:hover { background:#ddd6fe; }
-    .kcard-comment-btn { display:inline-flex; align-items:center; justify-content:center; gap:4px; font-size:11px; color:#0369a1; background:#e0f2fe; border:none; border-radius:6px; padding:2px 8px; cursor:pointer; margin-top:4px; line-height:1.8; width:100%; }
+    .kcard-financeiro-btn        { display:inline-flex; align-items:center; justify-content:center; gap:4px; font-size:11px; color:#166534; background:#dcfce7; border:none; border-radius:6px; padding:2px 8px; cursor:pointer; margin-top:4px; line-height:1.8; width:100%; font-weight:600; }
+    .kcard-financeiro-btn:hover  { background:#bbf7d0; }
+    .kcard-financeiro-btn.lancado{ color:#64748b; background:#f1f5f9; cursor:default; font-weight:500; }
     .kcard-comment-btn:hover { background:#bae6fd; }
     .kcard-followup-badge { display:flex; align-items:center; gap:4px; font-size:10px; font-weight:600; color:#b45309; background:#fef3c7; border:1px solid #fde68a; border-radius:5px; padding:2px 6px; margin-top:4px; }
     .kcard-comment-badge  { display:flex; align-items:center; gap:4px; font-size:10px; font-weight:600; color:#0369a1; background:#e0f2fe; border:1px solid #bae6fd; border-radius:5px; padding:2px 6px; margin-top:4px; }
@@ -3677,6 +3679,11 @@ function renderKanban() {
               return (cCount > 0 ? '<div class="kcard-comment-badge">💬 ' + cCount + ' Comentário' + (cCount !== 1 ? 's' : '') + '</div>' : '') +
               (fuStr ? '<div class="kcard-followup-badge">📅 Follow-up: ' + fuStr + '</div>' : '');
             })() +
+            (stage.id === 'Fechado'
+              ? (n.lancadoPropostaId
+                  ? '<div class="kcard-financeiro-btn lancado">✅ Lançado no Financeiro</div>'
+                  : '<button class="kcard-financeiro-btn" onclick="event.stopPropagation();lancarPropostaFinanceiro(\'' + n.leadId + '\',\'' + n.id + '\')">💰 Lançar no Financeiro</button>')
+              : '') +
           '</div>';
         }).join('')
       : '<div class="kanban-empty">Nenhum negócio<br><small style="color:#e2e8f0">Use "Novo Negócio" para adicionar</small></div>';
@@ -5445,6 +5452,91 @@ function onReceitaParceladoCalc() {
   }
 }
 
+// ── Lançar Proposta no Financeiro ─────────────────────────────────────────
+function lancarPropostaFinanceiro(leadId, negId) {
+  var props = loadPropostas().filter(function(p){ return p.leadId === leadId; });
+  if (!props.length) {
+    alert('Nenhuma proposta encontrada para este lead.\nCrie uma proposta antes de lançar no financeiro.');
+    return;
+  }
+  if (props.length === 1) {
+    _confirmarLancarProposta(props[0], negId);
+  } else {
+    _openPropostaPickerModal(props.slice().reverse(), negId);
+  }
+}
+
+function _confirmarLancarProposta(p, negId) {
+  var lead   = leads.find(function(l){ return l.id === p.leadId; }) || {};
+  var linhas = (p.parcelas > 1) ? p.parcelas + 'x de ' + fmtMoney(p.valorParcela) : 'à vista';
+  var msg    = 'Lançar no Financeiro — Receita?\n\n' +
+    'Proposta: ' + p.numero + '\n' +
+    'Total: ' + fmtMoney(p.total) + '  (' + linhas + ')\n\n' +
+    (p.parcelas > 1 ? 'Serão criadas ' + p.parcelas + ' entradas de receita.' : 'Será criada 1 entrada de receita.');
+  if (!confirm(msg)) return;
+  var session = getSession();
+  var lista   = loadReceita();
+  var grupoId = generateId();
+  var empresa = strToTitleCase(lead.empresa || 'Lead');
+  var desc    = empresa + ' — ' + p.numero;
+  if (p.parcelas <= 1) {
+    lista.push({
+      id: generateId(), descricao: desc, categoria: 'Outros',
+      status: 'Pendente', valor: p.total,
+      vencimento: (p.vencimentos && p.vencimentos[0]) || '',
+      dataRecebimento: '', leadId: p.leadId,
+      observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
+      criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
+    });
+  } else {
+    for (var i = 0; i < p.parcelas; i++) {
+      lista.push({
+        id: generateId(),
+        descricao: desc + ' (' + (i+1) + '/' + p.parcelas + ')',
+        categoria: 'Outros', status: 'Pendente',
+        valor: p.valorParcela,
+        vencimento: (p.vencimentos && p.vencimentos[i]) || '',
+        dataRecebimento: '', leadId: p.leadId,
+        observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
+        parcelaGrupoId: grupoId, parcelaSeq: i + 1, parcelas: p.parcelas,
+        criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
+      });
+    }
+  }
+  saveReceita2(lista);
+  var negocios = loadNegocios();
+  var nIdx = negocios.findIndex(function(x){ return x.id === negId; });
+  if (nIdx !== -1) { negocios[nIdx].lancadoPropostaId = p.id; saveNegocios(negocios); }
+  closePropostaPickerModal();
+  renderKanban();
+  alert('✅ ' + (p.parcelas > 1 ? p.parcelas + ' parcelas lançadas' : 'Receita lançada') + ' com sucesso no Financeiro!');
+}
+
+function _openPropostaPickerModal(props, negId) {
+  document.getElementById('propostaPickerList').innerHTML = props.map(function(p) {
+    var linhas = p.parcelas > 1 ? p.parcelas + 'x de ' + fmtMoney(p.valorParcela) : 'à vista';
+    var data   = p.data ? new Date(p.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    return '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px">' +
+      '<div style="min-width:0">' +
+        '<div style="font-size:13px;font-weight:700;color:#0f172a">' + esc(p.numero) + '</div>' +
+        '<div style="font-size:11px;color:#64748b;margin-top:2px">' + data + ' · ' + linhas + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;align-items:center;flex-shrink:0">' +
+        '<span style="font-weight:700;color:#166534;font-size:14px">' + fmtMoney(p.total) + '</span>' +
+        '<button class="btn btn-primary" style="padding:4px 12px;font-size:12px" onclick="_confirmarLancarProposta(' + JSON.stringify(p).replace(/'/g,"\\'") + ',\'' + negId + '\')">' +
+          'Selecionar' +
+        '</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  document.getElementById('propostaPickerModal').classList.add('open');
+}
+function closePropostaPickerModal() { document.getElementById('propostaPickerModal').classList.remove('open'); }
+
+window.lancarPropostaFinanceiro  = lancarPropostaFinanceiro;
+window._confirmarLancarProposta  = _confirmarLancarProposta;
+window.closePropostaPickerModal  = closePropostaPickerModal;
+
 window.showFinTab              = showFinTab;
 window.openContaPagarModal     = openContaPagarModal;
 window.closeContaPagarModal    = closeContaPagarModal;
@@ -5547,5 +5639,24 @@ async function boot() {
 }
 boot();
 </script>
+
+<!-- Modal: Selecionar Proposta para lançar no Financeiro -->
+<div class="modal-overlay" id="propostaPickerModal" style="z-index:700">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h2>Selecionar Proposta</h2>
+      <button class="modal-close" onclick="closePropostaPickerModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:#64748b;margin-bottom:14px">Este lead tem mais de uma proposta. Selecione qual deseja lançar no Financeiro:</p>
+      <div id="propostaPickerList" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closePropostaPickerModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
