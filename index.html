@@ -886,6 +886,20 @@
     .fin-st-atrasado  { background:#fef2f2; color:#991b1b; }
     .fin-st-parcial   { background:#eff6ff; color:#1d4ed8; }
 
+    /* ── Eventos ── */
+    .evento-card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px 20px; margin-bottom:12px; }
+    .evento-card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
+    .evento-card-nome { font-size:15px; font-weight:700; color:#0f172a; }
+    .evento-card-meta { font-size:12px; color:#64748b; margin-top:3px; }
+    .evento-pl-row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    .evento-pl-item { background:#f8fafc; border-radius:8px; padding:10px 14px; }
+    .evento-pl-label { font-size:11px; color:#64748b; margin-bottom:3px; }
+    .evento-pl-value { font-size:14px; font-weight:700; }
+    .evento-pl-receita .evento-pl-value { color:#16a34a; }
+    .evento-pl-despesa .evento-pl-value { color:#dc2626; }
+    .evento-pl-pos .evento-pl-value { color:#16a34a; }
+    .evento-pl-neg .evento-pl-value { color:#dc2626; }
+
     /* ── Notificações ── */
     .notif-wrap { position:relative; }
     .notif-btn { position:relative; background:none; border:none; cursor:pointer; padding:6px; border-radius:8px; color:#64748b; display:flex; align-items:center; justify-content:center; transition:background .15s; }
@@ -1347,6 +1361,7 @@
           <button class="fin-tab active" id="finTabDash"    onclick="showFinTab('dash')">Dashboard</button>
           <button class="fin-tab"        id="finTabPagar"   onclick="showFinTab('pagar')">Contas a Pagar</button>
           <button class="fin-tab"        id="finTabReceita" onclick="showFinTab('receita')">Receita</button>
+          <button class="fin-tab"        id="finTabEventos" onclick="showFinTab('eventos')">Eventos</button>
         </div>
       </div>
 
@@ -1421,6 +1436,29 @@
             </tr></thead>
             <tbody id="receitaTbody"></tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- Eventos -->
+      <div id="finEventosPanel" style="display:none">
+        <!-- Lista de Eventos -->
+        <div id="finEventosListView">
+          <div class="fin-list-bar">
+            <h3>Eventos</h3>
+            <button class="btn btn-primary" onclick="openEventoModal()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Novo Evento
+            </button>
+          </div>
+          <div id="eventosListContainer" style="padding:16px 24px 24px"></div>
+        </div>
+        <!-- Detalhe / P&L do Evento -->
+        <div id="finEventosDetailView" style="display:none">
+          <div class="fin-list-bar" style="gap:16px">
+            <button class="btn btn-ghost" style="font-size:13px;padding:5px 12px" onclick="voltarEventosList()">← Voltar</button>
+            <h3 id="eventoDetalheNome" style="flex:1;margin:0"></h3>
+          </div>
+          <div id="eventoDetalheBody" style="padding:16px 24px 24px"></div>
         </div>
       </div>
     </div>
@@ -2019,6 +2057,10 @@
         </div>
       </div>
       <div class="form-group">
+        <label>Vincular a um Evento (opcional)</label>
+        <select id="contaPagarEventoId"></select>
+      </div>
+      <div class="form-group">
         <label>Observação</label>
         <textarea id="contaPagarObs" rows="2" style="resize:vertical"></textarea>
       </div>
@@ -2026,6 +2068,44 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeContaPagarModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="saveContaPagar()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Novo/Editar Evento -->
+<div class="modal-overlay" id="eventoModal" style="z-index:650">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2 id="eventoModalTitle">Novo Evento</h2>
+      <button class="modal-close" onclick="closeEventoModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="eventoId"/>
+      <div class="form-group">
+        <label>Nome do Evento <span class="required">*</span></label>
+        <input type="text" id="eventoNome" placeholder="Ex: INTER'ISP Belém"/>
+        <span class="field-error" id="eventoNomeError"></span>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" id="eventoData" class="form-control"/>
+        </div>
+        <div class="form-group">
+          <label>Local</label>
+          <input type="text" id="eventoLocal" placeholder="Ex: Belém, PA"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descrição / Observações</label>
+        <textarea id="eventoDesc" rows="2" style="resize:vertical" placeholder="Detalhes sobre o evento..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeEventoModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEvento()">Salvar</button>
     </div>
   </div>
 </div>
@@ -2139,6 +2219,10 @@
       <div class="form-group">
         <label>Vincular a um Lead (opcional)</label>
         <select id="receitaLeadId"></select>
+      </div>
+      <div class="form-group">
+        <label>Vincular a um Evento (opcional)</label>
+        <select id="receitaEventoId"></select>
       </div>
       <div class="form-group">
         <label>Observação</label>
@@ -4896,11 +4980,14 @@ window.setTarefaOrdem   = setTarefaOrdem;
 // ── Financeiro ─────────────────────────────────────────────────────────────
 var CONTAS_PAGAR_KEY = 'crm_contas_pagar';
 var RECEITA_KEY      = 'crm_receita';
+var EVENTOS_KEY      = 'crm_eventos';
 
 function loadContasPagar() { return _cfgCache[CONTAS_PAGAR_KEY] || []; }
 function saveContasPagar(a){ saveConfigBg(CONTAS_PAGAR_KEY, a); }
 function loadReceita()     { return _cfgCache[RECEITA_KEY] || []; }
 function saveReceita2(a)   { saveConfigBg(RECEITA_KEY, a); }
+function loadEventos()     { return _cfgCache[EVENTOS_KEY] || []; }
+function saveEventos(a)    { saveConfigBg(EVENTOS_KEY, a); }
 
 var _finTab = 'dash';
 
@@ -4923,15 +5010,19 @@ function updateNavFinBadge() {
   badge.style.display = count > 0 ? '' : 'none';
 }
 
+var _TAB_BTN = { dash:'finTabDash', pagar:'finTabPagar', receita:'finTabReceita', eventos:'finTabEventos' };
+var _TAB_PAN = { dash:'finDashPanel', pagar:'finPagarPanel', receita:'finReceitaPanel', eventos:'finEventosPanel' };
+
 function showFinTab(tab) {
   _finTab = tab;
-  ['dash','pagar','receita'].forEach(function(t) {
-    document.getElementById('finTab' + (t === 'dash' ? 'Dash' : t === 'pagar' ? 'Pagar' : 'Receita')).classList.toggle('active', t === tab);
-    document.getElementById('fin' + (t === 'dash' ? 'Dash' : t === 'pagar' ? 'Pagar' : 'Receita') + 'Panel').style.display = t === tab ? '' : 'none';
+  ['dash','pagar','receita','eventos'].forEach(function(t) {
+    document.getElementById(_TAB_BTN[t]).classList.toggle('active', t === tab);
+    document.getElementById(_TAB_PAN[t]).style.display = t === tab ? '' : 'none';
   });
   if (tab === 'dash')    renderFinDash();
   if (tab === 'pagar')   { populateFilterCat('filterPagarCat','pagar');   renderContasPagar(); }
   if (tab === 'receita') { populateFilterCat('filterReceitaCat','receita'); renderReceita(); }
+  if (tab === 'eventos') renderEventos();
 }
 
 function renderFinanceiro() {
@@ -5020,8 +5111,10 @@ function renderContasPagar() {
     var stClass = { 'Pago':'fin-st-pago','Atrasado':'fin-st-atrasado','Pendente':'fin-st-pendente','Pago Parcial':'fin-st-parcial' }[st] || 'fin-st-pendente';
     var vencStr = i.vencimento ? new Date(i.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
     var recLabel = i.recorrencia && i.recorrencia !== 'nenhuma' ? ' <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:#eff6ff;color:#2563eb;margin-left:4px">🔄 ' + (REC_LABELS[i.recorrencia]||i.recorrencia) + '</span>' : '';
+    var evPag   = i.eventoId ? loadEventos().find(function(e){ return e.id===i.eventoId; }) : null;
+    var evBadge = evPag ? ' <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:#faf5ff;color:#7c3aed;margin-left:4px">🎪 ' + esc(evPag.nome) + '</span>' : '';
     return '<tr class="' + (st==='Atrasado'?'row-atrasado':'') + '">' +
-      '<td>' + esc(i.descricao) + recLabel + (i.observacao ? '<br><small style="color:#94a3b8">' + esc(i.observacao) + '</small>' : '') + '</td>' +
+      '<td>' + esc(i.descricao) + recLabel + evBadge + (i.observacao ? '<br><small style="color:#94a3b8">' + esc(i.observacao) + '</small>' : '') + '</td>' +
       '<td>' + esc(i.categoria||'—') + '</td>' +
       '<td style="white-space:nowrap">' + vencStr + '</td>' +
       '<td style="font-weight:600;white-space:nowrap">' + fmtMoney(+i.valor||0) + (i.saldoRestante && i.saldoRestante < i.valor ? '<br><small style="color:#1d4ed8;font-size:10px">Restante: ' + fmtMoney(+i.saldoRestante) + '</small>' : '') + '</td>' +
@@ -5055,8 +5148,10 @@ function renderReceita() {
     var vencStr = i.vencimento ? new Date(i.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
     var lead    = i.leadId ? leads.find(function(l){ return l.id===i.leadId; }) : null;
     var recLabel = i.recorrencia && i.recorrencia !== 'nenhuma' ? ' <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:#f0fdf4;color:#16a34a;margin-left:4px">🔄 ' + (REC_LABELS[i.recorrencia]||i.recorrencia) + '</span>' : '';
+    var evRec   = i.eventoId ? loadEventos().find(function(e){ return e.id===i.eventoId; }) : null;
+    var evBadgeR= evRec ? ' <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:#faf5ff;color:#7c3aed;margin-left:4px">🎪 ' + esc(evRec.nome) + '</span>' : '';
     return '<tr class="' + (st==='Atrasado'?'row-atrasado':'') + '">' +
-      '<td>' + esc(i.descricao) + recLabel + (i.observacao ? '<br><small style="color:#94a3b8">' + esc(i.observacao) + '</small>' : '') + '</td>' +
+      '<td>' + esc(i.descricao) + recLabel + evBadgeR + (i.observacao ? '<br><small style="color:#94a3b8">' + esc(i.observacao) + '</small>' : '') + '</td>' +
       '<td>' + (lead ? '<span class="link-empresa" style="font-size:12px" onclick="openDetail(\'' + lead.id + '\')">' + esc(lead.empresa) + '</span>' : '—') + '</td>' +
       '<td>' + esc(i.categoria||'—') + '</td>' +
       '<td style="white-space:nowrap">' + vencStr + '</td>' +
@@ -5072,7 +5167,15 @@ function renderReceita() {
 }
 
 // ── Modais Financeiro ──
-function openContaPagarModal(id) {
+function populateEventoSelect(selectId, selected) {
+  var sel = document.getElementById(selectId);
+  if (!sel) return;
+  var evs = loadEventos().slice().sort(function(a,b){ return (b.data||'').localeCompare(a.data||''); });
+  sel.innerHTML = '<option value="">Nenhum evento</option>' +
+    evs.map(function(e){ return '<option value="'+e.id+'"'+(e.id===selected?' selected':'')+'>'+esc(e.nome)+'</option>'; }).join('');
+}
+
+function openContaPagarModal(id, preselEvento) {
   var i = id ? loadContasPagar().find(function(x){ return x.id===id; }) : null;
   document.getElementById('contaPagarModalTitle').textContent = i ? 'Editar Conta a Pagar' : 'Nova Conta a Pagar';
   document.getElementById('contaPagarId').value      = i ? i.id : '';
@@ -5090,6 +5193,7 @@ function openContaPagarModal(id) {
   var meses = i ? (i.recorrenciaMeses != null ? i.recorrenciaMeses : 12) : 12;
   document.getElementById('contaPagarRecMeses').value = meses;
   document.getElementById('contaPagarRecMesesGrp').style.display = rec === 'mensal' ? '' : 'none';
+  populateEventoSelect('contaPagarEventoId', i ? (i.eventoId||'') : (preselEvento||''));
   document.getElementById('contaPagarModal').classList.add('open');
 }
 function closeContaPagarModal() { document.getElementById('contaPagarModal').classList.remove('open'); }
@@ -5115,6 +5219,7 @@ function saveContaPagar() {
     vencimento:   document.getElementById('contaPagarVenc').value,
     dataPagamento:document.getElementById('contaPagarDataPag').value,
     observacao:   document.getElementById('contaPagarObs').value.trim(),
+    eventoId:     document.getElementById('contaPagarEventoId').value || '',
     recorrencia:  rec,
     criadoPor:    criadoPor,
     criadoEm:     criadoEm,
@@ -5292,7 +5397,7 @@ function deletarContaPagar(id) {
   renderFinanceiro();
 }
 
-function openReceitaModal(id) {
+function openReceitaModal(id, preselEvento) {
   var i = id ? loadReceita().find(function(x){ return x.id===id; }) : null;
   document.getElementById('receitaModalTitle').textContent = i ? 'Editar Receita' : 'Nova Receita';
   document.getElementById('receitaId').value       = i ? i.id : '';
@@ -5319,6 +5424,7 @@ function openReceitaModal(id) {
     leads.slice().sort(function(a,b){ return a.empresa.localeCompare(b.empresa); }).map(function(l) {
       return '<option value="'+l.id+'"'+(i&&i.leadId===l.id?' selected':'')+'>'+esc(l.empresa)+'</option>';
     }).join('');
+  populateEventoSelect('receitaEventoId', i ? (i.eventoId||'') : (preselEvento||''));
   document.getElementById('receitaModal').classList.add('open');
 }
 function closeReceitaModal() { document.getElementById('receitaModal').classList.remove('open'); }
@@ -5331,9 +5437,10 @@ function saveReceita() {
   var id      = document.getElementById('receitaId').value;
   var lista   = loadReceita();
   var isNew   = !id;
-  var cat     = document.getElementById('receitaCat').value;
-  var obs     = document.getElementById('receitaObs').value.trim();
-  var leadId  = document.getElementById('receitaLeadId').value;
+  var cat      = document.getElementById('receitaCat').value;
+  var obs      = document.getElementById('receitaObs').value.trim();
+  var leadId   = document.getElementById('receitaLeadId').value;
+  var eventoId = document.getElementById('receitaEventoId').value || '';
   var criadoPor = isNew ? (session ? session.nome : '—') : (lista.find(function(x){ return x.id===id; })||{}).criadoPor;
   var criadoEm  = isNew ? Date.now() : (lista.find(function(x){ return x.id===id; })||{}).criadoEm;
 
@@ -5353,7 +5460,7 @@ function saveReceita() {
       } else {
         valParc = p < nParc - 1 ? Math.floor(valTotal / nParc * 100) / 100 : Math.round((valTotal - Math.floor(valTotal / nParc * 100) / 100 * (nParc - 1)) * 100) / 100;
       }
-      lista.push({ id: generateId(), descricao: desc + ' (' + (p+1) + '/' + nParc + ')', categoria: cat, status: 'Pendente', valor: valParc, vencimento: nextVencimentoN(vencIni, p), dataRecebimento: '', leadId: leadId, observacao: obs, recorrencia: 'nenhuma', parcelaGrupoId: grupoId, parcelaSeq: p+1, parcelas: nParc, criadoPor: criadoPor, criadoEm: Date.now() });
+      lista.push({ id: generateId(), descricao: desc + ' (' + (p+1) + '/' + nParc + ')', categoria: cat, status: 'Pendente', valor: valParc, vencimento: nextVencimentoN(vencIni, p), dataRecebimento: '', leadId: leadId, eventoId: eventoId, observacao: obs, recorrencia: 'nenhuma', parcelaGrupoId: grupoId, parcelaSeq: p+1, parcelas: nParc, criadoPor: criadoPor, criadoEm: Date.now() });
     }
   } else {
     var valor = parseFloat(document.getElementById('receitaValor').value);
@@ -5366,10 +5473,10 @@ function saveReceita() {
       var grupoId2 = generateId();
       var vencBase = document.getElementById('receitaVenc').value;
       for (var m = 0; m < totalM; m++) {
-        lista.push({ id: generateId(), descricao: desc, categoria: cat, status: 'Pendente', valor: valor, vencimento: nextVencimentoN(vencBase, m), dataRecebimento: '', leadId: leadId, observacao: obs, recorrencia: 'mensal', recorrenciaMeses: recMeses, recorrenciaSeq: m+1, recorrenciaGrupoId: grupoId2, recorrenciaIndefinido: indef, criadoPor: criadoPor, criadoEm: Date.now() });
+        lista.push({ id: generateId(), descricao: desc, categoria: cat, status: 'Pendente', valor: valor, vencimento: nextVencimentoN(vencBase, m), dataRecebimento: '', leadId: leadId, eventoId: eventoId, observacao: obs, recorrencia: 'mensal', recorrenciaMeses: recMeses, recorrenciaSeq: m+1, recorrenciaGrupoId: grupoId2, recorrenciaIndefinido: indef, criadoPor: criadoPor, criadoEm: Date.now() });
       }
     } else {
-      var item = { id: id||generateId(), descricao: desc, categoria: cat, status: document.getElementById('receitaStatus').value, valor: valor, vencimento: document.getElementById('receitaVenc').value, dataRecebimento: document.getElementById('receitaDataRec').value, leadId: leadId, observacao: obs, recorrencia: rec, criadoPor: criadoPor, criadoEm: criadoEm };
+      var item = { id: id||generateId(), descricao: desc, categoria: cat, status: document.getElementById('receitaStatus').value, valor: valor, vencimento: document.getElementById('receitaVenc').value, dataRecebimento: document.getElementById('receitaDataRec').value, leadId: leadId, eventoId: eventoId, observacao: obs, recorrencia: rec, criadoPor: criadoPor, criadoEm: criadoEm };
       if (isNew) { lista.push(item); } else { var idx2=lista.findIndex(function(x){return x.id===id;}); if(idx2!==-1)lista[idx2]=item; else lista.push(item); }
     }
   }
@@ -5537,6 +5644,212 @@ window.lancarPropostaFinanceiro  = lancarPropostaFinanceiro;
 window._confirmarLancarProposta  = _confirmarLancarProposta;
 window.closePropostaPickerModal  = closePropostaPickerModal;
 
+// ── Eventos ─────────────────────────────────────────────────────────────────
+var _eventoDetId = null;
+
+function renderEventos() {
+  if (_eventoDetId) {
+    var ev = loadEventos().find(function(e){ return e.id === _eventoDetId; });
+    if (ev) {
+      document.getElementById('finEventosListView').style.display   = 'none';
+      document.getElementById('finEventosDetailView').style.display = '';
+      document.getElementById('eventoDetalheNome').textContent      = ev.nome;
+      renderEventoDetalhe();
+      return;
+    }
+    _eventoDetId = null;
+  }
+  document.getElementById('finEventosListView').style.display   = '';
+  document.getElementById('finEventosDetailView').style.display = 'none';
+  var eventos = loadEventos().slice().sort(function(a,b){ return (b.data||'').localeCompare(a.data||''); });
+  var pagar   = loadContasPagar();
+  var receita = loadReceita();
+  var cont    = document.getElementById('eventosListContainer');
+  if (!cont) return;
+  if (!eventos.length) {
+    cont.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:40px;font-size:13px">Nenhum evento cadastrado. Clique em "Novo Evento" para começar.</div>';
+    return;
+  }
+  cont.innerHTML = eventos.map(function(ev) {
+    var evRec  = receita.filter(function(i){ return i.eventoId === ev.id; });
+    var evPag  = pagar  .filter(function(i){ return i.eventoId === ev.id; });
+    var totRec = evRec.reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+    var totPag = evPag.reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+    var lucro  = totRec - totPag;
+    var dataStr = ev.data ? new Date(ev.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    var lClass  = lucro >= 0 ? 'evento-pl-pos' : 'evento-pl-neg';
+    return '<div class="evento-card">' +
+      '<div class="evento-card-header">' +
+        '<div>' +
+          '<div class="evento-card-nome">' + esc(ev.nome) + '</div>' +
+          '<div class="evento-card-meta">' + dataStr + (ev.local ? ' · ' + esc(ev.local) : '') + '</div>' +
+          (ev.descricao ? '<div class="evento-card-meta" style="margin-top:1px">' + esc(ev.descricao) + '</div>' : '') +
+        '</div>' +
+        '<div style="display:flex;gap:6px;flex-shrink:0">' +
+          '<button class="btn btn-outline" style="padding:4px 10px;font-size:12px" onclick="openEventoModal(\'' + ev.id + '\')">✏️</button>' +
+          '<button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;color:#ef4444" onclick="deletarEvento(\'' + ev.id + '\')">✕</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="evento-pl-row">' +
+        '<div class="evento-pl-item evento-pl-receita">' +
+          '<div class="evento-pl-label">Receita</div>' +
+          '<div class="evento-pl-value">' + fmtMoney(totRec) + '</div>' +
+          '<div style="font-size:10px;color:#94a3b8">' + evRec.length + ' lançamento(s)</div>' +
+        '</div>' +
+        '<div class="evento-pl-item evento-pl-despesa">' +
+          '<div class="evento-pl-label">Despesa</div>' +
+          '<div class="evento-pl-value">' + fmtMoney(totPag) + '</div>' +
+          '<div style="font-size:10px;color:#94a3b8">' + evPag.length + ' lançamento(s)</div>' +
+        '</div>' +
+        '<div class="evento-pl-item ' + lClass + '">' +
+          '<div class="evento-pl-label">Resultado</div>' +
+          '<div class="evento-pl-value">' + (lucro >= 0 ? '+' : '') + fmtMoney(lucro) + '</div>' +
+          (totRec > 0 ? '<div style="font-size:10px;color:#94a3b8">' + Math.round(lucro/totRec*100) + '% margem</div>' : '<div style="font-size:10px;color:#94a3b8">&nbsp;</div>') +
+        '</div>' +
+      '</div>' +
+      '<div style="margin-top:12px">' +
+        '<button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="openEventoDetalhe(\'' + ev.id + '\')">📊 Ver Detalhes</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function openEventoDetalhe(id) {
+  var ev = loadEventos().find(function(e){ return e.id === id; });
+  if (!ev) return;
+  _eventoDetId = id;
+  document.getElementById('finEventosListView').style.display   = 'none';
+  document.getElementById('finEventosDetailView').style.display = '';
+  document.getElementById('eventoDetalheNome').textContent      = ev.nome;
+  renderEventoDetalhe();
+}
+
+function voltarEventosList() {
+  _eventoDetId = null;
+  document.getElementById('finEventosListView').style.display   = '';
+  document.getElementById('finEventosDetailView').style.display = 'none';
+}
+
+function renderEventoDetalhe() {
+  var id     = _eventoDetId;
+  var ev     = loadEventos().find(function(e){ return e.id === id; });
+  if (!ev) return;
+  var pagar   = loadContasPagar().filter(function(i){ return i.eventoId === id; });
+  var receita = loadReceita()   .filter(function(i){ return i.eventoId === id; });
+  var totRec  = receita.reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+  var totPag  = pagar  .reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+  var lucro   = totRec - totPag;
+  var recPago = receita.filter(function(i){ return i.status==='Recebido'; }).reduce(function(s,i){ return s+(+i.valor||0); }, 0);
+  var pagoPag = pagar  .filter(function(i){ return i.status==='Pago';     }).reduce(function(s,i){ return s+(+i.valor||0); }, 0);
+  var dataStr = ev.data ? new Date(ev.data+'T12:00:00').toLocaleDateString('pt-BR') : '';
+  var html = '';
+  if (dataStr || ev.local || ev.descricao) {
+    html += '<div style="font-size:12px;color:#64748b;margin-bottom:16px">' +
+      [dataStr, ev.local, ev.descricao].filter(Boolean).map(esc).join(' · ') + '</div>';
+  }
+  // P&L cards
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px">';
+  html += '<div class="fin-card c-green"><div class="fin-card-value">'+fmtMoney(totRec)+'</div><div class="fin-card-label">Receita Prevista</div><div class="fin-card-sub">Recebido: '+fmtMoney(recPago)+'</div></div>';
+  html += '<div class="fin-card c-red"><div class="fin-card-value">'+fmtMoney(totPag)+'</div><div class="fin-card-label">Despesa Prevista</div><div class="fin-card-sub">Pago: '+fmtMoney(pagoPag)+'</div></div>';
+  html += '<div class="fin-card '+(lucro>=0?'c-green':'c-red')+'"><div class="fin-card-value">'+(lucro>=0?'+':'')+fmtMoney(lucro)+'</div><div class="fin-card-label">Resultado</div><div class="fin-card-sub">'+(totRec>0?Math.round(lucro/totRec*100)+'% margem':'—')+'</div></div>';
+  html += '</div>';
+  // Despesas
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
+    '<div style="font-size:14px;font-weight:700;color:#0f172a">💸 Despesas</div>' +
+    '<button class="btn btn-outline" style="font-size:12px;padding:4px 12px" onclick="openContaPagarModal(null,\''+id+'\')">+ Adicionar Despesa</button>' +
+    '</div>';
+  if (!pagar.length) {
+    html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;text-align:center;color:#94a3b8;font-size:13px;margin-bottom:20px">Nenhuma despesa vinculada.</div>';
+  } else {
+    html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:20px"><table class="fin-tbl"><thead><tr><th>Descrição</th><th>Categoria</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+    pagar.slice().sort(function(a,b){ return (a.vencimento||'').localeCompare(b.vencimento||''); }).forEach(function(i) {
+      var st      = finStatus(i,'Pago');
+      var stCls   = { 'Pago':'fin-st-pago','Atrasado':'fin-st-atrasado','Pendente':'fin-st-pendente','Pago Parcial':'fin-st-parcial' }[st] || 'fin-st-pendente';
+      var vencStr = i.vencimento ? new Date(i.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+      html += '<tr><td>'+esc(i.descricao)+'</td><td>'+esc(i.categoria||'—')+'</td><td>'+vencStr+'</td><td style="font-weight:600">'+fmtMoney(+i.valor||0)+'</td><td><span class="badge-fin '+stCls+'">'+st+'</span></td><td><div class="fin-tbl col-acoes">';
+      html += '<button class="btn btn-outline" style="padding:3px 10px;font-size:12px" onclick="openContaPagarModal(\''+i.id+'\')">✏️</button>';
+      if (st !== 'Pago') html += '<button class="btn btn-primary" style="padding:3px 10px;font-size:12px" onclick="openPagarParcialModal(\''+i.id+'\')">✔ Pagar</button>';
+      html += '<button class="btn btn-ghost" style="padding:3px 10px;font-size:12px;color:#ef4444" onclick="deletarContaPagar(\''+i.id+'\')">✕</button>';
+      html += '</div></td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  // Receitas
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
+    '<div style="font-size:14px;font-weight:700;color:#0f172a">💰 Receitas</div>' +
+    '<button class="btn btn-outline" style="font-size:12px;padding:4px 12px" onclick="openReceitaModal(null,\''+id+'\')">+ Adicionar Receita</button>' +
+    '</div>';
+  if (!receita.length) {
+    html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;text-align:center;color:#94a3b8;font-size:13px">Nenhuma receita vinculada.</div>';
+  } else {
+    html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden"><table class="fin-tbl"><thead><tr><th>Descrição</th><th>Cliente</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+    receita.slice().sort(function(a,b){ return (a.vencimento||'').localeCompare(b.vencimento||''); }).forEach(function(i) {
+      var st      = finStatus(i,'Recebido');
+      var stCls   = { 'Recebido':'fin-st-recebido','Atrasado':'fin-st-atrasado','Pendente':'fin-st-pendente' }[st] || 'fin-st-pendente';
+      var vencStr = i.vencimento ? new Date(i.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+      var lead    = i.leadId ? leads.find(function(l){ return l.id===i.leadId; }) : null;
+      html += '<tr><td>'+esc(i.descricao)+'</td>';
+      html += '<td>'+(lead ? '<span class="link-empresa" style="font-size:12px" onclick="openDetail(\''+lead.id+'\')">'+esc(lead.empresa)+'</span>' : '—')+'</td>';
+      html += '<td>'+vencStr+'</td><td style="font-weight:600;color:#16a34a">'+fmtMoney(+i.valor||0)+'</td>';
+      html += '<td><span class="badge-fin '+stCls+'">'+st+'</span></td>';
+      html += '<td><div class="fin-tbl col-acoes">';
+      html += '<button class="btn btn-outline" style="padding:3px 10px;font-size:12px" onclick="openReceitaModal(\''+i.id+'\')">✏️</button>';
+      if (st !== 'Recebido') html += '<button class="btn btn-primary" style="padding:3px 10px;font-size:12px;background:#16a34a;border-color:#16a34a" onclick="marcarRecebido(\''+i.id+'\')">✔ Recebido</button>';
+      html += '<button class="btn btn-ghost" style="padding:3px 10px;font-size:12px;color:#ef4444" onclick="deletarReceita(\''+i.id+'\')">✕</button>';
+      html += '</div></td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  document.getElementById('eventoDetalheBody').innerHTML = html;
+}
+
+function openEventoModal(id) {
+  var ev = id ? loadEventos().find(function(e){ return e.id === id; }) : null;
+  document.getElementById('eventoModalTitle').textContent = ev ? 'Editar Evento' : 'Novo Evento';
+  document.getElementById('eventoId').value    = ev ? ev.id : '';
+  document.getElementById('eventoNome').value  = ev ? ev.nome : '';
+  document.getElementById('eventoNomeError').textContent = '';
+  document.getElementById('eventoData').value  = ev ? (ev.data||'') : '';
+  document.getElementById('eventoLocal').value = ev ? (ev.local||'') : '';
+  document.getElementById('eventoDesc').value  = ev ? (ev.descricao||'') : '';
+  document.getElementById('eventoModal').classList.add('open');
+}
+function closeEventoModal() { document.getElementById('eventoModal').classList.remove('open'); }
+
+function saveEvento() {
+  var nome = document.getElementById('eventoNome').value.trim();
+  if (!nome) { document.getElementById('eventoNomeError').textContent = 'Informe o nome do evento.'; return; }
+  var id       = document.getElementById('eventoId').value;
+  var lista    = loadEventos();
+  var isNew    = !id;
+  var criadoEm = isNew ? Date.now() : (lista.find(function(e){ return e.id===id; })||{}).criadoEm;
+  var item = {
+    id: id || generateId(), nome: nome,
+    data:      document.getElementById('eventoData').value,
+    local:     document.getElementById('eventoLocal').value.trim(),
+    descricao: document.getElementById('eventoDesc').value.trim(),
+    criadoEm:  criadoEm,
+  };
+  if (isNew) { lista.push(item); } else { var idx=lista.findIndex(function(e){return e.id===id;}); if(idx!==-1)lista[idx]=item; else lista.push(item); }
+  saveEventos(lista);
+  closeEventoModal();
+  renderEventos();
+}
+
+function deletarEvento(id) {
+  var ev = loadEventos().find(function(e){ return e.id===id; });
+  if (!ev) return;
+  var nPag = loadContasPagar().filter(function(i){ return i.eventoId===id; }).length;
+  var nRec = loadReceita()   .filter(function(i){ return i.eventoId===id; }).length;
+  var warn = (nPag+nRec > 0) ? '\n\nEste evento tem '+(nPag+nRec)+' lançamento(s) vinculado(s). Os vínculos serão removidos mas os lançamentos serão mantidos.' : '';
+  if (!confirm('Excluir o evento "'+ev.nome+'"?'+warn)) return;
+  if (nPag > 0) saveContasPagar(loadContasPagar().map(function(i){ return i.eventoId===id ? Object.assign({},i,{eventoId:''}) : i; }));
+  if (nRec > 0) saveReceita2  (loadReceita()   .map(function(i){ return i.eventoId===id ? Object.assign({},i,{eventoId:''}) : i; }));
+  saveEventos(loadEventos().filter(function(e){ return e.id!==id; }));
+  if (_eventoDetId === id) _eventoDetId = null;
+  renderEventos();
+}
+
 window.showFinTab              = showFinTab;
 window.openContaPagarModal     = openContaPagarModal;
 window.closeContaPagarModal    = closeContaPagarModal;
@@ -5560,11 +5873,18 @@ window.onReceitaRecChange      = onReceitaRecChange;
 window.onReceitaParceladoCalc  = onReceitaParceladoCalc;
 window.populateCatSelect       = populateCatSelect;
 window.populateFilterCat       = populateFilterCat;
+window.renderEventos           = renderEventos;
+window.openEventoDetalhe       = openEventoDetalhe;
+window.voltarEventosList       = voltarEventosList;
+window.openEventoModal         = openEventoModal;
+window.closeEventoModal        = closeEventoModal;
+window.saveEvento              = saveEvento;
+window.deletarEvento           = deletarEvento;
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
   // Preload all configs from Supabase into memory (single query)
-  var cfgKeys = [STAGES_KEY, NEGOCIOS_KEY, SERVICOS_KEY, LEAD_SERVS_KEY, LEAD_EXTRA_KEY, PROPOSTAS_KEY, TAREFAS_KEY, CONTAS_PAGAR_KEY, RECEITA_KEY];
+  var cfgKeys = [STAGES_KEY, NEGOCIOS_KEY, SERVICOS_KEY, LEAD_SERVS_KEY, LEAD_EXTRA_KEY, PROPOSTAS_KEY, TAREFAS_KEY, CONTAS_PAGAR_KEY, RECEITA_KEY, EVENTOS_KEY];
   try {
     var { data: cfgRows } = await db.from('configs').select('id,value').in('id', cfgKeys);
     if (cfgRows) cfgRows.forEach(function(row){ _cfgCache[row.id] = row.value; });
@@ -5622,7 +5942,7 @@ async function boot() {
         var tv = document.getElementById('tarefasView');
         if (tv && tv.style.display !== 'none') renderTarefas();
       }
-      if (payload.new.id === CONTAS_PAGAR_KEY || payload.new.id === RECEITA_KEY) {
+      if (payload.new.id === CONTAS_PAGAR_KEY || payload.new.id === RECEITA_KEY || payload.new.id === EVENTOS_KEY) {
         updateNavFinBadge();
         var fv = document.getElementById('financeiroView');
         if (fv && fv.style.display !== 'none') renderFinanceiro();
