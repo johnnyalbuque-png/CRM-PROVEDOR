@@ -3761,9 +3761,19 @@ function renderKanban() {
               (wa ? '<a class="kcard-wa" href="https://wa.me/55' + wa + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="WhatsApp">📱</a>' : '') +
             '</div>' +
             (function(){
-              var nProps = loadPropostas().filter(function(p){ return p.leadId === n.leadId; }).length;
-              return '<button class="kcard-prop-btn" onclick="event.stopPropagation();openPropostaModal(\'' + n.leadId + '\')">' +
-                '📄 ' + (nProps > 0 ? nProps + ' Proposta' + (nProps > 1 ? 's' : '') : 'Proposta') +
+              var props = loadPropostas().filter(function(p){ return p.leadId === n.leadId; });
+              var nProps = props.length;
+              var clickFn;
+              if (nProps === 0) {
+                clickFn = "openPropostaModal('" + n.leadId + "')";
+              } else if (nProps === 1) {
+                clickFn = "editarProposta('" + props[0].id + "')";
+              } else {
+                // Múltiplas: abre o detalhe para o usuário escolher
+                clickFn = "openDetail('" + n.leadId + "','" + n.id + "')";
+              }
+              return '<button class="kcard-prop-btn" onclick="event.stopPropagation();' + clickFn + '">' +
+                '📄 ' + (nProps > 0 ? nProps + ' Proposta' + (nProps > 1 ? 's' : '') : 'Nova Proposta') +
               '</button>';
             })() +
             (function(){
