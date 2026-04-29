@@ -3760,9 +3760,12 @@ function renderKanban() {
               (lead.porte ? '<span class="badge-porte porte-' + lead.porte.toLowerCase().replace('é','e') + '">' + esc(lead.porte) + '</span>' : '<span></span>') +
               (wa ? '<a class="kcard-wa" href="https://wa.me/55' + wa + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="WhatsApp">📱</a>' : '') +
             '</div>' +
-            '<button class="kcard-prop-btn" onclick="event.stopPropagation();openPropostaModal(\'' + n.leadId + '\')">' +
-              '📄 Proposta' +
-            '</button>' +
+            (function(){
+              var nProps = loadPropostas().filter(function(p){ return p.leadId === n.leadId; }).length;
+              return '<button class="kcard-prop-btn" onclick="event.stopPropagation();openPropostaModal(\'' + n.leadId + '\')">' +
+                '📄 ' + (nProps > 0 ? nProps + ' Proposta' + (nProps > 1 ? 's' : '') : 'Proposta') +
+              '</button>';
+            })() +
             (function(){
               var cCount = (n.comentarios || []).length;
               var fu = n.followUp;
@@ -4382,6 +4385,9 @@ function salvarProposta(p) {
   if (idx !== -1) lista[idx] = p; else lista.push(p);
   savePropostas(lista);
   renderDetailPropostas(p.leadId);
+  // Atualiza o kanban se estiver visível para refletir o badge de proposta
+  var cv = document.getElementById('crmView');
+  if (cv && cv.style.display !== 'none') renderKanban();
 }
 
 function salvarRascunhoProposta() {
