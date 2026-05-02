@@ -5877,7 +5877,7 @@ function renderEventoDetalhe() {
           var vencStr    = i.vencimento ? new Date(i.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
           var lead       = i.leadId ? leads.find(function(l){ return l.id===i.leadId; }) : null;
           recRows.push('<tr>' +
-            '<td>'+esc(descBase)+'<br><small style="color:#94a3b8">'+pagas+'/'+grupo.length+' parcelas recebidas</small></td>' +
+            '<td>'+esc(descBase)+'</td>' +
             '<td>'+(lead ? '<span class="link-empresa" style="font-size:12px" onclick="openDetail(\''+lead.id+'\')">'+esc(lead.empresa)+'</span>' : '—')+'</td>' +
             '<td>'+vencStr+'</td>' +
             '<td style="font-weight:600;color:#16a34a">'+fmtMoney(totGrupo)+'</td>' +
