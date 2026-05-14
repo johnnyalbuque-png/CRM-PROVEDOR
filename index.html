@@ -715,6 +715,7 @@
     .kcard-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
     .kcard-wa { color: #16a34a; text-decoration: none; font-size: 16px; line-height: 1; }
     .kanban-empty { font-size: 13px; color: #cbd5e1; text-align: center; padding: 24px 8px; font-style: italic; }
+    .kanban-col-total { padding: 8px 10px; text-align: center; font-size: 12px; font-weight: 700; color: #15803d; background: #f0fdf4; border-top: 1px solid #dcfce7; border-radius: 0 0 12px 12px; }
 
     /* ── Stage editor ── */
     .stage-row {
@@ -3804,6 +3805,16 @@ function renderKanban() {
         '<span class="kanban-col-count">' + sn.length + '</span>' +
       '</div>' +
       '<div class="kanban-col-body">' + cards + '</div>' +
+      (function(){
+        var totalCol = sn.reduce(function(sum, n) {
+          var props = loadPropostas().filter(function(p){ return p.leadId === n.leadId; });
+          var maior = props.reduce(function(m, p){ return p.total > m ? p.total : m; }, 0);
+          return sum + maior;
+        }, 0);
+        return totalCol > 0
+          ? '<div class="kanban-col-total">' + fmtMoney(totalCol) + '</div>'
+          : '';
+      })() +
     '</div>';
   }).join('');
 }
