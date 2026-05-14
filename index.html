@@ -1556,7 +1556,7 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label for="email">E-mail <span class="required">*</span></label>
+          <label for="email">E-mail</label>
           <input type="email" id="email" placeholder="contato@empresa.com" />
           <span class="field-error" id="emailError"></span>
         </div>
@@ -2951,9 +2951,7 @@ function validate(data) {
   }
   if (!data.empresa.trim()) set('empresa', 'Campo obrigatório');
   if (!data.cargo.trim())   set('cargo',   'Campo obrigatório');
-  if (!data.email.trim()) {
-    set('email', 'Campo obrigatório');
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+  if (data.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
     set('email', 'E-mail inválido');
   }
   if (!data.estado) set('estado', 'Selecione um estado');
