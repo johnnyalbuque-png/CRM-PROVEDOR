@@ -5969,7 +5969,9 @@ function renderEventoDetalhe() {
             '<td>'+vencStr+'</td>' +
             '<td style="font-weight:600;color:#16a34a">'+fmtMoney(totGrupo)+'</td>' +
             '<td><span class="badge-fin '+stClsGrupo+'">'+stGrupo+'</span></td>' +
-            '<td>—</td>' +
+            '<td><div class="fin-tbl col-acoes">' +
+              '<button class="btn btn-ghost" style="padding:3px 10px;font-size:12px;color:#ef4444" onclick="deletarReceitaGrupo(\''+i.parcelaGrupoId+'\')">✕</button>' +
+            '</div></td>' +
           '</tr>');
         }
       } else {
@@ -6030,6 +6032,14 @@ function saveEvento() {
   renderEventos();
 }
 
+function deletarReceitaGrupo(grupoId) {
+  var grupo = loadReceita().filter(function(x){ return x.parcelaGrupoId === grupoId; });
+  if (!grupo.length) return;
+  if (!confirm('Excluir todas as ' + grupo.length + ' parcelas deste grupo?')) return;
+  saveReceita2(loadReceita().filter(function(x){ return x.parcelaGrupoId !== grupoId; }));
+  renderEventoDetalhe();
+}
+
 function deletarEvento(id) {
   var ev = loadEventos().find(function(e){ return e.id===id; });
   if (!ev) return;
@@ -6075,6 +6085,7 @@ window.openEventoModal         = openEventoModal;
 window.closeEventoModal        = closeEventoModal;
 window.saveEvento              = saveEvento;
 window.deletarEvento           = deletarEvento;
+window.deletarReceitaGrupo     = deletarReceitaGrupo;
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
