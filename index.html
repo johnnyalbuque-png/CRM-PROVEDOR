@@ -5663,49 +5663,44 @@ function _confirmarLancarProposta(p, negId) {
   var eventos  = loadEventos();
   var linhas   = p.linhas || [];
 
-  // Group lines by eventoId (resolved from the linked service)
-  var gruposMap = {}; // eventoId -> subtotal
-  var semEvento = 0;
+  // Resolve each line's event and subtotal
+  var gruposMap = {};
   linhas.forEach(function(linha) {
     var s    = servicos.find(function(x){ return x.id === linha.servId; });
     var evId = (s && s.eventoId) ? s.eventoId : '';
-    // Use stored total; fallback to valorUnit*qty for older proposals
     var val  = +(linha.total) || (+(linha.valorUnit || 0) * +(linha.qty || 1));
-    if (evId) {
-      gruposMap[evId] = (gruposMap[evId] || 0) + val;
-    } else {
-      semEvento += val;
-    }
+    if (evId) gruposMap[evId] = (gruposMap[evId] || 0) + val;
   });
 
-  // If lines had no computed value but proposal has a total, distribute equally by line
-  var somaGrupos = Object.keys(gruposMap).reduce(function(s,k){ return s + gruposMap[k]; }, 0) + semEvento;
+  // Fallback: if no line values found, distribute p.total equally per line with event
+  var somaGrupos = Object.keys(gruposMap).reduce(function(s,k){ return s + gruposMap[k]; }, 0);
   if (somaGrupos === 0 && p.total > 0 && linhas.length > 0) {
-    var valPorLinha = p.total / linhas.length;
+    var evLinhas = linhas.filter(function(l){
+      var s = servicos.find(function(x){ return x.id === l.servId; });
+      return s && s.eventoId;
+    });
+    var nEv = evLinhas.length || linhas.length;
+    var vpl = p.total / nEv;
     gruposMap = {};
-    semEvento = 0;
-    linhas.forEach(function(linha) {
+    (evLinhas.length ? evLinhas : linhas).forEach(function(linha) {
       var s    = servicos.find(function(x){ return x.id === linha.servId; });
       var evId = (s && s.eventoId) ? s.eventoId : '';
-      if (evId) gruposMap[evId] = (gruposMap[evId] || 0) + valPorLinha;
-      else      semEvento += valPorLinha;
+      if (evId) gruposMap[evId] = (gruposMap[evId] || 0) + vpl;
     });
   }
 
   var grupoList = Object.keys(gruposMap).map(function(k){ return { evId: k, subtotal: gruposMap[k] }; });
   var parcStr   = (p.parcelas > 1) ? p.parcelas + 'x de ' + fmtMoney(p.valorParcela) : 'à vista';
-
-  var evLines = grupoList.map(function(g) {
+  var evLines   = grupoList.map(function(g) {
     var ev = eventos.find(function(e){ return e.id === g.evId; });
     return '  • ' + (ev ? ev.nome : g.evId) + ': ' + fmtMoney(g.subtotal);
   });
-  if (semEvento > 0) evLines.push('  • Sem evento: ' + fmtMoney(semEvento));
 
   var msg = 'Lançar no Financeiro — Receita?\n\n' +
     'Proposta: ' + p.numero + '\n' +
     'Total: ' + fmtMoney(p.total) + '  (' + parcStr + ')\n' +
-    (evLines.length ? '\nEventos:\n' + evLines.join('\n') + '\n' : '') + '\n' +
-    (p.parcelas > 1 ? 'Serão criadas entradas parceladas por evento.' : 'Será criada 1 entrada por evento.');
+    (evLines.length ? '\nEventos (P&L):\n' + evLines.join('\n') + '\n' : '') + '\n' +
+    'Receitas: ' + (p.parcelas > 1 ? p.parcelas + ' parcelas de ' + fmtMoney(p.valorParcela) : '1 entrada de ' + fmtMoney(p.total));
   if (!confirm(msg)) return;
 
   var session = getSession();
@@ -5713,68 +5708,49 @@ function _confirmarLancarProposta(p, negId) {
   var empresa = strToTitleCase(lead.empresa || 'Lead');
   var desc    = empresa + ' — ' + p.numero;
 
-  // Create receita entries per event
-  grupoList.forEach(function(g) {
-    var ev       = eventos.find(function(e){ return e.id === g.evId; });
-    var evNome   = ev ? ev.nome : '';
-    var subDesc  = desc + (evNome ? ' / ' + evNome : '');
-    var grupoId  = generateId();
-    if (p.parcelas <= 1) {
+  // 1. Receitas (fluxo de caixa): total dividido pelas parcelas nas datas informadas
+  if (p.parcelas <= 1) {
+    lista.push({
+      id: generateId(), descricao: desc, categoria: 'Eventos',
+      status: 'Pendente', valor: p.total,
+      vencimento: (p.vencimentos && p.vencimentos[0]) || '',
+      dataRecebimento: '', leadId: p.leadId, eventoId: '',
+      observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
+      criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
+    });
+  } else {
+    var grupoIdParcelas = generateId();
+    for (var i = 0; i < p.parcelas; i++) {
       lista.push({
-        id: generateId(), descricao: subDesc, categoria: 'Eventos',
-        status: 'Pendente', valor: g.subtotal,
-        vencimento: (p.vencimentos && p.vencimentos[0]) || '',
-        dataRecebimento: '', leadId: p.leadId, eventoId: g.evId,
-        observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
-        criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
-      });
-    } else {
-      var valParcela = Math.round(g.subtotal / p.parcelas * 100) / 100;
-      for (var i = 0; i < p.parcelas; i++) {
-        lista.push({
-          id: generateId(),
-          descricao: subDesc + ' (' + (i+1) + '/' + p.parcelas + ')',
-          categoria: 'Eventos', status: 'Pendente',
-          valor: valParcela,
-          vencimento: (p.vencimentos && p.vencimentos[i]) || '',
-          dataRecebimento: '', leadId: p.leadId, eventoId: g.evId,
-          observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
-          parcelaGrupoId: grupoId, parcelaSeq: i + 1, parcelas: p.parcelas,
-          criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
-        });
-      }
-    }
-  });
-
-  // Lines without a linked event
-  if (semEvento > 0) {
-    var grupoIdSem = generateId();
-    if (p.parcelas <= 1) {
-      lista.push({
-        id: generateId(), descricao: desc, categoria: 'Eventos',
-        status: 'Pendente', valor: semEvento,
-        vencimento: (p.vencimentos && p.vencimentos[0]) || '',
+        id: generateId(),
+        descricao: desc + ' (' + (i+1) + '/' + p.parcelas + ')',
+        categoria: 'Eventos', status: 'Pendente',
+        valor: p.valorParcela,
+        vencimento: (p.vencimentos && p.vencimentos[i]) || '',
         dataRecebimento: '', leadId: p.leadId, eventoId: '',
         observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
+        parcelaGrupoId: grupoIdParcelas, parcelaSeq: i + 1, parcelas: p.parcelas,
         criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
       });
-    } else {
-      var valParcelaSem = Math.round(semEvento / p.parcelas * 100) / 100;
-      for (var i = 0; i < p.parcelas; i++) {
-        lista.push({
-          id: generateId(),
-          descricao: desc + ' (' + (i+1) + '/' + p.parcelas + ')',
-          categoria: 'Eventos', status: 'Pendente',
-          valor: valParcelaSem,
-          vencimento: (p.vencimentos && p.vencimentos[i]) || '',
-          dataRecebimento: '', leadId: p.leadId, eventoId: '',
-          observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
-          parcelaGrupoId: grupoIdSem, parcelaSeq: i + 1, parcelas: p.parcelas,
-          criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
-        });
-      }
     }
   }
+
+  // 2. P&L por evento: 1 entrada única (eventoOnly) com o valor total do item
+  grupoList.forEach(function(g) {
+    var ev      = eventos.find(function(e){ return e.id === g.evId; });
+    var evNome  = ev ? ev.nome : '';
+    lista.push({
+      id: generateId(),
+      descricao: desc + (evNome ? ' / ' + evNome : ''),
+      categoria: 'Eventos', status: 'Pendente',
+      valor: g.subtotal,
+      vencimento: (p.vencimentos && p.vencimentos[0]) || '',
+      dataRecebimento: '', leadId: p.leadId, eventoId: g.evId,
+      observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
+      eventoOnly: true,
+      criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
+    });
+  });
 
   saveReceita2(lista);
   var negocios = loadNegocios();
