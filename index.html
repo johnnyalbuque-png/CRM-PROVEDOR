@@ -5669,13 +5669,28 @@ function _confirmarLancarProposta(p, negId) {
   linhas.forEach(function(linha) {
     var s    = servicos.find(function(x){ return x.id === linha.servId; });
     var evId = (s && s.eventoId) ? s.eventoId : '';
-    var val  = +(linha.total || 0);
+    // Use stored total; fallback to valorUnit*qty for older proposals
+    var val  = +(linha.total) || (+(linha.valorUnit || 0) * +(linha.qty || 1));
     if (evId) {
       gruposMap[evId] = (gruposMap[evId] || 0) + val;
     } else {
       semEvento += val;
     }
   });
+
+  // If lines had no computed value but proposal has a total, distribute equally by line
+  var somaGrupos = Object.keys(gruposMap).reduce(function(s,k){ return s + gruposMap[k]; }, 0) + semEvento;
+  if (somaGrupos === 0 && p.total > 0 && linhas.length > 0) {
+    var valPorLinha = p.total / linhas.length;
+    gruposMap = {};
+    semEvento = 0;
+    linhas.forEach(function(linha) {
+      var s    = servicos.find(function(x){ return x.id === linha.servId; });
+      var evId = (s && s.eventoId) ? s.eventoId : '';
+      if (evId) gruposMap[evId] = (gruposMap[evId] || 0) + valPorLinha;
+      else      semEvento += valPorLinha;
+    });
+  }
 
   var grupoList = Object.keys(gruposMap).map(function(k){ return { evId: k, subtotal: gruposMap[k] }; });
   var parcStr   = (p.parcelas > 1) ? p.parcelas + 'x de ' + fmtMoney(p.valorParcela) : 'à vista';
