@@ -5648,7 +5648,6 @@ function lancarPropostaFinanceiro(leadId, negId) {
 }
 
 function _resolvePropostaEventoId(p) {
-  // Find the first service in the proposal that has an eventoId linked
   var servicos = loadServicos();
   var linhas   = p.linhas || [];
   for (var l = 0; l < linhas.length; l++) {
@@ -5659,52 +5658,116 @@ function _resolvePropostaEventoId(p) {
 }
 
 function _confirmarLancarProposta(p, negId) {
-  var lead    = leads.find(function(l){ return l.id === p.leadId; }) || {};
-  var linhas  = (p.parcelas > 1) ? p.parcelas + 'x de ' + fmtMoney(p.valorParcela) : 'à vista';
-  var evId    = _resolvePropostaEventoId(p);
-  var ev      = evId ? loadEventos().find(function(e){ return e.id === evId; }) : null;
-  var msg     = 'Lançar no Financeiro — Receita?\n\n' +
+  var lead     = leads.find(function(l){ return l.id === p.leadId; }) || {};
+  var servicos = loadServicos();
+  var eventos  = loadEventos();
+  var linhas   = p.linhas || [];
+
+  // Group lines by eventoId (resolved from the linked service)
+  var gruposMap = {}; // eventoId -> subtotal
+  var semEvento = 0;
+  linhas.forEach(function(linha) {
+    var s    = servicos.find(function(x){ return x.id === linha.servId; });
+    var evId = (s && s.eventoId) ? s.eventoId : '';
+    var val  = +(linha.total || 0);
+    if (evId) {
+      gruposMap[evId] = (gruposMap[evId] || 0) + val;
+    } else {
+      semEvento += val;
+    }
+  });
+
+  var grupoList = Object.keys(gruposMap).map(function(k){ return { evId: k, subtotal: gruposMap[k] }; });
+  var parcStr   = (p.parcelas > 1) ? p.parcelas + 'x de ' + fmtMoney(p.valorParcela) : 'à vista';
+
+  var evLines = grupoList.map(function(g) {
+    var ev = eventos.find(function(e){ return e.id === g.evId; });
+    return '  • ' + (ev ? ev.nome : g.evId) + ': ' + fmtMoney(g.subtotal);
+  });
+  if (semEvento > 0) evLines.push('  • Sem evento: ' + fmtMoney(semEvento));
+
+  var msg = 'Lançar no Financeiro — Receita?\n\n' +
     'Proposta: ' + p.numero + '\n' +
-    'Total: ' + fmtMoney(p.total) + '  (' + linhas + ')\n' +
-    (ev ? 'Evento: ' + ev.nome + '\n' : '') + '\n' +
-    (p.parcelas > 1 ? 'Serão criadas ' + p.parcelas + ' entradas de receita.' : 'Será criada 1 entrada de receita.');
+    'Total: ' + fmtMoney(p.total) + '  (' + parcStr + ')\n' +
+    (evLines.length ? '\nEventos:\n' + evLines.join('\n') + '\n' : '') + '\n' +
+    (p.parcelas > 1 ? 'Serão criadas entradas parceladas por evento.' : 'Será criada 1 entrada por evento.');
   if (!confirm(msg)) return;
+
   var session = getSession();
   var lista   = loadReceita();
-  var grupoId = generateId();
   var empresa = strToTitleCase(lead.empresa || 'Lead');
   var desc    = empresa + ' — ' + p.numero;
-  if (p.parcelas <= 1) {
-    lista.push({
-      id: generateId(), descricao: desc, categoria: 'Eventos',
-      status: 'Pendente', valor: p.total,
-      vencimento: (p.vencimentos && p.vencimentos[0]) || '',
-      dataRecebimento: '', leadId: p.leadId, eventoId: evId,
-      observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
-      criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
-    });
-  } else {
-    for (var i = 0; i < p.parcelas; i++) {
+
+  // Create receita entries per event
+  grupoList.forEach(function(g) {
+    var ev       = eventos.find(function(e){ return e.id === g.evId; });
+    var evNome   = ev ? ev.nome : '';
+    var subDesc  = desc + (evNome ? ' / ' + evNome : '');
+    var grupoId  = generateId();
+    if (p.parcelas <= 1) {
       lista.push({
-        id: generateId(),
-        descricao: desc + ' (' + (i+1) + '/' + p.parcelas + ')',
-        categoria: 'Eventos', status: 'Pendente',
-        valor: p.valorParcela,
-        vencimento: (p.vencimentos && p.vencimentos[i]) || '',
-        dataRecebimento: '', leadId: p.leadId, eventoId: evId,
+        id: generateId(), descricao: subDesc, categoria: 'Eventos',
+        status: 'Pendente', valor: g.subtotal,
+        vencimento: (p.vencimentos && p.vencimentos[0]) || '',
+        dataRecebimento: '', leadId: p.leadId, eventoId: g.evId,
         observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
-        parcelaGrupoId: grupoId, parcelaSeq: i + 1, parcelas: p.parcelas,
         criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
       });
+    } else {
+      var valParcela = Math.round(g.subtotal / p.parcelas * 100) / 100;
+      for (var i = 0; i < p.parcelas; i++) {
+        lista.push({
+          id: generateId(),
+          descricao: subDesc + ' (' + (i+1) + '/' + p.parcelas + ')',
+          categoria: 'Eventos', status: 'Pendente',
+          valor: valParcela,
+          vencimento: (p.vencimentos && p.vencimentos[i]) || '',
+          dataRecebimento: '', leadId: p.leadId, eventoId: g.evId,
+          observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
+          parcelaGrupoId: grupoId, parcelaSeq: i + 1, parcelas: p.parcelas,
+          criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
+        });
+      }
+    }
+  });
+
+  // Lines without a linked event
+  if (semEvento > 0) {
+    var grupoIdSem = generateId();
+    if (p.parcelas <= 1) {
+      lista.push({
+        id: generateId(), descricao: desc, categoria: 'Eventos',
+        status: 'Pendente', valor: semEvento,
+        vencimento: (p.vencimentos && p.vencimentos[0]) || '',
+        dataRecebimento: '', leadId: p.leadId, eventoId: '',
+        observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
+        criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
+      });
+    } else {
+      var valParcelaSem = Math.round(semEvento / p.parcelas * 100) / 100;
+      for (var i = 0; i < p.parcelas; i++) {
+        lista.push({
+          id: generateId(),
+          descricao: desc + ' (' + (i+1) + '/' + p.parcelas + ')',
+          categoria: 'Eventos', status: 'Pendente',
+          valor: valParcelaSem,
+          vencimento: (p.vencimentos && p.vencimentos[i]) || '',
+          dataRecebimento: '', leadId: p.leadId, eventoId: '',
+          observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
+          parcelaGrupoId: grupoIdSem, parcelaSeq: i + 1, parcelas: p.parcelas,
+          criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
+        });
+      }
     }
   }
+
   saveReceita2(lista);
   var negocios = loadNegocios();
   var nIdx = negocios.findIndex(function(x){ return x.id === negId; });
   if (nIdx !== -1) { negocios[nIdx].lancadoPropostaId = p.id; saveNegocios(negocios); }
   closePropostaPickerModal();
   renderKanban();
-  alert('✅ ' + (p.parcelas > 1 ? p.parcelas + ' parcelas lançadas' : 'Receita lançada') + ' com sucesso no Financeiro!');
+  alert('✅ Receita lançada com sucesso no Financeiro!');
 }
 
 function _openPropostaPickerModal(props, negId) {
