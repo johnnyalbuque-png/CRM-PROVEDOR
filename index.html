@@ -3808,8 +3808,8 @@ function renderKanban() {
       (function(){
         var totalCol = sn.reduce(function(sum, n) {
           var props = loadPropostas().filter(function(p){ return p.leadId === n.leadId; });
-          var maior = props.reduce(function(m, p){ return p.total > m ? p.total : m; }, 0);
-          return sum + maior;
+          var totalProps = props.reduce(function(s, p){ return s + (+p.total || 0); }, 0);
+          return sum + totalProps;
         }, 0);
         return totalCol > 0
           ? '<div class="kanban-col-total">' + fmtMoney(totalCol) + '</div>'
