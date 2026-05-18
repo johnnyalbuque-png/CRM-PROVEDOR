@@ -4213,8 +4213,13 @@ function loadPropostas()      { return _cfgCache[PROPOSTAS_KEY] || []; }
 function savePropostas(arr)   { saveConfigBg(PROPOSTAS_KEY, arr); }
 
 function gerarNumProposta() {
-  var n = loadPropostas().length + 1;
-  return 'PRO-' + String(n).padStart(3, '0');
+  var lista = loadPropostas();
+  var max = lista.reduce(function(m, p) {
+    var match = (p.numero || '').match(/(\d+)$/);
+    var n = match ? parseInt(match[1]) : 0;
+    return n > m ? n : m;
+  }, 0);
+  return 'PRO-' + String(max + 1).padStart(3, '0');
 }
 
 function openPropostaModal(leadId) {
@@ -4398,7 +4403,7 @@ function coletarPropostaData() {
 
 function salvarProposta(p) {
   var lista = loadPropostas();
-  var idx = lista.findIndex(function(x){ return x.id === p.id || x.numero === p.numero; });
+  var idx = lista.findIndex(function(x){ return x.id === p.id; });
   if (idx !== -1) lista[idx] = p; else lista.push(p);
   savePropostas(lista);
   renderDetailPropostas(p.leadId);
