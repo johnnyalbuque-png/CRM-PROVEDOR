@@ -979,6 +979,15 @@
       .dbrd-kpi-row { grid-template-columns:repeat(2,1fr); }
       .dbrd-charts-grid { grid-template-columns:1fr; }
     }
+
+    /* ── Histórico de Interações ─────────────────────────────────────── */
+    .interacao-item { padding:10px 12px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; display:flex; gap:12px; background:#fafbfc; }
+    .interacao-item:last-child { margin-bottom:0; }
+    .interacao-tipo-icon { font-size:18px; flex-shrink:0; padding-top:2px; }
+    .interacao-corpo { flex:1; min-width:0; }
+    .interacao-meta { font-size:11px; color:var(--text-muted); margin-bottom:3px; font-weight:500; }
+    .interacao-nota { font-size:13px; color:var(--text); line-height:1.5; white-space:pre-wrap; }
+    .interacao-form-wrap { background:#f8fafc; border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:14px; }
   </style>
 </head>
 <body>
@@ -1757,6 +1766,33 @@
     <div class="detail-card">
       <h3>Anotações</h3>
       <div id="dAnotacao"></div>
+    </div>
+    <div class="detail-card" id="dInteracoesCard">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="margin:0">📋 Histórico de Interações</h3>
+        <button class="btn btn-outline" style="font-size:12px;padding:5px 12px" onclick="toggleInteracaoForm()">+ Registrar</button>
+      </div>
+      <div id="dInteracaoForm" style="display:none" class="interacao-form-wrap">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div class="form-group" style="margin:0">
+            <label style="font-size:11px;color:#64748b">Tipo de contato</label>
+            <select id="dInteracaoTipo" class="form-control" style="padding:6px 10px;font-size:13px">
+              <option value="ligacao">📞 Ligação</option>
+              <option value="email">✉️ E-mail</option>
+              <option value="reuniao">🤝 Reunião</option>
+              <option value="whatsapp">💬 WhatsApp</option>
+              <option value="visita">🏢 Visita</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label style="font-size:11px;color:#64748b">Data</label>
+            <input type="date" id="dInteracaoData" class="form-control" style="padding:6px 10px;font-size:13px" />
+          </div>
+        </div>
+        <textarea id="dInteracaoNota" rows="3" placeholder="Descreva o contato…" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;resize:vertical;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px"></textarea>
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="addInteracao()">Registrar Interação</button>
+      </div>
+      <div id="dInteracoesList"></div>
     </div>
     <div class="detail-card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -2872,6 +2908,7 @@ function openDetail(id, negId) {
   document.getElementById('detailEditBtn').onclick     = function(){ closeDetail(); openEdit(id); };
   document.getElementById('detailPropostaBtn').onclick = function(){ openPropostaModal(id); };
   renderDetailPropostas(id);
+  renderLeadInteracoes(id);
 
   // Encontra o negócio: usa negId se fornecido, senão pega o primeiro do lead
   var negs = loadNegocios().filter(function(x){ return x.leadId === id; });
@@ -4749,9 +4786,10 @@ function renderNotifList() {
   el.innerHTML = notifs.map(function(n) {
     var dt   = new Date(n.criadoEm);
     var str  = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-    var icon = n.tipo === 'vencimento' ? '💸' : n.tipo === 'vencimento_receita' ? '💰' : '📋';
+    var iconMap = { vencimento:'💸', vencimento_receita:'💰', tarefa_atrasada:'⏰', followup:'📅', tarefa:'📋' };
+    var icon = iconMap[n.tipo] || '📋';
     var fnTp = (n.tipo === 'vencimento' || n.tipo === 'vencimento_receita') ? n.tipo : '';
-    return '<div class="notif-item' + (n.lida ? '' : ' unread') + '" onclick="openNotif(\'' + n.id + '\',\'' + (n.tarefaId || '') + '\',\'' + fnTp + '\')">' +
+    return '<div class="notif-item' + (n.lida ? '' : ' unread') + '" onclick="openNotif(\'' + n.id + '\',\'' + (n.tarefaId || '') + '\',\'' + fnTp + '\',\'' + (n.tipo || '') + '\')">' +
       '<div class="notif-icon">' + icon + '</div>' +
       '<div class="notif-body">' +
         '<div class="notif-title">' + esc(n.titulo) + '</div>' +
@@ -4768,7 +4806,7 @@ function toggleNotifDropdown() {
   if (dd.classList.contains('open')) renderNotifList();
 }
 
-function openNotif(notifId, tarefaId, finTipo) {
+function openNotif(notifId, tarefaId, finTipo, tipo) {
   var notifs = loadMyNotifs();
   var idx    = notifs.findIndex(function(n){ return n.id === notifId; });
   if (idx !== -1) notifs[idx].lida = true;
@@ -4782,6 +4820,10 @@ function openNotif(notifId, tarefaId, finTipo) {
   } else if (tarefaId) {
     showView('tarefas');
     openTarefaModal(tarefaId);
+  } else if (tipo === 'tarefa_atrasada') {
+    showView('tarefas');
+  } else if (tipo === 'followup') {
+    showView('crm');
   }
 }
 
@@ -6163,6 +6205,113 @@ window.saveEvento              = saveEvento;
 window.deletarEvento           = deletarEvento;
 window.deletarReceitaGrupo     = deletarReceitaGrupo;
 
+// ── Histórico de Interações no Lead ────────────────────────────────────────
+var INTERACOES_KEY = 'crm_interacoes';
+function loadInteracoes()    { return _cfgCache[INTERACOES_KEY] || {}; }
+function saveInteracoes(obj) { saveConfigBg(INTERACOES_KEY, obj); _cfgCache[INTERACOES_KEY] = obj; }
+function getLeadInteracoes(leadId) { return (loadInteracoes()[leadId] || []).slice(); }
+
+var _TIPO_ICON  = { ligacao:'📞', email:'✉️', reuniao:'🤝', whatsapp:'💬', visita:'🏢' };
+var _TIPO_LABEL = { ligacao:'Ligação', email:'E-mail', reuniao:'Reunião', whatsapp:'WhatsApp', visita:'Visita' };
+
+function toggleInteracaoForm() {
+  var f = document.getElementById('dInteracaoForm');
+  var isHidden = f.style.display === 'none';
+  f.style.display = isHidden ? '' : 'none';
+  if (isHidden) {
+    document.getElementById('dInteracaoData').value = getTodayStr();
+    document.getElementById('dInteracaoNota').value = '';
+    document.getElementById('dInteracaoNota').focus();
+  }
+}
+
+function renderLeadInteracoes(leadId) {
+  var el = document.getElementById('dInteracoesList');
+  if (!el) return;
+  var lista = getLeadInteracoes(leadId).slice().reverse();
+  if (!lista.length) {
+    el.innerHTML = '<div style="color:#94a3b8;font-size:13px;font-style:italic;padding:6px 0">Nenhuma interação registrada.</div>';
+    return;
+  }
+  el.innerHTML = lista.map(function(item) {
+    var icon  = _TIPO_ICON[item.tipo]  || '📝';
+    var label = _TIPO_LABEL[item.tipo] || item.tipo;
+    var dataStr = item.data ? new Date(item.data + 'T12:00:00').toLocaleDateString('pt-BR') : '';
+    return '<div class="interacao-item">' +
+      '<div class="interacao-tipo-icon">' + icon + '</div>' +
+      '<div class="interacao-corpo">' +
+        '<div class="interacao-meta">' + label + (dataStr ? ' · ' + dataStr : '') + ' · ' + esc(item.criadoPor || '—') + '</div>' +
+        '<div class="interacao-nota">' + esc(item.nota) + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function addInteracao() {
+  if (!_currentDetailLeadId) return;
+  var tipo = document.getElementById('dInteracaoTipo').value;
+  var data = document.getElementById('dInteracaoData').value;
+  var nota = document.getElementById('dInteracaoNota').value.trim();
+  if (!nota) { document.getElementById('dInteracaoNota').focus(); return; }
+  var session = getSession();
+  var obj = loadInteracoes();
+  if (!obj[_currentDetailLeadId]) obj[_currentDetailLeadId] = [];
+  obj[_currentDetailLeadId].push({ id: generateId(), tipo: tipo, data: data, nota: nota, criadoPor: session ? session.nome : '—', criadoEm: Date.now() });
+  saveInteracoes(obj);
+  document.getElementById('dInteracaoForm').style.display = 'none';
+  renderLeadInteracoes(_currentDetailLeadId);
+}
+window.toggleInteracaoForm = toggleInteracaoForm;
+window.addInteracao        = addInteracao;
+
+// ── Notificações: tarefas atrasadas + follow-ups ────────────────────────────
+function checkTarefasNotifs() {
+  var today   = getTodayStr();
+  var session = getSession();
+  if (!session) return;
+  var myNome  = session.nome;
+  var key     = NOTIFS_PREFIX + session.id;
+  var existing = (_cfgCache[key] || []).slice();
+  var atrasadas = loadTarefas().filter(function(t) {
+    if (t.status === 'Concluída') return false;
+    if (!t.vencimento || t.vencimento >= today) return false;
+    return t.responsavel === myNome || t.criadoPor === myNome || t.visibilidade === 'todos';
+  });
+  var changed = false;
+  atrasadas.forEach(function(t) {
+    var already = existing.some(function(n){ return n.tipo === 'tarefa_atrasada' && n.tarefaId === t.id && n.data === t.vencimento; });
+    if (!already) {
+      existing.push({ id: generateId(), tipo: 'tarefa_atrasada', titulo: '⏰ Tarefa atrasada', mensagem: t.titulo + (t.vencimento ? ' — venceu em ' + new Date(t.vencimento + 'T12:00:00').toLocaleDateString('pt-BR') : ''), tarefaId: t.id, data: t.vencimento, lida: false, criadoEm: Date.now() });
+      changed = true;
+    }
+  });
+  if (changed) { _cfgCache[key] = existing; saveConfigBg(key, existing); }
+  updateNotifBadge();
+}
+
+function checkFollowUpsNotifs() {
+  var today   = getTodayStr();
+  var session = getSession();
+  if (!session) return;
+  var myNome  = session.nome;
+  var key     = NOTIFS_PREFIX + session.id;
+  var existing = (_cfgCache[key] || []).slice();
+  var followUps = loadNegocios().filter(function(n) {
+    return n.followUp && n.followUp.data === today;
+  });
+  var changed = false;
+  followUps.forEach(function(neg) {
+    var lead = leads.find(function(l){ return l.id === neg.leadId; });
+    var already = existing.some(function(n){ return n.tipo === 'followup' && n.refId === neg.id && n.data === today; });
+    if (!already) {
+      existing.push({ id: generateId(), tipo: 'followup', titulo: '📅 Follow-up hoje', mensagem: 'Follow-up com ' + (lead ? lead.empresa : 'lead') + (neg.followUp.hora ? ' às ' + neg.followUp.hora : ''), refId: neg.id, data: today, lida: false, criadoEm: Date.now() });
+      changed = true;
+    }
+  });
+  if (changed) { _cfgCache[key] = existing; saveConfigBg(key, existing); }
+  updateNotifBadge();
+}
+
 // ── Dashboard com Gráficos ──────────────────────────────────────────────────
 var _dashCharts = {};
 
@@ -6322,7 +6471,7 @@ window.renderDashboard = renderDashboard;
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
   // Preload all configs from Supabase into memory (single query)
-  var cfgKeys = [STAGES_KEY, NEGOCIOS_KEY, SERVICOS_KEY, LEAD_SERVS_KEY, LEAD_EXTRA_KEY, PROPOSTAS_KEY, TAREFAS_KEY, CONTAS_PAGAR_KEY, RECEITA_KEY, EVENTOS_KEY];
+  var cfgKeys = [STAGES_KEY, NEGOCIOS_KEY, SERVICOS_KEY, LEAD_SERVS_KEY, LEAD_EXTRA_KEY, PROPOSTAS_KEY, TAREFAS_KEY, CONTAS_PAGAR_KEY, RECEITA_KEY, EVENTOS_KEY, INTERACOES_KEY];
   try {
     var { data: cfgRows } = await db.from('configs').select('id,value').in('id', cfgKeys);
     if (cfgRows) cfgRows.forEach(function(row){ _cfgCache[row.id] = row.value; });
@@ -6348,6 +6497,8 @@ async function boot() {
   if (session) {
     initApp(session);
     checkVencimentos();
+    checkTarefasNotifs();
+    checkFollowUpsNotifs();
   }
 
   // Realtime: sync leads between users
