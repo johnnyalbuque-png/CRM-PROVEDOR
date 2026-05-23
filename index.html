@@ -5121,27 +5121,44 @@ function renderFinDash() {
     '</div>';
   }).join('');
 
-  // Últimas movimentações – itens concluídos (Pago / Recebido) e pagamentos parciais
-  var todos = pagar.filter(function(i){ return i.status === 'Pago' || i.status === 'Pago Parcial'; })
-    .map(function(i){ return Object.assign({},i,{_tipo:'saida', _ts: new Date((i.dataPagamento||'') + 'T12:00:00').getTime() || i.criadoEm||0}); })
-    .concat(receita.filter(function(i){ return i.status === 'Recebido'; })
-    .map(function(i){ return Object.assign({},i,{_tipo:'entrada', _ts: new Date((i.dataRecebimento||'') + 'T12:00:00').getTime() || i.criadoEm||0}); }));
+  // Últimas movimentações – cada pagamento individual registrado no histórico
+  var todos = [];
+  pagar.forEach(function(i) {
+    var hist = i.historicoPagamentos || [];
+    if (hist.length) {
+      // Mostra cada entrada do histórico individualmente
+      hist.forEach(function(h) {
+        todos.push({ _desc: i.descricao, _cat: i.categoria, _tipo: 'saida',
+          _st: h === hist[hist.length-1] && i.status === 'Pago' ? 'Pago' : 'Pago Parcial',
+          _valor: h.valor, _data: h.data,
+          _ts: new Date((h.data||'') + 'T12:00:00').getTime() || i.criadoEm||0 });
+      });
+    } else if (i.status === 'Pago') {
+      // Item pago de uma vez (sem histórico parcial)
+      todos.push({ _desc: i.descricao, _cat: i.categoria, _tipo: 'saida',
+        _st: 'Pago', _valor: +i.valor||0, _data: i.dataPagamento,
+        _ts: new Date((i.dataPagamento||'') + 'T12:00:00').getTime() || i.criadoEm||0 });
+    }
+  });
+  receita.filter(function(i){ return i.status === 'Recebido'; }).forEach(function(i) {
+    todos.push({ _desc: i.descricao, _cat: i.categoria, _tipo: 'entrada',
+      _st: 'Recebido', _valor: +i.valor||0, _data: i.dataRecebimento,
+      _ts: new Date((i.dataRecebimento||'') + 'T12:00:00').getTime() || i.criadoEm||0 });
+  });
   todos.sort(function(a,b){ return b._ts - a._ts; });
-  var recent = todos.slice(0,10);
+  var recent = todos.slice(0,15);
   var recEl  = document.getElementById('finRecentList');
   if (!recent.length) { recEl.innerHTML = '<div style="padding:24px 16px;text-align:center;color:#94a3b8;font-size:13px">Nenhuma movimentação ainda.</div>'; return; }
   recEl.innerHTML = recent.map(function(i) {
-    var st  = i._tipo === 'saida' ? finStatus(i,'Pago') : finStatus(i,'Recebido');
-    var stClass = { 'Pago':'fin-st-pago','Recebido':'fin-st-recebido','Atrasado':'fin-st-atrasado','Pendente':'fin-st-pendente','Pago Parcial':'fin-st-parcial' }[st] || 'fin-st-pendente';
+    var stClass = { 'Pago':'fin-st-pago','Recebido':'fin-st-recebido','Pago Parcial':'fin-st-parcial' }[i._st] || 'fin-st-pendente';
     var icon    = i._tipo === 'entrada' ? '💰' : '💸';
-    var vencStr = i.vencimento ? new Date(i.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
-    var valorExib = (i.status === 'Pago Parcial') ? (+i.valorPago || 0) : (+i.valor || 0);
+    var dataStr = i._data ? new Date(i._data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
     return '<div class="fin-recent-row">' +
       '<div class="fin-recent-icon ' + i._tipo + '">' + icon + '</div>' +
-      '<div class="fin-recent-desc"><b>' + esc(i.descricao) + '</b><span>' + esc(i.categoria||'') + ' · ' + vencStr + '</span></div>' +
+      '<div class="fin-recent-desc"><b>' + esc(i._desc) + '</b><span>' + esc(i._cat||'') + ' · ' + dataStr + '</span></div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">' +
-        '<span class="fin-recent-valor ' + i._tipo + '">' + (i._tipo==='entrada'?'+':'-') + fmtMoney(valorExib) + '</span>' +
-        '<span class="badge-fin ' + stClass + '">' + st + '</span>' +
+        '<span class="fin-recent-valor ' + i._tipo + '">' + (i._tipo==='entrada'?'+':'-') + fmtMoney(i._valor) + '</span>' +
+        '<span class="badge-fin ' + stClass + '">' + i._st + '</span>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -5401,9 +5418,11 @@ function confirmarPagamentoParcial() {
   var saldo = item.saldoRestante != null ? +item.saldoRestante : +item.valor;
   if (pago >= saldo - 0.005) { marcarPago(id); closePagarParcialModal(); return; }
   var restante = saldo - pago;
+  var hist = (item.historicoPagamentos || []).concat([{ data: getTodayStr(), valor: pago }]);
   lista[idx] = Object.assign({}, item, {
     status: 'Pago Parcial', saldoRestante: restante,
     valorPago: (+item.valorPago||0) + pago, dataPagamento: getTodayStr(),
+    historicoPagamentos: hist,
   });
   saveContasPagar(lista);
   renderFinanceiro();
@@ -5414,6 +5433,8 @@ function marcarPago(id) {
   var lista = loadContasPagar();
   var idx   = lista.findIndex(function(x){ return x.id===id; });
   if (idx === -1) return;
+  var saldoFinal = lista[idx].saldoRestante != null ? +lista[idx].saldoRestante : +lista[idx].valor;
+  lista[idx].historicoPagamentos = (lista[idx].historicoPagamentos || []).concat([{ data: getTodayStr(), valor: saldoFinal }]);
   lista[idx].status        = 'Pago';
   lista[idx].dataPagamento = getTodayStr();
   delete lista[idx].saldoRestante;
