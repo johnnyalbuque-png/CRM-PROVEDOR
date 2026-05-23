@@ -5121,8 +5121,8 @@ function renderFinDash() {
     '</div>';
   }).join('');
 
-  // Últimas movimentações – apenas itens concluídos (Pago / Recebido)
-  var todos = pagar.filter(function(i){ return i.status === 'Pago'; })
+  // Últimas movimentações – itens concluídos (Pago / Recebido) e pagamentos parciais
+  var todos = pagar.filter(function(i){ return i.status === 'Pago' || i.status === 'Pago Parcial'; })
     .map(function(i){ return Object.assign({},i,{_tipo:'saida', _ts: new Date((i.dataPagamento||'') + 'T12:00:00').getTime() || i.criadoEm||0}); })
     .concat(receita.filter(function(i){ return i.status === 'Recebido'; })
     .map(function(i){ return Object.assign({},i,{_tipo:'entrada', _ts: new Date((i.dataRecebimento||'') + 'T12:00:00').getTime() || i.criadoEm||0}); }));
@@ -5132,14 +5132,15 @@ function renderFinDash() {
   if (!recent.length) { recEl.innerHTML = '<div style="padding:24px 16px;text-align:center;color:#94a3b8;font-size:13px">Nenhuma movimentação ainda.</div>'; return; }
   recEl.innerHTML = recent.map(function(i) {
     var st  = i._tipo === 'saida' ? finStatus(i,'Pago') : finStatus(i,'Recebido');
-    var stClass = { 'Pago':'fin-st-pago','Recebido':'fin-st-recebido','Atrasado':'fin-st-atrasado','Pendente':'fin-st-pendente' }[st] || 'fin-st-pendente';
+    var stClass = { 'Pago':'fin-st-pago','Recebido':'fin-st-recebido','Atrasado':'fin-st-atrasado','Pendente':'fin-st-pendente','Pago Parcial':'fin-st-parcial' }[st] || 'fin-st-pendente';
     var icon    = i._tipo === 'entrada' ? '💰' : '💸';
     var vencStr = i.vencimento ? new Date(i.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    var valorExib = (i.status === 'Pago Parcial') ? (+i.valorPago || 0) : (+i.valor || 0);
     return '<div class="fin-recent-row">' +
       '<div class="fin-recent-icon ' + i._tipo + '">' + icon + '</div>' +
       '<div class="fin-recent-desc"><b>' + esc(i.descricao) + '</b><span>' + esc(i.categoria||'') + ' · ' + vencStr + '</span></div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">' +
-        '<span class="fin-recent-valor ' + i._tipo + '">' + (i._tipo==='entrada'?'+':'-') + fmtMoney(+i.valor||0) + '</span>' +
+        '<span class="fin-recent-valor ' + i._tipo + '">' + (i._tipo==='entrada'?'+':'-') + fmtMoney(valorExib) + '</span>' +
         '<span class="badge-fin ' + stClass + '">' + st + '</span>' +
       '</div>' +
     '</div>';
