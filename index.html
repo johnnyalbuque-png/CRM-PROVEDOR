@@ -6,6 +6,7 @@
   <title>CRM Provedor — Leads</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -956,6 +957,28 @@
     .prop-total-bar { background:#1e3a8a; color:#fff; border-radius:8px; display:flex; justify-content:space-between; align-items:center; padding:12px 16px; margin-top:10px; }
     .prop-total-bar .ptb-label { font-size:13px; font-weight:600; opacity:.85; }
     .prop-total-bar .ptb-value { font-size:20px; font-weight:900; }
+
+    /* ── Dashboard com Gráficos ─────────────────────────────────────── */
+    #dashboardView { padding:24px; display:flex; flex-direction:column; gap:20px; }
+    .dbrd-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+    .dbrd-header h2 { font-size:20px; font-weight:700; color:var(--text); }
+    .dbrd-mes-label { font-size:13px; color:var(--text-muted); }
+    .dbrd-kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+    .dbrd-kpi-card { background:var(--surface); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:6px; border-left:4px solid transparent; }
+    .dbrd-kpi-card.kpi-blue  { border-left-color:#2563eb; }
+    .dbrd-kpi-card.kpi-green { border-left-color:#16a34a; }
+    .dbrd-kpi-card.kpi-red   { border-left-color:#dc2626; }
+    .dbrd-kpi-card.kpi-amber { border-left-color:#d97706; }
+    .dbrd-kpi-value { font-size:26px; font-weight:700; color:var(--text); line-height:1; }
+    .dbrd-kpi-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
+    .dbrd-charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .dbrd-chart-card { background:var(--surface); border-radius:var(--radius); padding:20px 22px; box-shadow:var(--shadow); }
+    .dbrd-chart-title { font-size:14px; font-weight:600; color:var(--text); margin-bottom:16px; }
+    .dbrd-chart-wrap { position:relative; height:220px; }
+    @media (max-width:900px) {
+      .dbrd-kpi-row { grid-template-columns:repeat(2,1fr); }
+      .dbrd-charts-grid { grid-template-columns:1fr; }
+    }
   </style>
 </head>
 <body>
@@ -1162,6 +1185,13 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-section-title">Menu</div>
     <nav>
+      <button class="nav-item" id="navDashboard" onclick="showView('dashboard')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        DASHBOARD
+      </button>
       <button class="nav-item active" id="navLeads" onclick="showView('leads')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/>
@@ -1460,6 +1490,50 @@
             <h3 id="eventoDetalheNome" style="flex:1;margin:0"></h3>
           </div>
           <div id="eventoDetalheBody" style="padding:16px 24px 24px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard com Gráficos -->
+    <div id="dashboardView" style="display:none">
+      <div class="dbrd-header">
+        <h2>Dashboard</h2>
+        <span class="dbrd-mes-label" id="dbrdMesLabel"></span>
+      </div>
+      <div class="dbrd-kpi-row">
+        <div class="dbrd-kpi-card kpi-blue">
+          <div class="dbrd-kpi-value" id="kpiLeads">0</div>
+          <div class="dbrd-kpi-label">Total de Leads</div>
+        </div>
+        <div class="dbrd-kpi-card kpi-green">
+          <div class="dbrd-kpi-value" id="kpiReceita">R$0</div>
+          <div class="dbrd-kpi-label">Receita do Mês</div>
+        </div>
+        <div class="dbrd-kpi-card kpi-red">
+          <div class="dbrd-kpi-value" id="kpiDespesa">R$0</div>
+          <div class="dbrd-kpi-label">Despesas do Mês</div>
+        </div>
+        <div class="dbrd-kpi-card kpi-amber">
+          <div class="dbrd-kpi-value" id="kpiAtrasadas">0</div>
+          <div class="dbrd-kpi-label">Tarefas Atrasadas</div>
+        </div>
+      </div>
+      <div class="dbrd-charts-grid">
+        <div class="dbrd-chart-card">
+          <div class="dbrd-chart-title">Receitas × Despesas — Últimos 6 Meses</div>
+          <div class="dbrd-chart-wrap"><canvas id="chartRecDesp"></canvas></div>
+        </div>
+        <div class="dbrd-chart-card">
+          <div class="dbrd-chart-title">Leads por Status</div>
+          <div class="dbrd-chart-wrap"><canvas id="chartLeads"></canvas></div>
+        </div>
+        <div class="dbrd-chart-card">
+          <div class="dbrd-chart-title">Tarefas por Situação</div>
+          <div class="dbrd-chart-wrap"><canvas id="chartTarefas"></canvas></div>
+        </div>
+        <div class="dbrd-chart-card">
+          <div class="dbrd-chart-title">Pipeline por Etapa</div>
+          <div class="dbrd-chart-wrap"><canvas id="chartPipeline"></canvas></div>
         </div>
       </div>
     </div>
@@ -3481,14 +3555,15 @@ window.toggleUser = toggleUser;
 
 // ── Navegação ──────────────────────────────────────────────────────────────
 function showView(name) {
-  var views = { leads: 'leadsView', crm: 'crmView', tarefas: 'tarefasView', financeiro: 'financeiroView', servicos: 'servicosView' };
-  var navs  = { leads: 'navLeads', crm: 'navCRM', tarefas: 'navTarefas', financeiro: 'navFinanceiro', servicos: 'navServicos' };
+  var views = { dashboard: 'dashboardView', leads: 'leadsView', crm: 'crmView', tarefas: 'tarefasView', financeiro: 'financeiroView', servicos: 'servicosView' };
+  var navs  = { dashboard: 'navDashboard', leads: 'navLeads', crm: 'navCRM', tarefas: 'navTarefas', financeiro: 'navFinanceiro', servicos: 'navServicos' };
   Object.keys(views).forEach(function(k) {
     var el = document.getElementById(views[k]);
     if (el) el.style.display = k === name ? '' : 'none';
     var nav = document.getElementById(navs[k]);
     if (nav) nav.classList.toggle('active', k === name);
   });
+  if (name === 'dashboard')  renderDashboard();
   if (name === 'crm')        renderKanban();
   if (name === 'servicos')   renderServicos();
   if (name === 'tarefas')    renderTarefas();
@@ -6087,6 +6162,162 @@ window.closeEventoModal        = closeEventoModal;
 window.saveEvento              = saveEvento;
 window.deletarEvento           = deletarEvento;
 window.deletarReceitaGrupo     = deletarReceitaGrupo;
+
+// ── Dashboard com Gráficos ──────────────────────────────────────────────────
+var _dashCharts = {};
+
+function _destroyChart(key) {
+  if (_dashCharts[key]) { _dashCharts[key].destroy(); delete _dashCharts[key]; }
+}
+
+var _MONTH_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+function _getLastMonths(n) {
+  var result = [], now = new Date();
+  for (var i = n - 1; i >= 0; i--) {
+    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    result.push(d.toISOString().slice(0, 7));
+  }
+  return result;
+}
+
+function _monthLabel(ym) {
+  var p = ym.split('-');
+  return _MONTH_PT[parseInt(p[1], 10) - 1] + '/' + p[0].slice(2);
+}
+
+function _fmtK(v) {
+  v = +v || 0;
+  if (v >= 1000) return 'R$' + (v / 1000).toFixed(1).replace('.', ',') + 'k';
+  return 'R$' + v.toLocaleString('pt-BR');
+}
+
+function renderDashboard() {
+  var today    = getTodayStr();
+  var mesSel   = today.slice(0, 7);
+  var receitas = loadReceita();
+  var despesas = loadContasPagar();
+  var tarefas  = loadTarefas();
+  var negocios = loadNegocios();
+  var stages   = loadStages();
+
+  // KPIs
+  document.getElementById('kpiLeads').textContent = leads.length;
+
+  var recMes = receitas
+    .filter(function(r) { return (r.vencimento || '').startsWith(mesSel); })
+    .reduce(function(s, r) { return s + (+r.valor || 0); }, 0);
+  document.getElementById('kpiReceita').textContent = _fmtK(recMes);
+
+  var despMes = despesas
+    .filter(function(d) { return (d.vencimento || '').startsWith(mesSel); })
+    .reduce(function(s, d) { return s + (+d.valor || 0); }, 0);
+  document.getElementById('kpiDespesa').textContent = _fmtK(despMes);
+
+  var atrasadas = tarefas.filter(function(t) {
+    return t.status !== 'Concluída' && t.vencimento && t.vencimento < today;
+  }).length;
+  document.getElementById('kpiAtrasadas').textContent = atrasadas;
+
+  var mesLabel = document.getElementById('dbrdMesLabel');
+  if (mesLabel) {
+    var mp = mesSel.split('-');
+    mesLabel.textContent = 'Mês atual: ' + _MONTH_PT[parseInt(mp[1], 10) - 1] + '/' + mp[0].slice(2);
+  }
+
+  // Chart 1 — Receitas × Despesas últimos 6 meses
+  var months6  = _getLastMonths(6);
+  var recData  = months6.map(function(m) {
+    return receitas.filter(function(r) { return (r.vencimento || '').startsWith(m); })
+                   .reduce(function(s, r) { return s + (+r.valor || 0); }, 0);
+  });
+  var despData = months6.map(function(m) {
+    return despesas.filter(function(d) { return (d.vencimento || '').startsWith(m); })
+                   .reduce(function(s, d) { return s + (+d.valor || 0); }, 0);
+  });
+  _destroyChart('recDesp');
+  _dashCharts['recDesp'] = new Chart(
+    document.getElementById('chartRecDesp').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: months6.map(_monthLabel),
+        datasets: [
+          { label: 'Receitas', data: recData,  backgroundColor: '#16a34a', borderRadius: 4 },
+          { label: 'Despesas', data: despData, backgroundColor: '#dc2626', borderRadius: 4 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+        scales: { y: { beginAtZero: true, ticks: { callback: function(v) { return _fmtK(v); }, font: { size: 11 } } } }
+      }
+    }
+  );
+
+  // Chart 2 — Leads por status
+  var STATUS_ORDER  = ['Novo','Contatado','Interessado','Proposta','Fechado','Perdido'];
+  var STATUS_COLORS = { Novo:'#2563eb', Contatado:'#a16207', Interessado:'#7c3aed', Proposta:'#c2410c', Fechado:'#15803d', Perdido:'#94a3b8' };
+  var statusCounts  = STATUS_ORDER.map(function(s) {
+    return leads.filter(function(l) { return l.status === s; }).length;
+  });
+  _destroyChart('leads');
+  _dashCharts['leads'] = new Chart(
+    document.getElementById('chartLeads').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: STATUS_ORDER,
+        datasets: [{ data: statusCounts, backgroundColor: STATUS_ORDER.map(function(s){ return STATUS_COLORS[s]; }), borderWidth: 2, borderColor: '#fff' }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '62%',
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } } }
+      }
+    }
+  );
+
+  // Chart 3 — Tarefas por situação
+  var tPendente  = tarefas.filter(function(t) { return t.status !== 'Concluída' && (!t.vencimento || t.vencimento >= today); }).length;
+  var tAtrasada  = tarefas.filter(function(t) { return t.status !== 'Concluída' && t.vencimento && t.vencimento < today; }).length;
+  var tConcluida = tarefas.filter(function(t) { return t.status === 'Concluída'; }).length;
+  _destroyChart('tarefas');
+  _dashCharts['tarefas'] = new Chart(
+    document.getElementById('chartTarefas').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Pendente', 'Atrasada', 'Concluída'],
+        datasets: [{ data: [tPendente, tAtrasada, tConcluida], backgroundColor: ['#d97706','#dc2626','#16a34a'], borderWidth: 2, borderColor: '#fff' }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '62%',
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } } }
+      }
+    }
+  );
+
+  // Chart 4 — Pipeline por etapa (barra horizontal)
+  var activeStages  = stages.filter(function(s) { return s.id !== 'Perdido'; });
+  var stageLabels   = activeStages.map(function(s) { return s.label; });
+  var stageCounts   = activeStages.map(function(s) {
+    return negocios.filter(function(n) { return n.stageId === s.id; }).length;
+  });
+  var stageColors   = activeStages.map(function(s) { return s.cor || '#2563eb'; });
+  _destroyChart('pipeline');
+  _dashCharts['pipeline'] = new Chart(
+    document.getElementById('chartPipeline').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: stageLabels,
+        datasets: [{ label: 'Negócios', data: stageCounts, backgroundColor: stageColors, borderRadius: 4 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } } }, y: { ticks: { font: { size: 11 } } } }
+      }
+    }
+  );
+}
+window.renderDashboard = renderDashboard;
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
