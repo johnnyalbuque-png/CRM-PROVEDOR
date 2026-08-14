@@ -988,6 +988,23 @@
     .interacao-meta { font-size:11px; color:var(--text-muted); margin-bottom:3px; font-weight:500; }
     .interacao-nota { font-size:13px; color:var(--text); line-height:1.5; white-space:pre-wrap; }
     .interacao-form-wrap { background:#f8fafc; border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:14px; }
+
+    /* ── Contatos Adicionais ─────────────────────────────────────────── */
+    .contato-item { display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; background:#fafbfc; }
+    .contato-item:last-child { margin-bottom:0; }
+    .contato-primario { background:#eff6ff; border-color:#bfdbfe; }
+    .contato-avatar { width:34px; height:34px; border-radius:50%; background:#2563eb22; color:#2563eb; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; }
+    .contato-body { flex:1; min-width:0; }
+    .contato-nome { font-size:13px; font-weight:600; color:var(--text); margin-bottom:2px; }
+    .contato-meta { font-size:11px; color:var(--text-muted); }
+    .badge-primary { font-size:10px; font-weight:700; background:#2563eb; color:#fff; border-radius:4px; padding:1px 5px; margin-left:4px; vertical-align:middle; }
+    .link-btn { background:none; border:none; color:var(--primary); cursor:pointer; font-size:inherit; text-decoration:underline; padding:0; font-family:inherit; }
+
+    /* ── Kanban cards compactos ──────────────────────────────────────── */
+    .kcard-stage-badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; padding:2px 7px; border-radius:4px; margin-bottom:7px; }
+    .kcard-titulo { font-size:13px; font-weight:700; color:#0f172a; margin-bottom:1px; line-height:1.35; padding-right:18px; }
+    .kcard-empresa-sub { font-size:11px; color:#64748b; margin-bottom:5px; }
+    .kcard-meta-row { display:flex; align-items:center; justify-content:space-between; margin-top:5px; }
   </style>
 </head>
 <body>
@@ -1766,6 +1783,37 @@
     <div class="detail-card">
       <h3>Anotações</h3>
       <div id="dAnotacao"></div>
+    </div>
+    <div class="detail-card" id="dContatosCard">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="margin:0">👥 Contatos da Empresa</h3>
+        <button class="btn btn-outline" style="font-size:12px;padding:5px 12px" onclick="toggleContatoForm()">+ Adicionar</button>
+      </div>
+      <div id="dContatoForm" style="display:none" class="interacao-form-wrap">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div class="form-group" style="margin:0">
+            <label style="font-size:11px;color:#64748b">Nome</label>
+            <input type="text" id="dContatoNome" class="form-control" placeholder="Nome completo" style="padding:6px 10px;font-size:13px" />
+          </div>
+          <div class="form-group" style="margin:0">
+            <label style="font-size:11px;color:#64748b">Cargo</label>
+            <input type="text" id="dContatoCargo" class="form-control" placeholder="Ex: Diretor, Financeiro" style="padding:6px 10px;font-size:13px" />
+          </div>
+          <div class="form-group" style="margin:0">
+            <label style="font-size:11px;color:#64748b">E-mail</label>
+            <input type="email" id="dContatoEmail" class="form-control" placeholder="email@empresa.com" style="padding:6px 10px;font-size:13px" />
+          </div>
+          <div class="form-group" style="margin:0">
+            <label style="font-size:11px;color:#64748b">WhatsApp</label>
+            <input type="text" id="dContatoWhatsapp" class="form-control" placeholder="(00) 00000-0000" style="padding:6px 10px;font-size:13px" />
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="toggleContatoForm()">Cancelar</button>
+          <button class="btn btn-primary" style="font-size:12px;padding:5px 14px" onclick="addContatoAdicional()">Salvar Contato</button>
+        </div>
+      </div>
+      <div id="dContatosList"></div>
     </div>
     <div class="detail-card" id="dInteracoesCard">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
@@ -2909,6 +2957,7 @@ function openDetail(id, negId) {
   document.getElementById('detailPropostaBtn').onclick = function(){ openPropostaModal(id); };
   renderDetailPropostas(id);
   renderLeadInteracoes(id);
+  renderLeadContatos(id);
 
   // Encontra o negócio: usa negId se fornecido, senão pega o primeiro do lead
   var negs = loadNegocios().filter(function(x){ return x.leadId === id; });
@@ -3098,6 +3147,19 @@ leadForm.addEventListener('submit', async function(e) {
   data.cargo   = strToSentenceCase(data.cargo);
   if (!validate(data)) return;
   var id = document.getElementById('leadId').value;
+
+  // Bloquear empresa duplicada
+  if (!id) {
+    var empExist = leads.find(function(l) {
+      return l.empresa && l.empresa.toLowerCase() === data.empresa.toLowerCase();
+    });
+    if (empExist) {
+      var errEl = document.getElementById('empresaError');
+      errEl.innerHTML = '⚠️ Empresa já cadastrada. <button class="link-btn" onclick="closeModal();openDetail(\'' + empExist.id + '\')">Abrir lead</button> para adicionar um novo contato.';
+      errEl.style.display = 'block';
+      return;
+    }
+  }
 
   // Detectar duplicados por e-mail ou WhatsApp
   if (!id && (data.email || data.whatsapp)) {
@@ -3859,45 +3921,36 @@ function renderKanban() {
           var sCount = servs.length;
           var sTotal = servs.reduce(function(acc, e){ return acc + (e.precoUnit * e.qty); }, 0);
           var titulo = n.titulo || lead.empresa || '—';
+          var fu = n.followUp;
+          var fuStr = '';
+          if (fu && fu.data) {
+            var fd = new Date(fu.data + 'T12:00:00');
+            fuStr = fd.toLocaleDateString('pt-BR') + (fu.hora ? ' ' + fu.hora : '');
+          }
+          var props = loadPropostas().filter(function(p){ return p.leadId === n.leadId; });
+          var nProps = props.length;
+          var propClickFn;
+          if (nProps === 0) { propClickFn = "openPropostaModal('" + n.leadId + "')"; }
+          else if (nProps === 1) { propClickFn = "editarProposta('" + props[0].id + "')"; }
+          else { propClickFn = "openDetail('" + n.leadId + "','" + n.id + "')"; }
+          var badgeColor = (stage.cor || '#64748b');
+          var badgeBg = badgeColor + '22';
           return '<div class="kanban-card" draggable="true"' +
             ' ondragstart="dragStart(event,\'' + n.id + '\')"' +
             ' ondragend="dragEnd(event)"' +
             ' onclick="openDetail(\'' + n.leadId + '\',\'' + n.id + '\')">' +
             '<button class="kcard-del-btn" onclick="event.stopPropagation();removeNegocio(\'' + n.id + '\')" title="Remover do pipeline">✕</button>' +
-            '<div class="kcard-empresa">' + esc(titulo) + '</div>' +
-            (lead.nome ? '<div class="kcard-nome">' + esc(lead.nome) + '</div>' : '') +
-            (n.valor > 0 ? '<div class="kcard-valor">' + fmtMoney(n.valor) + '</div>' : '') +
-            '<div class="kcard-footer">' +
-              (lead.porte ? '<span class="badge-porte porte-' + lead.porte.toLowerCase().replace('é','e') + '">' + esc(lead.porte) + '</span>' : '<span></span>') +
-              (wa ? '<a class="kcard-wa" href="https://wa.me/55' + wa + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="WhatsApp">📱</a>' : '') +
+            '<div class="kcard-stage-badge" style="background:' + badgeBg + ';color:' + badgeColor + '">■ ' + esc(stage.label) + '</div>' +
+            '<div class="kcard-titulo">' + esc(titulo) + '</div>' +
+            (lead.empresa && titulo !== lead.empresa ? '<div class="kcard-empresa-sub">' + esc(lead.empresa) + '</div>' : (lead.nome ? '<div class="kcard-empresa-sub">' + esc(lead.nome) + '</div>' : '')) +
+            '<div class="kcard-meta-row">' +
+              (n.valor > 0 ? '<span style="font-size:12px;font-weight:700;color:#059669">' + fmtMoney(n.valor) + '</span>' : '<span></span>') +
+              (wa ? '<a href="https://wa.me/55' + wa + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="WhatsApp" style="font-size:16px;text-decoration:none">💬</a>' : '<span></span>') +
             '</div>' +
-            (function(){
-              var props = loadPropostas().filter(function(p){ return p.leadId === n.leadId; });
-              var nProps = props.length;
-              var clickFn;
-              if (nProps === 0) {
-                clickFn = "openPropostaModal('" + n.leadId + "')";
-              } else if (nProps === 1) {
-                clickFn = "editarProposta('" + props[0].id + "')";
-              } else {
-                // Múltiplas: abre o detalhe para o usuário escolher
-                clickFn = "openDetail('" + n.leadId + "','" + n.id + "')";
-              }
-              return '<button class="kcard-prop-btn" onclick="event.stopPropagation();' + clickFn + '">' +
-                '📄 ' + (nProps > 0 ? nProps + ' Proposta' + (nProps > 1 ? 's' : '') : 'Nova Proposta') +
-              '</button>';
-            })() +
-            (function(){
-              var cCount = (n.comentarios || []).length;
-              var fu = n.followUp;
-              var fuStr = '';
-              if (fu && fu.data) {
-                var d = new Date(fu.data + 'T12:00:00');
-                fuStr = d.toLocaleDateString('pt-BR') + (fu.hora ? ' ' + fu.hora : '');
-              }
-              return (cCount > 0 ? '<div class="kcard-comment-badge">💬 ' + cCount + ' Comentário' + (cCount !== 1 ? 's' : '') + '</div>' : '') +
-              (fuStr ? '<div class="kcard-followup-badge">📅 Follow-up: ' + fuStr + '</div>' : '');
-            })() +
+            (fuStr ? '<div class="kcard-followup-badge" style="margin-top:6px">📅 ' + fuStr + '</div>' : '') +
+            '<button class="kcard-prop-btn" style="margin-top:6px" onclick="event.stopPropagation();' + propClickFn + '">' +
+              '📄 ' + (nProps > 0 ? nProps + ' Proposta' + (nProps > 1 ? 's' : '') : 'Nova Proposta') +
+            '</button>' +
             (stage.id === 'Fechado'
               ? (n.lancadoPropostaId
                   ? '<div class="kcard-financeiro-btn lancado">✅ Lançado no Financeiro</div>'
@@ -6263,6 +6316,89 @@ function addInteracao() {
 }
 window.toggleInteracaoForm = toggleInteracaoForm;
 window.addInteracao        = addInteracao;
+
+// ── Contatos Adicionais ─────────────────────────────────────────────────────
+function toggleContatoForm() {
+  var f = document.getElementById('dContatoForm');
+  if (!f) return;
+  var show = f.style.display === 'none';
+  f.style.display = show ? '' : 'none';
+  if (show) {
+    document.getElementById('dContatoNome').value = '';
+    document.getElementById('dContatoCargo').value = '';
+    document.getElementById('dContatoEmail').value = '';
+    document.getElementById('dContatoWhatsapp').value = '';
+    document.getElementById('dContatoNome').focus();
+  }
+}
+
+function renderLeadContatos(leadId) {
+  var el = document.getElementById('dContatosList');
+  if (!el) return;
+  var lead = leads.find(function(l){ return l.id === leadId; });
+  if (!lead) return;
+  var extra = getLeadExtra(leadId) || {};
+  var adicionais = extra.contatosAdicionais || [];
+  var html = '';
+  // Contato principal
+  html += '<div class="contato-item contato-primario">' +
+    '<div class="contato-avatar">' + (lead.nome ? lead.nome.charAt(0).toUpperCase() : '?') + '</div>' +
+    '<div class="contato-body">' +
+      '<div class="contato-nome">' + esc(lead.nome || '—') + '<span class="badge-primary">Principal</span></div>' +
+      '<div class="contato-meta">' +
+        (lead.cargo ? lead.cargo : '') +
+        (lead.email ? ' · <a href="mailto:' + esc(lead.email) + '" style="color:#2563eb">' + esc(lead.email) + '</a>' : '') +
+        (lead.whatsapp ? ' · 📱 ' + esc(lead.whatsapp) : '') +
+      '</div>' +
+    '</div>' +
+  '</div>';
+  // Contatos adicionais
+  adicionais.forEach(function(c) {
+    html += '<div class="contato-item">' +
+      '<div class="contato-avatar" style="background:#64748b22;color:#64748b">' + (c.nome ? c.nome.charAt(0).toUpperCase() : '?') + '</div>' +
+      '<div class="contato-body">' +
+        '<div class="contato-nome">' + esc(c.nome || '—') + '</div>' +
+        '<div class="contato-meta">' +
+          (c.cargo ? c.cargo : '') +
+          (c.email ? ' · <a href="mailto:' + esc(c.email) + '" style="color:#2563eb">' + esc(c.email) + '</a>' : '') +
+          (c.whatsapp ? ' · 📱 ' + esc(c.whatsapp) : '') +
+        '</div>' +
+      '</div>' +
+      '<button onclick="removeContatoAdicional(\'' + leadId + '\',\'' + c.id + '\')" title="Remover" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;flex-shrink:0;padding:0 4px">✕</button>' +
+    '</div>';
+  });
+  if (!adicionais.length) {
+    html += '<div style="color:#94a3b8;font-size:13px;font-style:italic;padding:4px 0">Nenhum contato adicional cadastrado.</div>';
+  }
+  el.innerHTML = html;
+}
+
+function addContatoAdicional() {
+  if (!_currentDetailLeadId) return;
+  var nome = document.getElementById('dContatoNome').value.trim();
+  if (!nome) { document.getElementById('dContatoNome').focus(); return; }
+  var cargo    = document.getElementById('dContatoCargo').value.trim();
+  var email    = document.getElementById('dContatoEmail').value.trim();
+  var whatsapp = document.getElementById('dContatoWhatsapp').value.trim();
+  var extra = getLeadExtra(_currentDetailLeadId) || {};
+  if (!extra.contatosAdicionais) extra.contatosAdicionais = [];
+  extra.contatosAdicionais.push({ id: generateId(), nome: nome, cargo: cargo, email: email, whatsapp: whatsapp });
+  setLeadExtra(_currentDetailLeadId, extra);
+  toggleContatoForm();
+  renderLeadContatos(_currentDetailLeadId);
+}
+
+function removeContatoAdicional(leadId, contatoId) {
+  if (!confirm('Remover este contato?')) return;
+  var extra = getLeadExtra(leadId) || {};
+  extra.contatosAdicionais = (extra.contatosAdicionais || []).filter(function(c){ return c.id !== contatoId; });
+  setLeadExtra(leadId, extra);
+  renderLeadContatos(leadId);
+}
+
+window.toggleContatoForm     = toggleContatoForm;
+window.addContatoAdicional   = addContatoAdicional;
+window.removeContatoAdicional = removeContatoAdicional;
 
 // ── Notificações: tarefas atrasadas + follow-ups ────────────────────────────
 function checkTarefasNotifs() {
