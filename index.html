@@ -6580,7 +6580,7 @@ function renderDashboard() {
   document.getElementById('kpiLeads').textContent = leads.length;
 
   var recMes = receitas
-    .filter(function(r) { return (r.vencimento || '').startsWith(mesSel); })
+    .filter(function(r) { return !r.eventoOnly && (r.vencimento || '').startsWith(mesSel); })
     .reduce(function(s, r) { return s + (+r.valor || 0); }, 0);
   document.getElementById('kpiReceita').textContent = _fmtK(recMes);
 
@@ -6600,22 +6600,16 @@ function renderDashboard() {
     mesLabel.textContent = 'Mês atual: ' + _MONTH_PT[parseInt(mp[1], 10) - 1] + '/' + mp[0].slice(2);
   }
 
-  // Chart 1 — Receitas × Despesas últimos 6 meses
+  // Chart 1 — Receitas × Despesas últimos 6 meses (usa vencimento, igual à "Receita Prevista" do financeiro)
   var months6   = _getLastMonths(6);
   var recFin    = receitas.filter(function(r){ return !r.eventoOnly; });
   var recData   = months6.map(function(m) {
-    var recebido = recFin.filter(function(r){ return r.status === 'Recebido' && (r.dataRecebimento||'').startsWith(m); })
-                         .reduce(function(s,r){ return s + (+r.valor||0); }, 0);
-    var previsto = recFin.filter(function(r){ return r.status !== 'Recebido' && (r.vencimento||'').startsWith(m); })
-                         .reduce(function(s,r){ return s + (+r.valor||0); }, 0);
-    return recebido + previsto;
+    return recFin.filter(function(r){ return (r.vencimento||'').startsWith(m); })
+                 .reduce(function(s,r){ return s + (+r.valor||0); }, 0);
   });
   var despData  = months6.map(function(m) {
-    var pago     = despesas.filter(function(d){ return d.status === 'Pago' && (d.dataPagamento||'').startsWith(m); })
-                           .reduce(function(s,d){ return s + (+d.valor||0); }, 0);
-    var previsto = despesas.filter(function(d){ return d.status !== 'Pago' && (d.vencimento||'').startsWith(m); })
-                           .reduce(function(s,d){ return s + (+d.valor||0); }, 0);
-    return pago + previsto;
+    return despesas.filter(function(d){ return (d.vencimento||'').startsWith(m); })
+                   .reduce(function(s,d){ return s + (+d.valor||0); }, 0);
   });
   _destroyChart('recDesp');
   _dashCharts['recDesp'] = new Chart(
