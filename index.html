@@ -702,17 +702,17 @@
 
     .kanban-card {
       background: #fff;
-      border-radius: 8px;
+      border-radius: 6px;
       border: 1px solid #e2e8f0;
-      padding: 12px 14px;
+      padding: 8px 10px;
       cursor: grab;
       transition: box-shadow .15s, transform .1s;
       user-select: none;
     }
     .kanban-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.10); transform: translateY(-1px); }
     .kanban-card.dragging { opacity: 0.35; box-shadow: 0 4px 16px rgba(0,0,0,.15); }
-    .kcard-empresa { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 2px; }
-    .kcard-nome { font-size: 12px; color: #64748b; margin-bottom: 6px; }
+    .kcard-empresa { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 1px; }
+    .kcard-nome { font-size: 11px; color: #64748b; margin-bottom: 4px; }
     .kcard-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
     .kcard-wa { color: #16a34a; text-decoration: none; font-size: 16px; line-height: 1; }
     .kanban-empty { font-size: 13px; color: #cbd5e1; text-align: center; padding: 24px 8px; font-style: italic; }
@@ -1001,10 +1001,10 @@
     .link-btn { background:none; border:none; color:var(--primary); cursor:pointer; font-size:inherit; text-decoration:underline; padding:0; font-family:inherit; }
 
     /* ── Kanban cards compactos ──────────────────────────────────────── */
-    .kcard-stage-badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; padding:2px 7px; border-radius:4px; margin-bottom:7px; }
-    .kcard-titulo { font-size:13px; font-weight:700; color:#0f172a; margin-bottom:1px; line-height:1.35; padding-right:18px; }
-    .kcard-empresa-sub { font-size:11px; color:#64748b; margin-bottom:5px; }
-    .kcard-meta-row { display:flex; align-items:center; justify-content:space-between; margin-top:5px; }
+    .kcard-stage-badge { display:inline-flex; align-items:center; gap:3px; font-size:9px; font-weight:700; padding:1px 5px; border-radius:3px; margin-bottom:4px; }
+    .kcard-titulo { font-size:12px; font-weight:700; color:#0f172a; margin-bottom:1px; line-height:1.3; padding-right:16px; }
+    .kcard-empresa-sub { font-size:10px; color:#64748b; margin-bottom:3px; }
+    .kcard-meta-row { display:flex; align-items:center; justify-content:space-between; margin-top:4px; }
   </style>
 </head>
 <body>
@@ -3940,14 +3940,10 @@ function renderKanban() {
             '<div class="kcard-stage-badge" style="background:' + badgeBg + ';color:' + badgeColor + '">■ ' + esc(stage.label) + '</div>' +
             '<div class="kcard-titulo">' + esc(titulo) + '</div>' +
             (lead.empresa && titulo !== lead.empresa ? '<div class="kcard-empresa-sub">' + esc(lead.empresa) + '</div>' : (lead.nome ? '<div class="kcard-empresa-sub">' + esc(lead.nome) + '</div>' : '')) +
-            '<div class="kcard-meta-row" style="margin-top:7px">' +
-              (nProps > 0
-                ? '<span style="font-size:12px;font-weight:700;color:#059669" title="' + nProps + ' proposta' + (nProps > 1 ? 's' : '') + '">📄 ' + fmtMoney(propTotal) + '</span>'
-                : '<span style="font-size:11px;color:#94a3b8">Sem proposta</span>') +
-              (wa ? '<a href="https://wa.me/55' + wa + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="WhatsApp" style="font-size:16px;text-decoration:none">💬</a>' : '<span></span>') +
-            '</div>' +
-            (nProps > 0 ? '<div style="font-size:10px;color:#94a3b8;margin-top:2px">' + nProps + ' proposta' + (nProps > 1 ? 's' : '') + '</div>' : '') +
-            (fuStr ? '<div class="kcard-followup-badge" style="margin-top:6px">📅 ' + fuStr + '</div>' : '') +
+            (nProps > 0
+              ? '<div style="margin-top:4px;font-size:11px;font-weight:700;color:#059669">📄 ' + fmtMoney(propTotal) + ' <span style="font-weight:400;color:#94a3b8;font-size:10px">(' + nProps + ' proposta' + (nProps > 1 ? 's' : '') + ')</span></div>'
+              : '') +
+            (fuStr ? '<div class="kcard-followup-badge" style="margin-top:5px;font-size:10px">📅 ' + fuStr + '</div>' : '') +
             (stage.id === 'Fechado'
               ? (n.lancadoPropostaId
                   ? '<div class="kcard-financeiro-btn lancado">✅ Lançado no Financeiro</div>'
