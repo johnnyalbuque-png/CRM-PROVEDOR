@@ -3929,10 +3929,7 @@ function renderKanban() {
           }
           var props = loadPropostas().filter(function(p){ return p.leadId === n.leadId; });
           var nProps = props.length;
-          var propClickFn;
-          if (nProps === 0) { propClickFn = "openPropostaModal('" + n.leadId + "')"; }
-          else if (nProps === 1) { propClickFn = "editarProposta('" + props[0].id + "')"; }
-          else { propClickFn = "openDetail('" + n.leadId + "','" + n.id + "')"; }
+          var propTotal = props.reduce(function(acc, p){ return acc + (+p.total || 0); }, 0);
           var badgeColor = (stage.cor || '#64748b');
           var badgeBg = badgeColor + '22';
           return '<div class="kanban-card" draggable="true"' +
@@ -3943,14 +3940,14 @@ function renderKanban() {
             '<div class="kcard-stage-badge" style="background:' + badgeBg + ';color:' + badgeColor + '">■ ' + esc(stage.label) + '</div>' +
             '<div class="kcard-titulo">' + esc(titulo) + '</div>' +
             (lead.empresa && titulo !== lead.empresa ? '<div class="kcard-empresa-sub">' + esc(lead.empresa) + '</div>' : (lead.nome ? '<div class="kcard-empresa-sub">' + esc(lead.nome) + '</div>' : '')) +
-            '<div class="kcard-meta-row">' +
-              (n.valor > 0 ? '<span style="font-size:12px;font-weight:700;color:#059669">' + fmtMoney(n.valor) + '</span>' : '<span></span>') +
+            '<div class="kcard-meta-row" style="margin-top:7px">' +
+              (nProps > 0
+                ? '<span style="font-size:12px;font-weight:700;color:#059669" title="' + nProps + ' proposta' + (nProps > 1 ? 's' : '') + '">📄 ' + fmtMoney(propTotal) + '</span>'
+                : '<span style="font-size:11px;color:#94a3b8">Sem proposta</span>') +
               (wa ? '<a href="https://wa.me/55' + wa + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="WhatsApp" style="font-size:16px;text-decoration:none">💬</a>' : '<span></span>') +
             '</div>' +
+            (nProps > 0 ? '<div style="font-size:10px;color:#94a3b8;margin-top:2px">' + nProps + ' proposta' + (nProps > 1 ? 's' : '') + '</div>' : '') +
             (fuStr ? '<div class="kcard-followup-badge" style="margin-top:6px">📅 ' + fuStr + '</div>' : '') +
-            '<button class="kcard-prop-btn" style="margin-top:6px" onclick="event.stopPropagation();' + propClickFn + '">' +
-              '📄 ' + (nProps > 0 ? nProps + ' Proposta' + (nProps > 1 ? 's' : '') : 'Nova Proposta') +
-            '</button>' +
             (stage.id === 'Fechado'
               ? (n.lancadoPropostaId
                   ? '<div class="kcard-financeiro-btn lancado">✅ Lançado no Financeiro</div>'
