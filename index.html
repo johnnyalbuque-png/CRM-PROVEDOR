@@ -6601,14 +6601,21 @@ function renderDashboard() {
   }
 
   // Chart 1 — Receitas × Despesas últimos 6 meses
-  var months6  = _getLastMonths(6);
-  var recData  = months6.map(function(m) {
-    return receitas.filter(function(r) { return (r.vencimento || '').startsWith(m); })
-                   .reduce(function(s, r) { return s + (+r.valor || 0); }, 0);
+  var months6   = _getLastMonths(6);
+  var recFin    = receitas.filter(function(r){ return !r.eventoOnly; });
+  var recData   = months6.map(function(m) {
+    var recebido = recFin.filter(function(r){ return r.status === 'Recebido' && (r.dataRecebimento||'').startsWith(m); })
+                         .reduce(function(s,r){ return s + (+r.valor||0); }, 0);
+    var previsto = recFin.filter(function(r){ return r.status !== 'Recebido' && (r.vencimento||'').startsWith(m); })
+                         .reduce(function(s,r){ return s + (+r.valor||0); }, 0);
+    return recebido + previsto;
   });
-  var despData = months6.map(function(m) {
-    return despesas.filter(function(d) { return (d.vencimento || '').startsWith(m); })
-                   .reduce(function(s, d) { return s + (+d.valor || 0); }, 0);
+  var despData  = months6.map(function(m) {
+    var pago     = despesas.filter(function(d){ return d.status === 'Pago' && (d.dataPagamento||'').startsWith(m); })
+                           .reduce(function(s,d){ return s + (+d.valor||0); }, 0);
+    var previsto = despesas.filter(function(d){ return d.status !== 'Pago' && (d.vencimento||'').startsWith(m); })
+                           .reduce(function(s,d){ return s + (+d.valor||0); }, 0);
+    return pago + previsto;
   });
   _destroyChart('recDesp');
   _dashCharts['recDesp'] = new Chart(
