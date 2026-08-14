@@ -633,21 +633,43 @@
     .nav-item {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       width: 100%;
-      padding: 10px 20px;
+      padding: 8px 16px;
       border: none;
       background: none;
       cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
+      font-size: 11px;
+      font-weight: 600;
       color: #64748b;
       text-align: left;
       transition: background .15s, color .15s;
       border-left: 3px solid transparent;
+      letter-spacing: .3px;
     }
     .nav-item:hover { background: #f8fafc; color: #0f172a; }
     .nav-item.active { background: #eff6ff; color: #2563eb; border-left-color: #2563eb; }
+    .nav-group-header {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 8px 16px; border: none; background: none; cursor: pointer;
+      font-size: 11px; font-weight: 700; color: #64748b; text-align: left;
+      border-left: 3px solid transparent; transition: background .15s, color .15s;
+      letter-spacing: .3px;
+    }
+    .nav-group-header:hover { background: #f8fafc; color: #0f172a; }
+    .nav-group-header.active { background: #eff6ff; color: #2563eb; border-left-color: #2563eb; }
+    .nav-chevron { margin-left: auto; transition: transform .2s; flex-shrink:0; }
+    .nav-chevron.open { transform: rotate(90deg); }
+    .nav-sub-items { overflow: hidden; transition: max-height .2s ease; max-height: 0; }
+    .nav-sub-items.open { max-height: 200px; }
+    .nav-sub-item {
+      display: flex; align-items: center; gap: 7px; width: 100%;
+      padding: 6px 16px 6px 32px; border: none; background: none; cursor: pointer;
+      font-size: 11px; font-weight: 500; color: #64748b; text-align: left;
+      border-left: 3px solid transparent; transition: background .15s, color .15s;
+    }
+    .nav-sub-item:hover { background: #f8fafc; color: #0f172a; }
+    .nav-sub-item.active { background: #eff6ff; color: #2563eb; border-left-color: #2563eb; font-weight:600; }
 
     /* ── Kanban ── */
     .crm-toolbar {
@@ -1212,28 +1234,50 @@
     <div class="sidebar-section-title">Menu</div>
     <nav>
       <button class="nav-item" id="navDashboard" onclick="showView('dashboard')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
           <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
         </svg>
         DASHBOARD
       </button>
-      <button class="nav-item active" id="navLeads" onclick="showView('leads')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/>
-          <line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/>
+
+      <!-- COMERCIAL group -->
+      <button class="nav-group-header" id="navComercial" onclick="toggleComercial()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
         </svg>
-        LEADS
-      </button>
-      <button class="nav-item" id="navCRM" onclick="showView('crm')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="2" y="3" width="6" height="18" rx="1"/><rect x="9" y="3" width="6" height="12" rx="1"/>
-          <rect x="16" y="3" width="6" height="15" rx="1"/>
+        COMERCIAL
+        <svg class="nav-chevron" id="navComercialChevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="9 18 15 12 9 6"/>
         </svg>
-        CRM
       </button>
+      <div class="nav-sub-items" id="navComercialSub">
+        <button class="nav-sub-item active" id="navLeads" onclick="showView('leads')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/>
+            <line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/>
+          </svg>
+          Leads
+        </button>
+        <button class="nav-sub-item" id="navCRM" onclick="showView('crm')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="6" height="18" rx="1"/><rect x="9" y="3" width="6" height="12" rx="1"/>
+            <rect x="16" y="3" width="6" height="15" rx="1"/>
+          </svg>
+          CRM
+        </button>
+        <button class="nav-sub-item" id="navMetas" onclick="showView('metas')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+          </svg>
+          Metas
+        </button>
+      </div>
+
       <button class="nav-item" id="navTarefas" onclick="showView('tarefas')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="9 11 12 14 22 4"/>
           <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
         </svg>
@@ -1241,14 +1285,14 @@
         <span class="nav-badge" id="navTarefasBadge" style="display:none">0</span>
       </button>
       <button class="nav-item" id="navFinanceiro" onclick="showView('financeiro')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
         </svg>
         FINANCEIRO
         <span class="nav-badge" id="navFinBadge" style="display:none">0</span>
       </button>
       <button class="nav-item" id="navServicos" onclick="showView('servicos')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>
           <path d="M16 10a4 4 0 0 1-8 0"/>
         </svg>
@@ -1411,6 +1455,68 @@
         </select>
       </div>
       <div class="tarefa-list" id="tarefaList"></div>
+    </div>
+
+    <!-- Metas -->
+    <div id="metasView" style="display:none;padding:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <h2 style="margin:0;font-size:18px;font-weight:800;color:#0f172a">🎯 Metas Comerciais</h2>
+        <button class="btn btn-primary" onclick="openMetaModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nova Meta
+        </button>
+      </div>
+      <div id="metasList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px"></div>
+    </div>
+
+    <!-- Modal Nova Meta -->
+    <div class="modal-overlay" id="metaModalOverlay">
+      <div class="modal" style="max-width:460px">
+        <div class="modal-header">
+          <h2 class="modal-title" id="metaModalTitle">Nova Meta</h2>
+          <button class="modal-close" onclick="closeMetaModal()">✕</button>
+        </div>
+        <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+          <input type="hidden" id="metaId" />
+          <div class="form-group" style="margin:0">
+            <label>Nome da meta</label>
+            <input type="text" id="metaNome" class="form-control" placeholder='Ex: Faturamento Q3 2026' />
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Tipo</label>
+            <select id="metaTipo" class="form-control" onchange="updateMetaTipoUI()">
+              <option value="faturamento">💰 Faturamento (Receita Prevista)</option>
+              <option value="leads">👥 Leads captados</option>
+              <option value="negocios">🤝 Negócios fechados</option>
+              <option value="despesa_max">💸 Despesa máxima</option>
+            </select>
+          </div>
+          <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-group" style="margin:0">
+              <label id="metaValorLabel">Valor alvo (R$)</label>
+              <input type="number" id="metaValor" class="form-control" placeholder="0,00" min="0" step="0.01" />
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>Responsável (opcional)</label>
+              <input type="text" id="metaResponsavel" class="form-control" placeholder="Nome ou todos" />
+            </div>
+          </div>
+          <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-group" style="margin:0">
+              <label>Data início</label>
+              <input type="date" id="metaIni" class="form-control" />
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>Data fim</label>
+              <input type="date" id="metaFim" class="form-control" />
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+            <button class="btn btn-ghost" onclick="closeMetaModal()">Cancelar</button>
+            <button class="btn btn-primary" onclick="saveMeta()">Salvar Meta</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Financeiro -->
@@ -3447,6 +3553,7 @@ function initApp(session) {
     document.getElementById('menuDivider').style.display  = 'block';
   }
   document.getElementById('loginOverlay').classList.remove('open');
+  _setComercialOpen(true);
   populateStatusDropdown();
   populateFilterStatus();
   render();
@@ -3657,22 +3764,43 @@ window.editUser   = editUser;
 window.toggleUser = toggleUser;
 
 // ── Navegação ──────────────────────────────────────────────────────────────
+var _comercialOpen = true; // começa aberto pois leads é a view inicial
+
+function toggleComercial() {
+  _comercialOpen = !_comercialOpen;
+  document.getElementById('navComercialSub').classList.toggle('open', _comercialOpen);
+  document.getElementById('navComercialChevron').classList.toggle('open', _comercialOpen);
+}
+
+function _setComercialOpen(open) {
+  _comercialOpen = open;
+  document.getElementById('navComercialSub').classList.toggle('open', open);
+  document.getElementById('navComercialChevron').classList.toggle('open', open);
+}
+
 function showView(name) {
-  var views = { dashboard: 'dashboardView', leads: 'leadsView', crm: 'crmView', tarefas: 'tarefasView', financeiro: 'financeiroView', servicos: 'servicosView' };
-  var navs  = { dashboard: 'navDashboard', leads: 'navLeads', crm: 'navCRM', tarefas: 'navTarefas', financeiro: 'navFinanceiro', servicos: 'navServicos' };
+  var views = { dashboard:'dashboardView', leads:'leadsView', crm:'crmView', metas:'metasView', tarefas:'tarefasView', financeiro:'financeiroView', servicos:'servicosView' };
+  var navs  = { dashboard:'navDashboard', leads:'navLeads', crm:'navCRM', metas:'navMetas', tarefas:'navTarefas', financeiro:'navFinanceiro', servicos:'navServicos' };
+  var comercialViews = ['leads','crm','metas'];
   Object.keys(views).forEach(function(k) {
     var el = document.getElementById(views[k]);
     if (el) el.style.display = k === name ? '' : 'none';
     var nav = document.getElementById(navs[k]);
     if (nav) nav.classList.toggle('active', k === name);
   });
+  // Manter COMERCIAL aberto quando sub-item está ativo
+  var isComercial = comercialViews.indexOf(name) !== -1;
+  document.getElementById('navComercial').classList.toggle('active', isComercial);
+  if (isComercial) _setComercialOpen(true);
   if (name === 'dashboard')  renderDashboard();
   if (name === 'crm')        renderKanban();
+  if (name === 'metas')      renderMetas();
   if (name === 'servicos')   renderServicos();
   if (name === 'tarefas')    renderTarefas();
   if (name === 'financeiro') renderFinanceiro();
 }
-window.showView = showView;
+window.showView       = showView;
+window.toggleComercial = toggleComercial;
 
 // ── Etapas do CRM ──────────────────────────────────────────────────────────
 var STAGES_KEY = 'crm_etapas';
@@ -6696,10 +6824,149 @@ function renderDashboard() {
 }
 window.renderDashboard = renderDashboard;
 
+// ── Metas ──────────────────────────────────────────────────────────────────
+var METAS_KEY = 'crm_metas';
+function loadMetas() { return _cfgCache[METAS_KEY] || []; }
+function saveMetas(a){ saveConfigBg(METAS_KEY, a); }
+
+function openMetaModal(id) {
+  var m = id ? loadMetas().find(function(x){ return x.id === id; }) : null;
+  document.getElementById('metaId').value          = m ? m.id : '';
+  document.getElementById('metaNome').value         = m ? m.nome : '';
+  document.getElementById('metaTipo').value         = m ? m.tipo : 'faturamento';
+  document.getElementById('metaValor').value        = m ? m.valor : '';
+  document.getElementById('metaResponsavel').value  = m ? (m.responsavel || '') : '';
+  document.getElementById('metaIni').value          = m ? m.ini : '';
+  document.getElementById('metaFim').value          = m ? m.fim : '';
+  document.getElementById('metaModalTitle').textContent = m ? 'Editar Meta' : 'Nova Meta';
+  updateMetaTipoUI();
+  document.getElementById('metaModalOverlay').classList.add('open');
+}
+function closeMetaModal() { document.getElementById('metaModalOverlay').classList.remove('open'); }
+
+function updateMetaTipoUI() {
+  var tipo = document.getElementById('metaTipo').value;
+  var label = { faturamento:'Valor alvo (R$)', leads:'Qtd. de leads', negocios:'Qtd. de negócios', despesa_max:'Limite de despesa (R$)' }[tipo] || 'Valor alvo';
+  document.getElementById('metaValorLabel').textContent = label;
+}
+
+function saveMeta() {
+  var nome  = document.getElementById('metaNome').value.trim();
+  var valor = parseFloat(document.getElementById('metaValor').value) || 0;
+  var ini   = document.getElementById('metaIni').value;
+  var fim   = document.getElementById('metaFim').value;
+  if (!nome)  { alert('Informe o nome da meta.'); return; }
+  if (!valor) { alert('Informe o valor alvo.'); return; }
+  if (!ini || !fim) { alert('Informe o período da meta.'); return; }
+  var metas = loadMetas();
+  var id    = document.getElementById('metaId').value;
+  var obj   = { id: id || generateId(), nome: nome, tipo: document.getElementById('metaTipo').value,
+    valor: valor, ini: ini, fim: fim,
+    responsavel: document.getElementById('metaResponsavel').value.trim(), criadoEm: Date.now() };
+  if (id) { var idx = metas.findIndex(function(x){ return x.id === id; }); if (idx !== -1) metas[idx] = obj; }
+  else metas.push(obj);
+  saveMetas(metas);
+  closeMetaModal();
+  renderMetas();
+}
+
+function deleteMeta(id) {
+  if (!confirm('Excluir esta meta?')) return;
+  saveMetas(loadMetas().filter(function(x){ return x.id !== id; }));
+  renderMetas();
+}
+
+function _calcMetaProgress(m) {
+  var receitas = loadReceita().filter(function(i){ return !i.eventoOnly; });
+  var despesas = loadContasPagar();
+  var atual = 0;
+  if (m.tipo === 'faturamento') {
+    atual = receitas.filter(function(i){ return (i.vencimento||'') >= m.ini && (i.vencimento||'') <= m.fim; })
+                    .reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+  } else if (m.tipo === 'despesa_max') {
+    atual = despesas.filter(function(i){ return (i.vencimento||'') >= m.ini && (i.vencimento||'') <= m.fim; })
+                    .reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+  } else if (m.tipo === 'leads') {
+    var iniTs = new Date(m.ini).getTime();
+    var fimTs = new Date(m.fim + 'T23:59:59').getTime();
+    atual = leads.filter(function(l){ var t = l.createdAt||0; return t >= iniTs && t <= fimTs; }).length;
+  } else if (m.tipo === 'negocios') {
+    atual = loadNegocios().filter(function(n){ return n.stageId === 'Fechado' && (n.criadoEm||0) >= new Date(m.ini).getTime() && (n.criadoEm||0) <= new Date(m.fim+'T23:59:59').getTime(); }).length;
+  }
+  return atual;
+}
+
+function renderMetas() {
+  var el = document.getElementById('metasList');
+  if (!el) return;
+  var metas = loadMetas();
+  var today = getTodayStr();
+  if (!metas.length) {
+    el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:48px 24px;color:#94a3b8;font-size:14px">Nenhuma meta cadastrada.<br><small>Clique em "Nova Meta" para começar.</small></div>';
+    return;
+  }
+  el.innerHTML = metas.map(function(m) {
+    var atual    = _calcMetaProgress(m);
+    var pct      = m.tipo === 'despesa_max'
+      ? Math.min(100, Math.round((atual / m.valor) * 100))
+      : Math.min(100, Math.round((atual / m.valor) * 100));
+    var expirada = m.fim < today;
+    var atingida = pct >= 100;
+    var emRisco  = !atingida && !expirada && pct < 60 && m.fim <= _addDays(today, 7);
+    var status, statusColor;
+    if (atingida)       { status = '🟢 Atingida';     statusColor = '#059669'; }
+    else if (expirada)  { status = '⚫ Expirada';     statusColor = '#64748b'; }
+    else if (emRisco)   { status = '🔴 Em risco';     statusColor = '#dc2626'; }
+    else                { status = '🟡 Em andamento'; statusColor = '#d97706'; }
+    var barColor = atingida ? '#059669' : (emRisco || m.tipo === 'despesa_max' && pct > 80) ? '#dc2626' : '#2563eb';
+    var isMoney  = m.tipo === 'faturamento' || m.tipo === 'despesa_max';
+    var atualStr = isMoney ? fmtMoney(atual) : atual + (m.tipo === 'leads' ? ' leads' : ' negócios');
+    var alvoStr  = isMoney ? fmtMoney(m.valor) : m.valor + (m.tipo === 'leads' ? ' leads' : ' negócios');
+    var faltaVal = m.valor - atual;
+    var faltaStr = faltaVal > 0 ? (isMoney ? 'Faltam ' + fmtMoney(faltaVal) : 'Faltam ' + faltaVal) : 'Meta atingida!';
+    var diasRest = Math.max(0, Math.round((new Date(m.fim+'T12:00:00') - new Date()) / 86400000));
+    var tipoLabel= { faturamento:'💰 Faturamento', leads:'👥 Leads', negocios:'🤝 Negócios fechados', despesa_max:'💸 Despesa máxima' }[m.tipo] || m.tipo;
+    return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;position:relative">' +
+      '<button onclick="deleteMeta(\'' + m.id + '\')" title="Excluir" style="position:absolute;top:10px;right:10px;background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:14px">✕</button>' +
+      '<button onclick="openMetaModal(\'' + m.id + '\')" title="Editar" style="position:absolute;top:10px;right:30px;background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:13px">✏️</button>' +
+      '<div style="font-size:10px;color:#94a3b8;margin-bottom:4px">' + tipoLabel + (m.responsavel ? ' · ' + esc(m.responsavel) : '') + '</div>' +
+      '<div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:2px">' + esc(m.nome) + '</div>' +
+      '<div style="font-size:11px;color:#64748b;margin-bottom:12px">' +
+        new Date(m.ini+'T12:00:00').toLocaleDateString('pt-BR') + ' → ' + new Date(m.fim+'T12:00:00').toLocaleDateString('pt-BR') +
+        (!expirada ? ' · <b>' + diasRest + ' dias restantes</b>' : '') +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">' +
+        '<span style="font-size:20px;font-weight:800;color:' + barColor + '">' + atualStr + '</span>' +
+        '<span style="font-size:12px;color:#94a3b8">/ ' + alvoStr + '</span>' +
+      '</div>' +
+      '<div style="background:#f1f5f9;border-radius:99px;height:8px;overflow:hidden;margin-bottom:8px">' +
+        '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:99px;transition:width .4s"></div>' +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center">' +
+        '<span style="font-size:11px;color:#64748b">' + faltaStr + '</span>' +
+        '<span style="font-size:11px;font-weight:700;color:' + statusColor + '">' + status + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function _addDays(dateStr, days) {
+  var d = new Date(dateStr + 'T12:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+window.openMetaModal   = openMetaModal;
+window.closeMetaModal  = closeMetaModal;
+window.updateMetaTipoUI = updateMetaTipoUI;
+window.saveMeta        = saveMeta;
+window.deleteMeta      = deleteMeta;
+window.renderMetas     = renderMetas;
+
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
   // Preload all configs from Supabase into memory (single query)
-  var cfgKeys = [STAGES_KEY, NEGOCIOS_KEY, SERVICOS_KEY, LEAD_SERVS_KEY, LEAD_EXTRA_KEY, PROPOSTAS_KEY, TAREFAS_KEY, CONTAS_PAGAR_KEY, RECEITA_KEY, EVENTOS_KEY, INTERACOES_KEY];
+  var cfgKeys = [STAGES_KEY, NEGOCIOS_KEY, SERVICOS_KEY, LEAD_SERVS_KEY, LEAD_EXTRA_KEY, PROPOSTAS_KEY, TAREFAS_KEY, CONTAS_PAGAR_KEY, RECEITA_KEY, EVENTOS_KEY, INTERACOES_KEY, METAS_KEY];
   try {
     var { data: cfgRows } = await db.from('configs').select('id,value').in('id', cfgKeys);
     if (cfgRows) cfgRows.forEach(function(row){ _cfgCache[row.id] = row.value; });
