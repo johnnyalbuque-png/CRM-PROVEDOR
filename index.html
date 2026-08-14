@@ -1425,9 +1425,6 @@
         </div>
       </div>
 
-      <!-- Visão Anual -->
-      <div id="finAnualPanel" style="margin-bottom:4px"></div>
-
       <!-- Dashboard financeiro -->
       <div id="finDashPanel" class="fin-dash">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:-8px">
@@ -1528,6 +1525,7 @@
 
     <!-- Dashboard com Gráficos -->
     <div id="dashboardView" style="display:none">
+      <div id="finAnualPanel" style="padding:24px 24px 0"></div>
       <div class="dbrd-header">
         <h2>Dashboard</h2>
         <span class="dbrd-mes-label" id="dbrdMesLabel"></span>
@@ -5343,7 +5341,6 @@ function renderFinAnual() {
 
 function renderFinanceiro() {
   updateNavFinBadge();
-  renderFinAnual();
   showFinTab(_finTab);
 }
 
@@ -6570,6 +6567,7 @@ function _fmtK(v) {
 }
 
 function renderDashboard() {
+  renderFinAnual();
   var today    = getTodayStr();
   var mesSel   = today.slice(0, 7);
   var receitas = loadReceita();
