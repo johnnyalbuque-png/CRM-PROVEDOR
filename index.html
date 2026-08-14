@@ -1655,9 +1655,9 @@
         </div>
       </div>
       <div class="dbrd-charts-grid">
-        <div class="dbrd-chart-card">
-          <div class="dbrd-chart-title">Receitas × Despesas — Últimos 6 Meses</div>
-          <div class="dbrd-chart-wrap"><canvas id="chartRecDesp"></canvas></div>
+        <div class="dbrd-chart-card" style="grid-column:span 2">
+          <div class="dbrd-chart-title">Receitas × Despesas — Últimos 12 Meses</div>
+          <div class="dbrd-chart-wrap" style="height:200px"><canvas id="chartRecDesp"></canvas></div>
         </div>
         <div class="dbrd-chart-card">
           <div class="dbrd-chart-title">Leads por Status</div>
@@ -1672,6 +1672,7 @@
           <div class="dbrd-chart-wrap"><canvas id="chartPipeline"></canvas></div>
         </div>
       </div>
+      <div id="dbrdMetas" style="margin-top:14px"></div>
     </div>
 
     <!-- Serviços / Produtos -->
@@ -6729,14 +6730,14 @@ function renderDashboard() {
     mesLabel.textContent = 'Mês atual: ' + _MONTH_PT[parseInt(mp[1], 10) - 1] + '/' + mp[0].slice(2);
   }
 
-  // Chart 1 — Receitas × Despesas últimos 6 meses (usa vencimento, igual à "Receita Prevista" do financeiro)
-  var months6   = _getLastMonths(6);
+  // Chart 1 — Receitas × Despesas últimos 12 meses
+  var months12  = _getLastMonths(12);
   var recFin    = receitas.filter(function(r){ return !r.eventoOnly; });
-  var recData   = months6.map(function(m) {
+  var recData   = months12.map(function(m) {
     return recFin.filter(function(r){ return (r.vencimento||'').startsWith(m); })
                  .reduce(function(s,r){ return s + (+r.valor||0); }, 0);
   });
-  var despData  = months6.map(function(m) {
+  var despData  = months12.map(function(m) {
     return despesas.filter(function(d){ return (d.vencimento||'').startsWith(m); })
                    .reduce(function(s,d){ return s + (+d.valor||0); }, 0);
   });
@@ -6745,19 +6746,55 @@ function renderDashboard() {
     document.getElementById('chartRecDesp').getContext('2d'), {
       type: 'bar',
       data: {
-        labels: months6.map(_monthLabel),
+        labels: months12.map(_monthLabel),
         datasets: [
-          { label: 'Receitas', data: recData,  backgroundColor: '#16a34a', borderRadius: 4 },
-          { label: 'Despesas', data: despData, backgroundColor: '#dc2626', borderRadius: 4 }
+          { label: 'Receitas', data: recData,  backgroundColor: '#16a34a', borderRadius: 3, barPercentage: 0.45, categoryPercentage: 0.8 },
+          { label: 'Despesas', data: despData, backgroundColor: '#dc2626', borderRadius: 3, barPercentage: 0.45, categoryPercentage: 0.8 }
         ]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
-        scales: { y: { beginAtZero: true, ticks: { callback: function(v) { return _fmtK(v); }, font: { size: 11 } } } }
+        scales: {
+          x: { ticks: { font: { size: 10 } } },
+          y: { beginAtZero: true, ticks: { callback: function(v) { return _fmtK(v); }, font: { size: 11 } } }
+        }
       }
     }
   );
+
+  // Metas ativas no Dashboard
+  var metasAtivas = loadMetas().filter(function(m){ return m.fim >= today; });
+  var dbrdMetasEl = document.getElementById('dbrdMetas');
+  if (dbrdMetasEl) {
+    if (!metasAtivas.length) {
+      dbrdMetasEl.innerHTML = '';
+    } else {
+      dbrdMetasEl.innerHTML =
+        '<div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:10px">🎯 Metas em Andamento</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">' +
+        metasAtivas.map(function(m) {
+          var atual    = _calcMetaProgress(m);
+          var pct      = Math.min(100, Math.round((atual / m.valor) * 100));
+          var barColor = pct >= 100 ? '#059669' : pct < 50 ? '#dc2626' : '#2563eb';
+          var isMoney  = m.tipo === 'faturamento' || m.tipo === 'despesa_max';
+          var atualStr = isMoney ? fmtMoney(atual) : String(atual);
+          var alvoStr  = isMoney ? fmtMoney(m.valor) : String(m.valor);
+          var diasRest = Math.max(0, Math.round((new Date(m.fim+'T12:00:00') - new Date()) / 86400000));
+          return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px">' +
+            '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">' +
+              '<span style="font-size:12px;font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:75%">' + esc(m.nome) + '</span>' +
+              '<span style="font-size:10px;color:#94a3b8;flex-shrink:0;margin-left:6px">' + diasRest + 'd restantes</span>' +
+            '</div>' +
+            '<div style="background:#f1f5f9;border-radius:99px;height:6px;overflow:hidden;margin-bottom:5px">' +
+              '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:99px;transition:width .4s"></div>' +
+            '</div>' +
+            '<div style="font-size:11px;color:#64748b">' + atualStr + ' / ' + alvoStr + ' <span style="font-weight:700;color:' + barColor + '">(' + pct + '%)</span></div>' +
+          '</div>';
+        }).join('') +
+        '</div>';
+    }
+  }
 
   // Chart 2 — Leads por status
   var STATUS_ORDER  = ['Novo','Contatado','Interessado','Proposta','Fechado','Perdido'];
