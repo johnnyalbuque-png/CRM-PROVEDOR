@@ -3915,8 +3915,9 @@ function renderKanbanAnoNav() {
   var curYear  = new Date().getFullYear();
   var anosSet  = {};
   negocios.forEach(function(n){ anosSet[n.ano || curYear] = true; });
-  anosSet[curYear] = true;
-  anosSet[_kanbanAno] = true;
+  anosSet[curYear]     = true;
+  anosSet[curYear + 1] = true; // sempre mostra próximo ano
+  anosSet[_kanbanAno]  = true;
   var anos = Object.keys(anosSet).map(Number).sort();
   var el = document.getElementById('kanbanAnoNav');
   if (!el) return;
