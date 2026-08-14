@@ -1364,7 +1364,10 @@
     <!-- CRM / Kanban -->
     <div id="crmView" style="display:none">
       <div class="crm-toolbar">
-        <h2>PIPELINE CRM</h2>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <h2 style="margin:0">PIPELINE CRM</h2>
+          <div id="kanbanAnoNav" style="display:flex;align-items:center;gap:4px"></div>
+        </div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-outline" id="editStagesBtn">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1421,6 +1424,9 @@
           <button class="fin-tab"        id="finTabEventos" onclick="showFinTab('eventos')">Eventos</button>
         </div>
       </div>
+
+      <!-- Visão Anual -->
+      <div id="finAnualPanel" style="margin-bottom:4px"></div>
 
       <!-- Dashboard financeiro -->
       <div id="finDashPanel" class="fin-dash">
@@ -3713,6 +3719,7 @@ function populateFilterStatus() {
 
 // ── Negócios (pipeline) ────────────────────────────────────────────────────
 var NEGOCIOS_KEY           = 'crm_negocios';
+var _kanbanAno             = new Date().getFullYear();
 var negocioLeadSelecionado = null;
 
 function loadNegocios()    { return _cfgCache[NEGOCIOS_KEY] || []; }
@@ -3802,7 +3809,7 @@ function saveNovaNegocio() {
   var titulo  = document.getElementById('negTitulo').value.trim();
   var valor   = parseFloat(document.getElementById('negValor').value) || 0;
   var negocios = loadNegocios();
-  negocios.push({ id: generateId(), leadId: leadId, stageId: stageId, titulo: titulo, valor: valor, criadoEm: Date.now() });
+  negocios.push({ id: generateId(), leadId: leadId, stageId: stageId, titulo: titulo, valor: valor, ano: _kanbanAno, criadoEm: Date.now() });
   saveNegocios(negocios);
   closeNovaNegocioModal();
   renderKanban();
@@ -3905,13 +3912,36 @@ window.saveDetailFollowUp  = saveDetailFollowUp;
 // ── Kanban ─────────────────────────────────────────────────────────────────
 var draggedNegocioId = null;
 
+function renderKanbanAnoNav() {
+  var negocios = loadNegocios();
+  var curYear  = new Date().getFullYear();
+  var anosSet  = {};
+  negocios.forEach(function(n){ anosSet[n.ano || curYear] = true; });
+  anosSet[curYear] = true;
+  anosSet[_kanbanAno] = true;
+  var anos = Object.keys(anosSet).map(Number).sort();
+  var el = document.getElementById('kanbanAnoNav');
+  if (!el) return;
+  el.innerHTML = anos.map(function(a) {
+    return '<button onclick="setKanbanAno(' + a + ')" style="font-size:11px;padding:3px 10px;border-radius:5px;border:1px solid ' + (a === _kanbanAno ? '#2563eb' : '#cbd5e1') + ';background:' + (a === _kanbanAno ? '#2563eb' : '#fff') + ';color:' + (a === _kanbanAno ? '#fff' : '#64748b') + ';cursor:pointer;font-weight:' + (a === _kanbanAno ? '700' : '500') + '">' + a + '</button>';
+  }).join('');
+}
+
+function setKanbanAno(ano) {
+  _kanbanAno = ano;
+  renderKanban();
+}
+window.setKanbanAno = setKanbanAno;
+
 function renderKanban() {
   var stages   = loadStages();
   var negocios = loadNegocios();
   var lsData   = loadLeadServicos();
+  var curYear  = new Date().getFullYear();
+  renderKanbanAnoNav();
   var board    = document.getElementById('kanbanBoard');
   board.innerHTML = stages.map(function(stage) {
-    var sn = negocios.filter(function(n){ return n.stageId === stage.id; });
+    var sn = negocios.filter(function(n){ return n.stageId === stage.id && (n.ano || curYear) === _kanbanAno; });
     var cards = sn.length
       ? sn.map(function(n) {
           var lead   = leads.find(function(l){ return l.id === n.leadId; }) || {};
@@ -5243,8 +5273,77 @@ function showFinTab(tab) {
   if (tab === 'eventos') renderEventos();
 }
 
+function renderFinAnual() {
+  var el = document.getElementById('finAnualPanel');
+  if (!el) return;
+  var receitas = loadReceita().filter(function(i){ return !i.eventoOnly; });
+  var despesas = loadContasPagar();
+  var anosSet  = {};
+  receitas.forEach(function(i){ var a = (i.dataRecebimento || i.vencimento || '').slice(0,4); if (a) anosSet[a] = true; });
+  despesas.forEach(function(i){ var a = (i.dataPagamento  || i.vencimento || '').slice(0,4); if (a) anosSet[a] = true; });
+  var anos = Object.keys(anosSet).sort();
+  if (!anos.length) { el.innerHTML = ''; return; }
+
+  var dados = anos.map(function(ano) {
+    var rec  = receitas.filter(function(i){ return i.status === 'Recebido' && (i.dataRecebimento||'').startsWith(ano); })
+                       .reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+    var desp = despesas.filter(function(i){ return i.status === 'Pago'     && (i.dataPagamento ||'').startsWith(ano); })
+                       .reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+    return { ano: ano, rec: rec, desp: desp, res: rec - desp };
+  });
+
+  var cardsHtml = dados.map(function(d) {
+    var resColor = d.res >= 0 ? '#059669' : '#dc2626';
+    var resIcon  = d.res >= 0 ? '▲' : '▼';
+    return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;min-width:160px;flex:1">' +
+      '<div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #f1f5f9">' + d.ano + '</div>' +
+      '<div style="font-size:10px;color:#64748b;margin-bottom:1px;text-transform:uppercase;letter-spacing:.5px">Faturamento</div>' +
+      '<div style="font-size:16px;font-weight:700;color:#2563eb;margin-bottom:8px">' + fmtMoney(d.rec) + '</div>' +
+      '<div style="font-size:10px;color:#64748b;margin-bottom:1px;text-transform:uppercase;letter-spacing:.5px">Despesas</div>' +
+      '<div style="font-size:16px;font-weight:700;color:#dc2626;margin-bottom:8px">' + fmtMoney(d.desp) + '</div>' +
+      '<div style="font-size:10px;color:#64748b;margin-bottom:1px;text-transform:uppercase;letter-spacing:.5px">Resultado</div>' +
+      '<div style="font-size:15px;font-weight:700;color:' + resColor + '">' + resIcon + ' ' + fmtMoney(Math.abs(d.res)) + '</div>' +
+    '</div>';
+  }).join('');
+
+  var chartHtml = anos.length > 1
+    ? '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin-top:12px"><canvas id="finAnualChart" height="70"></canvas></div>'
+    : '';
+
+  el.innerHTML = '<div style="margin-bottom:16px">' +
+    '<div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:10px">📊 Visão Anual</div>' +
+    '<div style="display:flex;gap:10px;flex-wrap:wrap">' + cardsHtml + '</div>' +
+    chartHtml +
+  '</div>';
+
+  if (anos.length > 1 && window.Chart) {
+    var ctx = document.getElementById('finAnualChart');
+    if (ctx) {
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: dados.map(function(d){ return d.ano; }),
+          datasets: [
+            { label: 'Faturamento', data: dados.map(function(d){ return d.rec;  }), backgroundColor: '#2563eb99', borderColor: '#2563eb', borderWidth: 1, borderRadius: 4 },
+            { label: 'Despesas',    data: dados.map(function(d){ return d.desp; }), backgroundColor: '#dc262699', borderColor: '#dc2626', borderWidth: 1, borderRadius: 4 },
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'top', labels: { font: { size: 11 } } },
+            tooltip: { callbacks: { label: function(c){ return c.dataset.label + ': ' + fmtMoney(c.raw); } } }
+          },
+          scales: { y: { ticks: { callback: function(v){ return 'R$' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v); }, font: { size: 10 } } } }
+        }
+      });
+    }
+  }
+}
+
 function renderFinanceiro() {
   updateNavFinBadge();
+  renderFinAnual();
   showFinTab(_finTab);
 }
 
