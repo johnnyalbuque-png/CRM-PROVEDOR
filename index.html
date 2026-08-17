@@ -4085,7 +4085,8 @@ function renderKanban() {
             var fd = new Date(fu.data + 'T12:00:00');
             fuStr = fd.toLocaleDateString('pt-BR') + (fu.hora ? ' ' + fu.hora : '');
           }
-          var props = loadPropostas().filter(function(p){ return p.leadId === n.leadId; });
+          var negAno = n.ano || new Date().getFullYear();
+          var props = loadPropostas().filter(function(p){ return p.leadId === n.leadId && new Date(p.criadoEm || 0).getFullYear() === negAno; });
           var nProps = props.length;
           var propTotal = props.reduce(function(acc, p){ return acc + (+p.total || 0); }, 0);
           var badgeColor = (stage.cor || '#64748b');
@@ -4117,7 +4118,8 @@ function renderKanban() {
       ' ondrop="dropOnStage(event,\'' + stage.id + '\',this)">' +
       (function(){
         var totalCol = sn.reduce(function(sum, n) {
-          var props = loadPropostas().filter(function(p){ return p.leadId === n.leadId; });
+          var nAno = n.ano || new Date().getFullYear();
+          var props = loadPropostas().filter(function(p){ return p.leadId === n.leadId && new Date(p.criadoEm || 0).getFullYear() === nAno; });
           var totalProps = props.reduce(function(s, p){ return s + (+p.total || 0); }, 0);
           return sum + totalProps;
         }, 0);
