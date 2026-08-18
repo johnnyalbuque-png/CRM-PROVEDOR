@@ -5409,15 +5409,15 @@ function renderFinAnual() {
   var receitas = loadReceita().filter(function(i){ return !i.eventoOnly; });
   var despesas = loadContasPagar();
   var anosSet  = {};
-  receitas.forEach(function(i){ var a = (i.dataRecebimento || i.vencimento || '').slice(0,4); if (a) anosSet[a] = true; });
-  despesas.forEach(function(i){ var a = (i.dataPagamento  || i.vencimento || '').slice(0,4); if (a) anosSet[a] = true; });
+  receitas.forEach(function(i){ var a = (i.vencimento || '').slice(0,4); if (a) anosSet[a] = true; });
+  despesas.forEach(function(i){ var a = (i.vencimento || '').slice(0,4); if (a) anosSet[a] = true; });
   var anos = Object.keys(anosSet).sort();
   if (!anos.length) { el.innerHTML = ''; return; }
 
   var dados = anos.map(function(ano) {
-    var rec  = receitas.filter(function(i){ return i.status === 'Recebido' && (i.dataRecebimento||'').startsWith(ano); })
+    var rec  = receitas.filter(function(i){ return (i.vencimento||'').startsWith(ano); })
                        .reduce(function(s,i){ return s + (+i.valor||0); }, 0);
-    var desp = despesas.filter(function(i){ return i.status === 'Pago'     && (i.dataPagamento ||'').startsWith(ano); })
+    var desp = despesas.filter(function(i){ return (i.vencimento||'').startsWith(ano); })
                        .reduce(function(s,i){ return s + (+i.valor||0); }, 0);
     return { ano: ano, rec: rec, desp: desp, res: rec - desp };
   });
