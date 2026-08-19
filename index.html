@@ -5408,10 +5408,9 @@ function renderFinAnual() {
   if (!el) return;
   var receitas = loadReceita().filter(function(i){ return !i.eventoOnly; });
   var despesas = loadContasPagar();
-  var curYear  = String(new Date().getFullYear());
   var anosSet  = {};
-  receitas.forEach(function(i){ var a = (i.vencimento || '').slice(0,4); if (a && a <= curYear) anosSet[a] = true; });
-  despesas.forEach(function(i){ var a = (i.vencimento || '').slice(0,4); if (a && a <= curYear) anosSet[a] = true; });
+  receitas.forEach(function(i){ var a = (i.vencimento || '').slice(0,4); if (a) anosSet[a] = true; });
+  despesas.forEach(function(i){ var a = (i.vencimento || '').slice(0,4); if (a) anosSet[a] = true; });
   var anos = Object.keys(anosSet).sort();
   if (!anos.length) { el.innerHTML = ''; return; }
 
