@@ -6687,6 +6687,15 @@ function _getLastMonths(n) {
   return result;
 }
 
+function _getMonthsAround(back, forward) {
+  var result = [], now = new Date();
+  for (var i = -back; i <= forward; i++) {
+    var d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    result.push(d.toISOString().slice(0, 7));
+  }
+  return result;
+}
+
 function _monthLabel(ym) {
   var p = ym.split('-');
   return _MONTH_PT[parseInt(p[1], 10) - 1] + '/' + p[0].slice(2);
@@ -6732,26 +6741,28 @@ function renderDashboard() {
     mesLabel.textContent = 'Mês atual: ' + _MONTH_PT[parseInt(mp[1], 10) - 1] + '/' + mp[0].slice(2);
   }
 
-  // Chart 1 — Receitas × Despesas últimos 12 meses
-  var months12  = _getLastMonths(12);
+  // Chart 1 — Receitas × Despesas: 6 meses atrás + mês atual + 6 meses à frente
+  var months13  = _getMonthsAround(6, 6);
   var recFin    = receitas.filter(function(r){ return !r.eventoOnly; });
-  var recData   = months12.map(function(m) {
+  var recData   = months13.map(function(m) {
     return recFin.filter(function(r){ return (r.vencimento||'').startsWith(m); })
                  .reduce(function(s,r){ return s + (+r.valor||0); }, 0);
   });
-  var despData  = months12.map(function(m) {
+  var despData  = months13.map(function(m) {
     return despesas.filter(function(d){ return (d.vencimento||'').startsWith(m); })
                    .reduce(function(s,d){ return s + (+d.valor||0); }, 0);
   });
+  var recColors  = months13.map(function(m){ return m === mesSel ? '#15803d' : '#16a34a66'; });
+  var despColors = months13.map(function(m){ return m === mesSel ? '#b91c1c' : '#dc262666'; });
   _destroyChart('recDesp');
   _dashCharts['recDesp'] = new Chart(
     document.getElementById('chartRecDesp').getContext('2d'), {
       type: 'bar',
       data: {
-        labels: months12.map(_monthLabel),
+        labels: months13.map(_monthLabel),
         datasets: [
-          { label: 'Receitas', data: recData,  backgroundColor: '#16a34a', borderRadius: 3, barPercentage: 0.45, categoryPercentage: 0.8 },
-          { label: 'Despesas', data: despData, backgroundColor: '#dc2626', borderRadius: 3, barPercentage: 0.45, categoryPercentage: 0.8 }
+          { label: 'Receitas', data: recData,  backgroundColor: recColors,  borderRadius: 3, barPercentage: 0.45, categoryPercentage: 0.8 },
+          { label: 'Despesas', data: despData, backgroundColor: despColors, borderRadius: 3, barPercentage: 0.45, categoryPercentage: 0.8 }
         ]
       },
       options: {
