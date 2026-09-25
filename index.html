@@ -1411,6 +1411,10 @@
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
           <h2 style="margin:0">PIPELINE CRM</h2>
           <div id="kanbanAnoNav" style="display:flex;align-items:center;gap:4px"></div>
+          <div style="position:relative;display:flex;align-items:center">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" style="position:absolute;left:8px;pointer-events:none"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="kanbanSearch" placeholder="Buscar empresa…" oninput="renderKanban()" style="padding:5px 10px 5px 26px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;width:170px;outline:none;color:#0f172a" />
+          </div>
         </div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-outline" id="editStagesBtn">
@@ -2695,6 +2699,24 @@
           </thead>
           <tbody id="propostaParcBody"></tbody>
         </table>
+      </div>
+
+      <!-- Validade e Multa (opcional) -->
+      <div style="margin-bottom:20px">
+        <div class="prop-section-title" style="display:flex;align-items:center;gap:8px">
+          Validade e Acréscimo
+          <span style="font-size:10px;font-weight:400;color:#94a3b8;background:#f1f5f9;padding:1px 7px;border-radius:99px">opcional</span>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+          <div class="form-group" style="flex:1;min-width:160px">
+            <label>Validade (dias após data)</label>
+            <input type="number" id="propostaValidadeDias" min="0" placeholder="ex: 15" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;width:100%" oninput="propostaAtualizaValidadeData()" />
+          </div>
+          <div class="form-group" style="flex:1;min-width:160px">
+            <label>Acréscimo por atraso (%)</label>
+            <input type="number" id="propostaAcrescimoPct" min="0" step="0.1" placeholder="ex: 2" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;width:100%" />
+          </div>
+        </div>
       </div>
 
       <!-- Observações -->
@@ -4067,9 +4089,19 @@ function renderKanban() {
   var lsData   = loadLeadServicos();
   var curYear  = new Date().getFullYear();
   renderKanbanAnoNav();
+  var _kSearch = (document.getElementById('kanbanSearch') || {}).value || '';
+  _kSearch = _kSearch.trim().toLowerCase();
   var board    = document.getElementById('kanbanBoard');
   board.innerHTML = stages.map(function(stage) {
-    var sn = negocios.filter(function(n){ return n.stageId === stage.id && (n.ano || curYear) === _kanbanAno; });
+    var sn = negocios.filter(function(n){
+      if (n.stageId !== stage.id || (n.ano || curYear) !== _kanbanAno) return false;
+      if (_kSearch) {
+        var lead = leads.find(function(l){ return l.id === n.leadId; }) || {};
+        var haystack = ((lead.empresa || '') + ' ' + (lead.nome || '') + ' ' + (n.titulo || '')).toLowerCase();
+        if (haystack.indexOf(_kSearch) === -1) return false;
+      }
+      return true;
+    });
     var cards = sn.length
       ? sn.map(function(n) {
           var lead   = leads.find(function(l){ return l.id === n.leadId; }) || {};
@@ -4555,6 +4587,8 @@ function openPropostaModal(leadId) {
   document.getElementById('propostaNParcelas').value = '1';
   document.getElementById('propostaValParc').value = 'R$ 0,00';
   document.getElementById('propostaObs').value = '';
+  document.getElementById('propostaValidadeDias').value = '';
+  document.getElementById('propostaAcrescimoPct').value = '';
   renderPropostaLinhas();
   updatePropostaParcelas();
   document.getElementById('propostaModal').classList.add('open');
@@ -4574,8 +4608,10 @@ function editarProposta(propostaId) {
   document.getElementById('propostaNumero').value    = p.numero;
   document.getElementById('propostaData').value      = p.data || '';
   document.getElementById('propostaValidade').value  = p.validade || '';
-  document.getElementById('propostaNParcelas').value = p.parcelas || 1;
-  document.getElementById('propostaObs').value       = p.obs || '';
+  document.getElementById('propostaNParcelas').value    = p.parcelas || 1;
+  document.getElementById('propostaObs').value           = p.obs || '';
+  document.getElementById('propostaValidadeDias').value  = p.validadeDias || '';
+  document.getElementById('propostaAcrescimoPct').value  = p.acrescimoPct || '';
   renderPropostaLinhas();
   calcPropostaTotal();
   updatePropostaParcelas();
@@ -4584,6 +4620,16 @@ function editarProposta(propostaId) {
     dateInputs.forEach(function(el, i){ if (p.vencimentos[i]) el.value = p.vencimentos[i]; });
   }
   document.getElementById('propostaModal').classList.add('open');
+}
+
+function propostaAtualizaValidadeData() {
+  var dias = parseInt(document.getElementById('propostaValidadeDias').value);
+  if (!dias || dias <= 0) return;
+  var base = document.getElementById('propostaData').value;
+  if (!base) base = new Date().toISOString().split('T')[0];
+  var d = new Date(base + 'T12:00:00');
+  d.setDate(d.getDate() + dias);
+  document.getElementById('propostaValidade').value = d.toISOString().split('T')[0];
 }
 
 function closePropostaModal() {
@@ -4713,7 +4759,9 @@ function coletarPropostaData() {
     parcelas:    n,
     valorParcela: n > 0 ? total / n : total,
     vencimentos: vencimentos,
-    obs:         document.getElementById('propostaObs').value,
+    obs:          document.getElementById('propostaObs').value,
+    validadeDias: parseInt(document.getElementById('propostaValidadeDias').value) || 0,
+    acrescimoPct: parseFloat(document.getElementById('propostaAcrescimoPct').value) || 0,
     criadoEm:    Date.now(),
     geradoPor:   (function(){ var s = getSession(); return s ? s.nome : '—'; })(),
   };
@@ -4895,6 +4943,20 @@ function _renderPropostaPDF(p, lead) {
       '</tr></thead><tbody>' + parcelasHTML + '</tbody></table>' +
     '</div>' +
 
+    ((p.validadeDias > 0 || p.acrescimoPct > 0)
+      ? '<div class="section"><div class="sec-title">Condições Gerais</div>' +
+        '<table><tbody>' +
+        (p.validadeDias > 0
+          ? '<tr><td style="padding:7px 11px;font-size:12px;border-bottom:1px solid #e2e8f0;width:220px;color:#475569">Validade da proposta</td>' +
+            '<td style="padding:7px 11px;font-size:12px;border-bottom:1px solid #e2e8f0;font-weight:600">' + p.validadeDias + ' dias (até ' + fmtDate(p.validade) + ')</td></tr>'
+          : '') +
+        (p.acrescimoPct > 0
+          ? '<tr><td style="padding:7px 11px;font-size:12px;color:#475569">Acréscimo por atraso</td>' +
+            '<td style="padding:7px 11px;font-size:12px;font-weight:600;color:#dc2626">' + p.acrescimoPct + '% sobre o valor total</td></tr>'
+          : '') +
+        '</tbody></table></div>'
+      : '') +
+
     (p.obs ? '<div class="section"><div class="sec-title">Observações</div><div class="obs-block">' + esc(p.obs) + '</div></div>' : '') +
 
     '<div class="footer">' +
@@ -4931,7 +4993,8 @@ window.onPropostaServSelect   = onPropostaServSelect;
 window.onPropostaFieldChange  = onPropostaFieldChange;
 window.updatePropostaParcelas = updatePropostaParcelas;
 window.salvarRascunhoProposta = salvarRascunhoProposta;
-window.gerarPropostaPDF       = gerarPropostaPDF;
+window.gerarPropostaPDF             = gerarPropostaPDF;
+window.propostaAtualizaValidadeData = propostaAtualizaValidadeData;
 window.gerarPropostaPDFById   = gerarPropostaPDFById;
 window.renderDetailPropostas  = renderDetailPropostas;
 window.deletarProposta        = deletarProposta;
@@ -6511,14 +6574,60 @@ function renderLeadInteracoes(leadId) {
     var icon  = _TIPO_ICON[item.tipo]  || '📝';
     var label = _TIPO_LABEL[item.tipo] || item.tipo;
     var dataStr = item.data ? new Date(item.data + 'T12:00:00').toLocaleDateString('pt-BR') : '';
-    return '<div class="interacao-item">' +
+    return '<div class="interacao-item" id="iitem-' + item.id + '">' +
       '<div class="interacao-tipo-icon">' + icon + '</div>' +
-      '<div class="interacao-corpo">' +
+      '<div class="interacao-corpo" style="flex:1;min-width:0">' +
         '<div class="interacao-meta">' + label + (dataStr ? ' · ' + dataStr : '') + ' · ' + esc(item.criadoPor || '—') + '</div>' +
-        '<div class="interacao-nota">' + esc(item.nota) + '</div>' +
+        '<div class="interacao-nota" id="inota-' + item.id + '">' + esc(item.nota) + '</div>' +
+        '<div id="iedit-' + item.id + '" style="display:none;margin-top:6px">' +
+          '<textarea id="itxt-' + item.id + '" rows="2" style="width:100%;font-size:12px;padding:5px 8px;border:1px solid #e2e8f0;border-radius:6px;resize:vertical">' + esc(item.nota) + '</textarea>' +
+          '<div style="display:flex;gap:6px;margin-top:4px">' +
+            '<button onclick="saveEditInteracao(\'' + item.id + '\')" style="font-size:11px;padding:3px 10px;background:#2563eb;color:#fff;border:none;border-radius:5px;cursor:pointer">Salvar</button>' +
+            '<button onclick="cancelEditInteracao(\'' + item.id + '\')" style="font-size:11px;padding:3px 10px;background:#f1f5f9;color:#475569;border:none;border-radius:5px;cursor:pointer">Cancelar</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:4px;flex-shrink:0;margin-left:6px">' +
+        '<button onclick="startEditInteracao(\'' + item.id + '\')" title="Editar" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:13px;padding:2px 4px">✏️</button>' +
+        '<button onclick="deleteInteracao(\'' + item.id + '\')" title="Excluir" style="background:none;border:none;cursor:pointer;color:#fca5a5;font-size:13px;padding:2px 4px">🗑️</button>' +
       '</div>' +
     '</div>';
   }).join('');
+}
+
+function startEditInteracao(id) {
+  document.getElementById('inota-' + id).style.display = 'none';
+  document.getElementById('iedit-' + id).style.display = '';
+  var ta = document.getElementById('itxt-' + id);
+  ta.focus(); ta.selectionStart = ta.value.length;
+}
+
+function cancelEditInteracao(id) {
+  document.getElementById('inota-' + id).style.display = '';
+  document.getElementById('iedit-' + id).style.display = 'none';
+}
+
+function saveEditInteracao(id) {
+  if (!_currentDetailLeadId) return;
+  var novaNota = document.getElementById('itxt-' + id).value.trim();
+  if (!novaNota) return;
+  var obj = loadInteracoes();
+  var lista = obj[_currentDetailLeadId] || [];
+  var idx = lista.findIndex(function(x){ return x.id === id; });
+  if (idx === -1) return;
+  lista[idx].nota = novaNota;
+  obj[_currentDetailLeadId] = lista;
+  saveInteracoes(obj);
+  renderLeadInteracoes(_currentDetailLeadId);
+}
+
+function deleteInteracao(id) {
+  if (!_currentDetailLeadId) return;
+  if (!confirm('Excluir esta interação?')) return;
+  var obj = loadInteracoes();
+  obj[_currentDetailLeadId] = (obj[_currentDetailLeadId] || []).filter(function(x){ return x.id !== id; });
+  saveInteracoes(obj);
+  renderLeadInteracoes(_currentDetailLeadId);
 }
 
 function addInteracao() {
@@ -6535,8 +6644,12 @@ function addInteracao() {
   document.getElementById('dInteracaoForm').style.display = 'none';
   renderLeadInteracoes(_currentDetailLeadId);
 }
-window.toggleInteracaoForm = toggleInteracaoForm;
-window.addInteracao        = addInteracao;
+window.toggleInteracaoForm  = toggleInteracaoForm;
+window.addInteracao         = addInteracao;
+window.startEditInteracao   = startEditInteracao;
+window.cancelEditInteracao  = cancelEditInteracao;
+window.saveEditInteracao    = saveEditInteracao;
+window.deleteInteracao      = deleteInteracao;
 
 // ── Contatos Adicionais ─────────────────────────────────────────────────────
 function toggleContatoForm() {
