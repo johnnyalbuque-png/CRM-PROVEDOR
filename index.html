@@ -4127,6 +4127,19 @@ function renderKanban() {
           var props = loadPropostas().filter(function(p){ return p.leadId === n.leadId && new Date(p.criadoEm || 0).getFullYear() === negAno; });
           var nProps = props.length;
           var propTotal = props.reduce(function(acc, p){ return acc + (+p.total || 0); }, 0);
+          var _hoje = getTodayStr();
+          var _d3 = new Date(_hoje + 'T12:00:00'); _d3.setDate(_d3.getDate() + 3);
+          var _in3 = _d3.toISOString().slice(0,10);
+          var propAlerta = null;
+          props.forEach(function(p) {
+            if (!p.validade) return;
+            if (p.validade < _hoje) {
+              propAlerta = { tipo: 'expirada' };
+            } else if (p.validade <= _in3 && propAlerta === null) {
+              var dias = Math.round((new Date(p.validade+'T12:00:00') - new Date(_hoje+'T12:00:00')) / 86400000);
+              propAlerta = { tipo: 'vencendo', dias: dias };
+            }
+          });
           var badgeColor = (stage.cor || '#64748b');
           var badgeBg = badgeColor + '22';
           return '<div class="kanban-card" draggable="true"' +
@@ -4139,6 +4152,11 @@ function renderKanban() {
             (lead.empresa && titulo !== lead.empresa ? '<div class="kcard-empresa-sub">' + esc(lead.empresa) + '</div>' : (lead.nome ? '<div class="kcard-empresa-sub">' + esc(lead.nome) + '</div>' : '')) +
             (nProps > 0
               ? '<div style="margin-top:4px;font-size:11px;font-weight:700;color:#059669">📄 ' + fmtMoney(propTotal) + ' <span style="font-weight:400;color:#94a3b8;font-size:10px">(' + nProps + ' proposta' + (nProps > 1 ? 's' : '') + ')</span></div>'
+              : '') +
+            (propAlerta
+              ? (propAlerta.tipo === 'expirada'
+                  ? '<div style="margin-top:3px;font-size:10px;font-weight:700;color:#dc2626;background:#fef2f2;border-radius:4px;padding:2px 6px;display:inline-block">🔴 Proposta vencida</div>'
+                  : '<div style="margin-top:3px;font-size:10px;font-weight:700;color:#d97706;background:#fffbeb;border-radius:4px;padding:2px 6px;display:inline-block">⚠️ Vence em ' + propAlerta.dias + 'd</div>')
               : '') +
             (fuStr ? '<div class="kcard-followup-badge" style="margin-top:5px;font-size:10px">📅 ' + fuStr + '</div>' : '') +
             (stage.id === 'Fechado'
@@ -5102,6 +5120,8 @@ function openNotif(notifId, tarefaId, finTipo, tipo) {
     showView('tarefas');
   } else if (tipo === 'followup') {
     showView('crm');
+  } else if (tipo === 'proposta_vencendo') {
+    showView('crm');
   }
 }
 
@@ -5151,7 +5171,9 @@ document.addEventListener('click', function(e) {
 window.toggleNotifDropdown = toggleNotifDropdown;
 window.openNotif           = openNotif;
 window.markAllNotifsRead   = markAllNotifsRead;
-window.checkVencimentos    = checkVencimentos;
+window.checkVencimentos        = checkVencimentos;
+window.checkPropostasVencendo  = checkPropostasVencendo;
+window.initPushNotifs          = initPushNotifs;
 
 // ── Tarefas ────────────────────────────────────────────────────────────────
 var TAREFAS_KEY = 'crm_tarefas';
@@ -6763,7 +6785,9 @@ function checkTarefasNotifs() {
   atrasadas.forEach(function(t) {
     var already = existing.some(function(n){ return n.tipo === 'tarefa_atrasada' && n.tarefaId === t.id && n.data === t.vencimento; });
     if (!already) {
-      existing.push({ id: generateId(), tipo: 'tarefa_atrasada', titulo: '⏰ Tarefa atrasada', mensagem: t.titulo + (t.vencimento ? ' — venceu em ' + new Date(t.vencimento + 'T12:00:00').toLocaleDateString('pt-BR') : ''), tarefaId: t.id, data: t.vencimento, lida: false, criadoEm: Date.now() });
+      var _tmsg = t.titulo + (t.vencimento ? ' — venceu em ' + new Date(t.vencimento + 'T12:00:00').toLocaleDateString('pt-BR') : '');
+      existing.push({ id: generateId(), tipo: 'tarefa_atrasada', titulo: '⏰ Tarefa atrasada', mensagem: _tmsg, tarefaId: t.id, data: t.vencimento, lida: false, criadoEm: Date.now() });
+      _pushBrowser('⏰ Tarefa atrasada', _tmsg);
       changed = true;
     }
   });
@@ -6786,7 +6810,54 @@ function checkFollowUpsNotifs() {
     var lead = leads.find(function(l){ return l.id === neg.leadId; });
     var already = existing.some(function(n){ return n.tipo === 'followup' && n.refId === neg.id && n.data === today; });
     if (!already) {
-      existing.push({ id: generateId(), tipo: 'followup', titulo: '📅 Follow-up hoje', mensagem: 'Follow-up com ' + (lead ? lead.empresa : 'lead') + (neg.followUp.hora ? ' às ' + neg.followUp.hora : ''), refId: neg.id, data: today, lida: false, criadoEm: Date.now() });
+      var _fmsg = 'Follow-up com ' + (lead ? lead.empresa : 'lead') + (neg.followUp.hora ? ' às ' + neg.followUp.hora : '');
+      existing.push({ id: generateId(), tipo: 'followup', titulo: '📅 Follow-up hoje', mensagem: _fmsg, refId: neg.id, data: today, lida: false, criadoEm: Date.now() });
+      _pushBrowser('📅 Follow-up hoje', _fmsg);
+      changed = true;
+    }
+  });
+  if (changed) { _cfgCache[key] = existing; saveConfigBg(key, existing); }
+  updateNotifBadge();
+}
+
+// ── Browser Push Notifications ─────────────────────────────────────────────
+function initPushNotifs() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function _pushBrowser(titulo, mensagem) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  var key = 'pushed_' + titulo + '_' + mensagem;
+  try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch(e) {}
+  try {
+    var n = new Notification(titulo, { body: mensagem, icon: '/favicon.ico', badge: '/favicon.ico' });
+    setTimeout(function(){ n.close(); }, 9000);
+  } catch(e) {}
+}
+
+function checkPropostasVencendo() {
+  var today   = getTodayStr();
+  var session = getSession();
+  if (!session) return;
+  var d3 = new Date(today + 'T12:00:00'); d3.setDate(d3.getDate() + 3);
+  var in3 = d3.toISOString().slice(0, 10);
+  var key = NOTIFS_PREFIX + session.id;
+  var existing = (_cfgCache[key] || []).slice();
+  var changed  = false;
+  loadPropostas().forEach(function(p) {
+    if (!p.validade || p.validade > in3) return;
+    var lead = leads.find(function(l){ return l.id === p.leadId; });
+    var diasRestantes = Math.max(0, Math.round((new Date(p.validade+'T12:00:00') - new Date(today+'T12:00:00')) / 86400000));
+    var already = existing.some(function(n){ return n.tipo === 'proposta_vencendo' && n.refId === p.id && n.data === today; });
+    if (!already) {
+      var expired = p.validade < today;
+      var titulo  = expired ? '🔴 Proposta vencida' : '⚠️ Proposta vencendo em ' + diasRestantes + ' dia(s)';
+      var msg     = (lead ? esc(lead.empresa) : 'Lead') + ' — ' + p.numero;
+      existing.push({ id: generateId(), tipo: 'proposta_vencendo', titulo: titulo, mensagem: msg, refId: p.id, leadId: p.leadId, data: today, lida: false, criadoEm: Date.now() });
+      _pushBrowser(titulo, msg);
       changed = true;
     }
   });
@@ -7166,9 +7237,17 @@ async function boot() {
   var session = getSession();
   if (session) {
     initApp(session);
+    initPushNotifs();
     checkVencimentos();
     checkTarefasNotifs();
     checkFollowUpsNotifs();
+    checkPropostasVencendo();
+    setInterval(function() {
+      checkVencimentos();
+      checkTarefasNotifs();
+      checkFollowUpsNotifs();
+      checkPropostasVencendo();
+    }, 5 * 60 * 1000);
   }
 
   // Realtime: sync leads between users
