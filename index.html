@@ -4327,17 +4327,23 @@ function renderServicos() {
   var eventosMap = {};
   loadEventos().forEach(function(e){ eventosMap[e.id] = e.nome; });
   tbody.innerHTML = servicos.map(function(s) {
+    var ativo = s.ativo !== false;
     var descInfo = '';
     if (s.descontoR   > 0) descInfo = '− ' + fmtMoney(s.descontoR);
     else if (s.descontoPct > 0) descInfo = '− ' + s.descontoPct + '%';
     var evLabel = s.eventoId && eventosMap[s.eventoId] ? '<br><span style="font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;background:#faf5ff;color:#7c3aed">🎪 '+esc(eventosMap[s.eventoId])+'</span>' : '';
-    return '<tr>' +
+    var rowStyle = ativo ? '' : 'opacity:0.45;';
+    var toggleBtn = ativo
+      ? '<button class="btn-icon" onclick="toggleServAtivo(\'' + s.id + '\')" title="Desativar serviço" style="color:#16a34a;font-size:13px">✅</button> '
+      : '<button class="btn-icon" onclick="toggleServAtivo(\'' + s.id + '\')" title="Ativar serviço" style="color:#dc2626;font-size:13px">⛔</button> ';
+    return '<tr style="' + rowStyle + '">' +
       '<td><strong>' + esc(s.nome) + '</strong>' + evLabel + '</td>' +
       '<td style="max-width:180px;color:#64748b;white-space:pre-wrap">' + esc(s.descricao || '—') + '</td>' +
       '<td class="serv-preco">' + fmtMoney(s.preco) + '</td>' +
       '<td class="serv-desconto">' + (descInfo || '—') + '</td>' +
       '<td class="serv-preco-final">' + fmtMoney(s.precoFinal) + '</td>' +
       '<td style="white-space:nowrap">' +
+        toggleBtn +
         '<button class="btn-icon" onclick="editServico(\'' + s.id + '\')" title="Editar">✏️</button> ' +
         '<button class="btn-icon delete" onclick="deleteServico(\'' + s.id + '\')" title="Excluir">🗑️</button>' +
       '</td>' +
@@ -4444,6 +4450,15 @@ function deleteServico(id) {
   renderKanban();
 }
 
+function toggleServAtivo(id) {
+  var servicos = loadServicos();
+  var idx = servicos.findIndex(function(x){ return x.id === id; });
+  if (idx === -1) return;
+  servicos[idx].ativo = servicos[idx].ativo === false;
+  saveServicos(servicos);
+  renderServicos();
+}
+
 // ── Lead-Service picker ────────────────────────────────────────────────────
 function openLeadServPicker(leadId) {
   currentLeadId = leadId;
@@ -4462,7 +4477,7 @@ function closeLeadServModal() {
 }
 
 function populateLeadServSelect() {
-  var servicos = loadServicos();
+  var servicos = loadServicos().filter(function(s){ return s.ativo !== false; });
   document.getElementById('leadServSelect').innerHTML =
     '<option value="">Selecione um serviço do catálogo…</option>' +
     servicos.map(function(s) {
@@ -4556,6 +4571,7 @@ function removeLeadServ(idx) {
 window.openNewServModal    = openNewServModal;
 window.editServico         = editServico;
 window.deleteServico       = deleteServico;
+window.toggleServAtivo     = toggleServAtivo;
 window.closeServModal      = closeServModal;
 window.saveServ            = saveServ;
 window.calcServFinal       = calcServFinal;
@@ -4735,7 +4751,7 @@ function updatePropostaParcelas() {
 }
 
 function renderPropostaLinhas() {
-  var servicos = loadServicos();
+  var servicos = loadServicos().filter(function(s){ return s.ativo !== false; });
   var tbody = document.getElementById('propostaLinhasBody');
   if (!propostaLinhas.length) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:24px 0;font-size:13px">Clique em "+ Adicionar item" para começar</td></tr>';
