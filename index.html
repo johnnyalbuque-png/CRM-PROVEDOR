@@ -1614,7 +1614,10 @@
         <!-- Lista de Eventos -->
         <div id="finEventosListView">
           <div class="fin-list-bar">
-            <h3>Eventos</h3>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <h3 style="margin:0">Eventos</h3>
+              <div id="eventosAnoNav" style="display:flex;align-items:center;gap:4px"></div>
+            </div>
             <button class="btn btn-primary" onclick="openEventoModal()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Novo Evento
@@ -6301,6 +6304,29 @@ window.closePropostaPickerModal  = closePropostaPickerModal;
 
 // ── Eventos ─────────────────────────────────────────────────────────────────
 var _eventoDetId = null;
+var _eventosAno  = new Date().getFullYear();
+
+function renderEventosAnoNav() {
+  var nav = document.getElementById('eventosAnoNav');
+  if (!nav) return;
+  var todos = loadEventos();
+  var curYear = new Date().getFullYear();
+  var anosSet = {};
+  todos.forEach(function(e){ var a = (e.data || '').slice(0,4); if (a) anosSet[+a] = true; });
+  anosSet[curYear] = true;
+  anosSet[curYear + 1] = true;
+  anosSet[_eventosAno] = true;
+  var anos = Object.keys(anosSet).map(Number).sort();
+  nav.innerHTML = anos.map(function(a) {
+    var ativo = a === _eventosAno;
+    return '<button onclick="setEventosAno(' + a + ')" style="padding:3px 10px;font-size:12px;font-weight:' + (ativo?'700':'500') + ';border-radius:6px;border:1px solid ' + (ativo?'#2563eb':'#e2e8f0') + ';background:' + (ativo?'#2563eb':'#fff') + ';color:' + (ativo?'#fff':'#64748b') + ';cursor:pointer">' + a + '</button>';
+  }).join('');
+}
+
+function setEventosAno(ano) {
+  _eventosAno = ano;
+  renderEventos();
+}
 
 function renderEventos() {
   if (_eventoDetId) {
@@ -6316,7 +6342,12 @@ function renderEventos() {
   }
   document.getElementById('finEventosListView').style.display   = '';
   document.getElementById('finEventosDetailView').style.display = 'none';
-  var eventos = loadEventos().slice().sort(function(a,b){ return (a.data||'9999').localeCompare(b.data||'9999'); });
+  renderEventosAnoNav();
+  var todos   = loadEventos();
+  var eventos = todos.filter(function(e){
+    var ano = +(e.data || '').slice(0,4);
+    return ano === _eventosAno || (!ano && _eventosAno === new Date().getFullYear());
+  }).slice().sort(function(a,b){ return (a.data||'9999').localeCompare(b.data||'9999'); });
   var pagar   = loadContasPagar();
   var receita = loadReceita();
   var cont    = document.getElementById('eventosListContainer');
@@ -6568,6 +6599,7 @@ window.onReceitaParceladoCalc  = onReceitaParceladoCalc;
 window.populateCatSelect       = populateCatSelect;
 window.populateFilterCat       = populateFilterCat;
 window.renderEventos           = renderEventos;
+window.setEventosAno           = setEventosAno;
 window.openEventoDetalhe       = openEventoDetalhe;
 window.voltarEventosList       = voltarEventosList;
 window.openEventoModal         = openEventoModal;
