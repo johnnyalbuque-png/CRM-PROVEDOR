@@ -4153,12 +4153,19 @@ function renderKanban() {
             fuStr = fd.toLocaleDateString('pt-BR') + (fu.hora ? ' ' + fu.hora : '');
           }
           var negAno = n.ano || new Date().getFullYear();
+          var _allLeadNegs = negocios.filter(function(x){ return x.leadId === n.leadId; });
           var props = loadPropostas().filter(function(p){
             if (p.leadId !== n.leadId) return false;
-            var pAno = p.negocioAno
-              || (p.data ? parseInt(p.data.slice(0,4)) : null)
-              || new Date(p.criadoEm || 0).getFullYear();
-            return pAno === negAno;
+            if (p.negocioAno) return p.negocioAno === negAno;
+            var pAno = (p.data ? parseInt(p.data.slice(0,4)) : null)
+                     || new Date(p.criadoEm || 0).getFullYear();
+            if (_allLeadNegs.length <= 1) return true;
+            var closest = _allLeadNegs.reduce(function(best, x){
+              var xA = x.ano || new Date().getFullYear();
+              var bA = best.ano || new Date().getFullYear();
+              return Math.abs(xA - pAno) < Math.abs(bA - pAno) ? x : best;
+            });
+            return (closest.ano || new Date().getFullYear()) === negAno;
           });
           var nProps = props.length;
           var propTotal = props.reduce(function(acc, p){ return acc + (+p.total || 0); }, 0);
@@ -4210,12 +4217,19 @@ function renderKanban() {
       (function(){
         var totalCol = sn.reduce(function(sum, n) {
           var nAno = n.ano || new Date().getFullYear();
+          var _allLNeg = negocios.filter(function(x){ return x.leadId === n.leadId; });
           var props = loadPropostas().filter(function(p){
             if (p.leadId !== n.leadId) return false;
-            var pAno = p.negocioAno
-              || (p.data ? parseInt(p.data.slice(0,4)) : null)
-              || new Date(p.criadoEm || 0).getFullYear();
-            return pAno === nAno;
+            if (p.negocioAno) return p.negocioAno === nAno;
+            var pAno = (p.data ? parseInt(p.data.slice(0,4)) : null)
+                     || new Date(p.criadoEm || 0).getFullYear();
+            if (_allLNeg.length <= 1) return true;
+            var closest = _allLNeg.reduce(function(best, x){
+              var xA = x.ano || new Date().getFullYear();
+              var bA = best.ano || new Date().getFullYear();
+              return Math.abs(xA - pAno) < Math.abs(bA - pAno) ? x : best;
+            });
+            return (closest.ano || new Date().getFullYear()) === nAno;
           });
           var totalProps = props.reduce(function(s, p){ return s + (+p.total || 0); }, 0);
           return sum + totalProps;
