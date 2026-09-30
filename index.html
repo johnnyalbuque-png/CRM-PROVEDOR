@@ -3118,7 +3118,11 @@ function openDetail(id, negId) {
     ? '<p class="detail-nota">' + esc(l.anotacao) + '</p>'
     : '<p class="detail-nota-vazia">Nenhuma anotação registrada.</p>';
   document.getElementById('detailEditBtn').onclick     = function(){ closeDetail(); openEdit(id); };
-  document.getElementById('detailPropostaBtn').onclick = function(){ openPropostaModal(id); };
+  document.getElementById('detailPropostaBtn').onclick = function(){
+    var _neg = loadNegocios().filter(function(x){ return x.leadId === id; });
+    var _n   = negId ? _neg.find(function(x){ return x.id === negId; }) : _neg[0];
+    openPropostaModal(id, _n ? (_n.ano || new Date().getFullYear()) : new Date().getFullYear());
+  };
   renderDetailPropostas(id);
   renderLeadInteracoes(id);
   renderLeadContatos(id);
@@ -4149,7 +4153,13 @@ function renderKanban() {
             fuStr = fd.toLocaleDateString('pt-BR') + (fu.hora ? ' ' + fu.hora : '');
           }
           var negAno = n.ano || new Date().getFullYear();
-          var props = loadPropostas().filter(function(p){ return p.leadId === n.leadId && new Date(p.criadoEm || 0).getFullYear() === negAno; });
+          var props = loadPropostas().filter(function(p){
+            if (p.leadId !== n.leadId) return false;
+            var pAno = p.negocioAno
+              || (p.data ? parseInt(p.data.slice(0,4)) : null)
+              || new Date(p.criadoEm || 0).getFullYear();
+            return pAno === negAno;
+          });
           var nProps = props.length;
           var propTotal = props.reduce(function(acc, p){ return acc + (+p.total || 0); }, 0);
           var _hoje = getTodayStr();
@@ -4200,7 +4210,13 @@ function renderKanban() {
       (function(){
         var totalCol = sn.reduce(function(sum, n) {
           var nAno = n.ano || new Date().getFullYear();
-          var props = loadPropostas().filter(function(p){ return p.leadId === n.leadId && new Date(p.criadoEm || 0).getFullYear() === nAno; });
+          var props = loadPropostas().filter(function(p){
+            if (p.leadId !== n.leadId) return false;
+            var pAno = p.negocioAno
+              || (p.data ? parseInt(p.data.slice(0,4)) : null)
+              || new Date(p.criadoEm || 0).getFullYear();
+            return pAno === nAno;
+          });
           var totalProps = props.reduce(function(s, p){ return s + (+p.total || 0); }, 0);
           return sum + totalProps;
         }, 0);
@@ -4684,9 +4700,10 @@ window.updateLeadServPrice = updateLeadServPrice;
 
 // ── Proposta Comercial ─────────────────────────────────────────────────────
 var PROPOSTAS_KEY    = 'crm_propostas';
-var propostaLeadId   = null;
-var propostaLinhas   = [];  // [{servId, nome, qty, valorUnit, descontoR, descontoPct, total}]
+var propostaLeadId    = null;
+var propostaLinhas    = [];  // [{servId, nome, qty, valorUnit, descontoR, descontoPct, total}]
 var propostaEditingId = null;
+var propostaNegocioAno = null;
 
 function loadPropostas()      { return _cfgCache[PROPOSTAS_KEY] || []; }
 function savePropostas(arr)   { saveConfigBg(PROPOSTAS_KEY, arr); }
@@ -4722,9 +4739,10 @@ function _populatePropostaEmitente(selected) {
     }).join('');
 }
 
-function openPropostaModal(leadId) {
-  propostaLeadId    = leadId;
-  propostaEditingId = null;  // sempre limpa modo edição ao criar nova
+function openPropostaModal(leadId, negocioAno) {
+  propostaLeadId     = leadId;
+  propostaEditingId  = null;  // sempre limpa modo edição ao criar nova
+  propostaNegocioAno = negocioAno || new Date().getFullYear();
   propostaLinhas    = [];
   var lead = leads.find(function(l){ return l.id === leadId; });
   document.getElementById('propostaLeadName').textContent = lead
@@ -4927,6 +4945,7 @@ function coletarPropostaData() {
     acrescimoPct: parseFloat(document.getElementById('propostaAcrescimoPct').value) || 0,
     notaFiscal:   document.getElementById('propostaNotaFiscal').checked,
     emitenteIdx:  document.getElementById('propostaEmitente').value,
+    negocioAno:  propostaNegocioAno || new Date().getFullYear(),
     criadoEm:    Date.now(),
     geradoPor:   (function(){ var s = getSession(); return s ? s.nome : '—'; })(),
   };
