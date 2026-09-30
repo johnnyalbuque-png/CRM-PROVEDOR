@@ -2101,8 +2101,15 @@
       <input type="hidden" id="servDescPct" value="0" />
       <input type="hidden" id="servPrecoFinal" />
       <div class="form-group">
-        <label>Vincular a um Evento (opcional)</label>
-        <select id="servEventoId"></select>
+        <label>Vincular a Eventos (opcional)</label>
+        <div id="servEventosWrap" style="border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px;max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
+          <label style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:13px;cursor:pointer">
+            <input type="checkbox" id="servEventoTodos" onchange="onServEventoTodosChange()" /> Todos os eventos
+          </label>
+          <hr style="margin:4px 0;border:none;border-top:1px solid #e2e8f0" />
+          <div id="servEventosCheckList" style="display:flex;flex-direction:column;gap:4px"></div>
+        </div>
+        <input type="hidden" id="servEventoId" value="" />
       </div>
     </div>
     <div class="modal-footer">
@@ -4331,7 +4338,15 @@ function renderServicos() {
     var descInfo = '';
     if (s.descontoR   > 0) descInfo = '− ' + fmtMoney(s.descontoR);
     else if (s.descontoPct > 0) descInfo = '− ' + s.descontoPct + '%';
-    var evLabel = s.eventoId && eventosMap[s.eventoId] ? '<br><span style="font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;background:#faf5ff;color:#7c3aed">🎪 '+esc(eventosMap[s.eventoId])+'</span>' : '';
+    var sEvIds = _getServEventoIds(s);
+    var evLabel = '';
+    if (sEvIds.length === 1 && sEvIds[0] === '*') {
+      evLabel = '<br><span style="font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;background:#faf5ff;color:#7c3aed">🎪 Todos os eventos</span>';
+    } else if (sEvIds.length) {
+      evLabel = '<br>' + sEvIds.filter(function(id){ return eventosMap[id]; }).map(function(id){
+        return '<span style="font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;background:#faf5ff;color:#7c3aed;margin-right:2px">🎪 '+esc(eventosMap[id])+'</span>';
+      }).join('');
+    }
     var rowStyle = ativo ? '' : 'opacity:0.45;';
     var toggleBtn = ativo
       ? '<button class="btn-icon" onclick="toggleServAtivo(\'' + s.id + '\')" title="Desativar serviço" style="color:#16a34a;font-size:13px">✅</button> '
@@ -4351,12 +4366,41 @@ function renderServicos() {
   }).join('');
 }
 
-function _populateServEventoSelect(selected) {
-  var sel = document.getElementById('servEventoId');
-  if (!sel) return;
+function _getServEventoIds(s) {
+  if (s.eventoIds && s.eventoIds.length) return s.eventoIds;
+  if (s.eventoId) return [s.eventoId];
+  return [];
+}
+
+function _populateServEventoSelect() {}
+
+function _populateServEventosCheck(selectedIds, todos) {
+  var list = document.getElementById('servEventosCheckList');
+  var todosChk = document.getElementById('servEventoTodos');
+  if (!list || !todosChk) return;
   var evs = loadEventos().slice().sort(function(a,b){ return (a.data||'9999').localeCompare(b.data||'9999'); });
-  sel.innerHTML = '<option value="">Nenhum evento</option>' +
-    evs.map(function(e){ return '<option value="'+e.id+'"'+(e.id===selected?' selected':'')+'>'+esc(e.nome)+'</option>'; }).join('');
+  list.innerHTML = evs.map(function(e) {
+    var chk = todos || (selectedIds.indexOf(e.id) !== -1) ? ' checked' : '';
+    return '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">' +
+      '<input type="checkbox" class="serv-ev-chk" value="' + esc(e.id) + '"' + chk + ' />' +
+      esc(e.nome) + '</label>';
+  }).join('');
+  todosChk.checked = !!todos;
+  list.style.opacity = todos ? '0.4' : '1';
+  list.style.pointerEvents = todos ? 'none' : '';
+}
+
+function onServEventoTodosChange() {
+  var todos = document.getElementById('servEventoTodos').checked;
+  var list = document.getElementById('servEventosCheckList');
+  if (!list) return;
+  list.style.opacity = todos ? '0.4' : '1';
+  list.style.pointerEvents = todos ? 'none' : '';
+}
+
+function _getServEventoIdsFromForm() {
+  if (document.getElementById('servEventoTodos').checked) return ['*'];
+  return Array.from(document.querySelectorAll('.serv-ev-chk:checked')).map(function(c){ return c.value; });
 }
 
 function openNewServModal() {
@@ -4371,7 +4415,7 @@ function openNewServModal() {
   document.getElementById('servPrecoFinal').value = '';
   document.getElementById('servNomeError').textContent  = '';
   document.getElementById('servPrecoError').textContent = '';
-  _populateServEventoSelect('');
+  _populateServEventosCheck([], false);
   document.getElementById('servModal').classList.add('open');
   document.getElementById('servNome').focus();
 }
@@ -4390,7 +4434,9 @@ function editServico(id) {
   document.getElementById('servPrecoFinal').value = fmtMoney(s.precoFinal);
   document.getElementById('servNomeError').textContent  = '';
   document.getElementById('servPrecoError').textContent = '';
-  _populateServEventoSelect(s.eventoId || '');
+  var ids = _getServEventoIds(s);
+  var isTodos = ids.length === 1 && ids[0] === '*';
+  _populateServEventosCheck(isTodos ? [] : ids, isTodos);
   document.getElementById('servModal').classList.add('open');
   document.getElementById('servNome').focus();
 }
@@ -4416,21 +4462,21 @@ function saveServ() {
   else if (descPct > 0) precoFinal = Math.max(0, preco * (1 - descPct / 100));
   else                  precoFinal = preco;
 
-  var eventoIdServ = document.getElementById('servEventoId').value || '';
+  var eventoIdsServ = _getServEventoIdsFromForm();
   var servicos = loadServicos();
   if (editingServId) {
     var idx = servicos.findIndex(function(x){ return x.id === editingServId; });
     if (idx !== -1) servicos[idx] = Object.assign(servicos[idx], {
       nome: nome, descricao: document.getElementById('servDescricao').value.trim(),
       preco: preco, descontoR: descR, descontoPct: descPct, precoFinal: precoFinal,
-      eventoId: eventoIdServ,
+      eventoIds: eventoIdsServ, eventoId: eventoIdsServ.length === 1 && eventoIdsServ[0] !== '*' ? eventoIdsServ[0] : '',
     });
   } else {
     servicos.push({
       id: generateId(), nome: nome,
       descricao: document.getElementById('servDescricao').value.trim(),
       preco: preco, descontoR: descR, descontoPct: descPct, precoFinal: precoFinal,
-      eventoId: eventoIdServ,
+      eventoIds: eventoIdsServ, eventoId: eventoIdsServ.length === 1 && eventoIdsServ[0] !== '*' ? eventoIdsServ[0] : '',
     });
   }
   saveServicos(servicos);
@@ -4571,8 +4617,9 @@ function removeLeadServ(idx) {
 window.openNewServModal    = openNewServModal;
 window.editServico         = editServico;
 window.deleteServico       = deleteServico;
-window.toggleServAtivo     = toggleServAtivo;
-window.closeServModal      = closeServModal;
+window.toggleServAtivo         = toggleServAtivo;
+window.onServEventoTodosChange = onServEventoTodosChange;
+window.closeServModal          = closeServModal;
 window.saveServ            = saveServ;
 window.calcServFinal       = calcServFinal;
 window.onServDescR         = onServDescR;
