@@ -1708,6 +1708,28 @@
           <tbody id="servicosBody"></tbody>
         </table>
       </div>
+
+      <!-- Empresas emitentes -->
+      <div style="margin-top:32px;padding:20px 24px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px">
+        <h3 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0f172a">Empresas Emitentes de Proposta</h3>
+        <p style="margin:0 0 16px;font-size:12px;color:#64748b">Cadastre até 2 empresas. Na hora de gerar uma proposta, você escolhe qual usar — razão social e CNPJ aparecem no PDF.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" id="emitentesGrid">
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#2563eb;margin-bottom:10px">Empresa 1</div>
+            <div class="form-group" style="margin-bottom:8px"><label style="font-size:11px">Razão Social</label><input type="text" id="emitente0Razao" placeholder="Ex: INTER'ISP LTDA" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px" /></div>
+            <div class="form-group" style="margin-bottom:0"><label style="font-size:11px">CNPJ</label><input type="text" id="emitente0CNPJ" placeholder="00.000.000/0001-00" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px" /></div>
+          </div>
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7c3aed;margin-bottom:10px">Empresa 2</div>
+            <div class="form-group" style="margin-bottom:8px"><label style="font-size:11px">Razão Social</label><input type="text" id="emitente1Razao" placeholder="Ex: INTER'ISP EVENTOS SA" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px" /></div>
+            <div class="form-group" style="margin-bottom:0"><label style="font-size:11px">CNPJ</label><input type="text" id="emitente1CNPJ" placeholder="11.111.111/0001-11" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px" /></div>
+          </div>
+        </div>
+        <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
+          <button class="btn btn-primary" onclick="saveEmitentesConfig()" style="font-size:13px;padding:7px 18px">💾 Salvar empresas</button>
+          <span id="emitenteSaveMsg" style="font-size:12px;color:#16a34a;display:none">Salvo!</span>
+        </div>
+      </div>
     </div>
 
   </div><!-- /app-content -->
@@ -2614,18 +2636,22 @@
     <div class="modal-body">
 
       <!-- Cabeçalho da proposta -->
-      <div style="display:flex;gap:12px;margin-bottom:20px">
-        <div class="form-group" style="flex:1">
+      <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <div class="form-group" style="flex:1;min-width:140px">
           <label>Nº Proposta</label>
           <input type="text" id="propostaNumero" readonly style="background:#f8fafc;font-weight:700;color:#2563eb" />
         </div>
-        <div class="form-group" style="flex:1">
+        <div class="form-group" style="flex:1;min-width:140px">
           <label>Data da Proposta</label>
           <input type="date" id="propostaData" />
         </div>
-        <div class="form-group" style="flex:1">
+        <div class="form-group" style="flex:1;min-width:140px">
           <label>Válida até</label>
           <input type="date" id="propostaValidade" />
+        </div>
+        <div class="form-group" style="flex:1;min-width:160px">
+          <label>Emitente (sua empresa)</label>
+          <select id="propostaEmitente" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;width:100%"></select>
         </div>
       </div>
 
@@ -3822,7 +3848,7 @@ function showView(name) {
   if (name === 'dashboard')  renderDashboard();
   if (name === 'crm')        renderKanban();
   if (name === 'metas')      renderMetas();
-  if (name === 'servicos')   renderServicos();
+  if (name === 'servicos')   { renderServicos(); renderEmitentesConfig(); }
   if (name === 'tarefas')    renderTarefas();
   if (name === 'financeiro') renderFinanceiro();
 }
@@ -4496,6 +4522,28 @@ function deleteServico(id) {
   renderKanban();
 }
 
+function renderEmitentesConfig() {
+  var arr = loadEmitentes();
+  for (var i = 0; i < 2; i++) {
+    var r = document.getElementById('emitente'+i+'Razao');
+    var c = document.getElementById('emitente'+i+'CNPJ');
+    if (r) r.value = (arr[i] && arr[i].razao) || '';
+    if (c) c.value = (arr[i] && arr[i].cnpj)  || '';
+  }
+}
+
+function saveEmitentesConfig() {
+  var arr = [];
+  for (var i = 0; i < 2; i++) {
+    var r = document.getElementById('emitente'+i+'Razao');
+    var c = document.getElementById('emitente'+i+'CNPJ');
+    arr.push({ razao: r ? r.value.trim() : '', cnpj: c ? c.value.trim() : '' });
+  }
+  saveEmitentes(arr);
+  var msg = document.getElementById('emitenteSaveMsg');
+  if (msg) { msg.style.display = 'inline'; setTimeout(function(){ msg.style.display = 'none'; }, 2000); }
+}
+
 function toggleServAtivo(id) {
   var servicos = loadServicos();
   var idx = servicos.findIndex(function(x){ return x.id === id; });
@@ -4619,6 +4667,8 @@ window.editServico         = editServico;
 window.deleteServico       = deleteServico;
 window.toggleServAtivo         = toggleServAtivo;
 window.onServEventoTodosChange = onServEventoTodosChange;
+window.saveEmitentesConfig     = saveEmitentesConfig;
+window.renderEmitentesConfig   = renderEmitentesConfig;
 window.closeServModal          = closeServModal;
 window.saveServ            = saveServ;
 window.calcServFinal       = calcServFinal;
@@ -4640,6 +4690,15 @@ var propostaEditingId = null;
 function loadPropostas()      { return _cfgCache[PROPOSTAS_KEY] || []; }
 function savePropostas(arr)   { saveConfigBg(PROPOSTAS_KEY, arr); }
 
+var EMITENTES_KEY = 'crm_emitentes';
+function loadEmitentes() {
+  var arr = _cfgCache[EMITENTES_KEY];
+  if (!Array.isArray(arr)) arr = [{razao:'',cnpj:''},{razao:'',cnpj:''}];
+  while (arr.length < 2) arr.push({razao:'',cnpj:''});
+  return arr;
+}
+function saveEmitentes(arr) { _cfgCache[EMITENTES_KEY] = arr; saveConfigBg(EMITENTES_KEY, arr); }
+
 function gerarNumProposta() {
   var lista = loadPropostas();
   var max = lista.reduce(function(m, p) {
@@ -4648,6 +4707,18 @@ function gerarNumProposta() {
     return n > m ? n : m;
   }, 0);
   return 'PRO-' + String(max + 1).padStart(3, '0');
+}
+
+function _populatePropostaEmitente(selected) {
+  var sel = document.getElementById('propostaEmitente');
+  if (!sel) return;
+  var emitentes = loadEmitentes();
+  sel.innerHTML = '<option value="">— Sem emitente —</option>' +
+    emitentes.map(function(e, i) {
+      if (!e.razao && !e.cnpj) return '';
+      var label = e.razao || ('Empresa ' + (i+1));
+      return '<option value="'+i+'"'+(String(i)===String(selected)?' selected':'')+'>'+esc(label)+'</option>';
+    }).join('');
 }
 
 function openPropostaModal(leadId) {
@@ -4668,6 +4739,7 @@ function openPropostaModal(leadId) {
   document.getElementById('propostaValidadeDias').value = '';
   document.getElementById('propostaAcrescimoPct').value = '';
   document.getElementById('propostaNotaFiscal').checked = false;
+  _populatePropostaEmitente('');
   renderPropostaLinhas();
   updatePropostaParcelas();
   document.getElementById('propostaModal').classList.add('open');
@@ -4692,6 +4764,7 @@ function editarProposta(propostaId) {
   document.getElementById('propostaValidadeDias').value  = p.validadeDias || '';
   document.getElementById('propostaAcrescimoPct').value  = p.acrescimoPct || '';
   document.getElementById('propostaNotaFiscal').checked  = !!p.notaFiscal;
+  _populatePropostaEmitente(p.emitenteIdx != null ? p.emitenteIdx : '');
   renderPropostaLinhas();
   calcPropostaTotal();
   updatePropostaParcelas();
@@ -4843,6 +4916,7 @@ function coletarPropostaData() {
     validadeDias: parseInt(document.getElementById('propostaValidadeDias').value) || 0,
     acrescimoPct: parseFloat(document.getElementById('propostaAcrescimoPct').value) || 0,
     notaFiscal:   document.getElementById('propostaNotaFiscal').checked,
+    emitenteIdx:  document.getElementById('propostaEmitente').value,
     criadoEm:    Date.now(),
     geradoPor:   (function(){ var s = getSession(); return s ? s.nome : '—'; })(),
   };
@@ -4900,7 +4974,7 @@ function deletarProposta(propostaId, leadId) {
   renderDetailPropostas(leadId);
 }
 
-function _renderPropostaPDF(p, lead) {
+function _renderPropostaPDF(p, lead, emitente) {
   function fmtDate(d) {
     return d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
   }
@@ -4952,30 +5026,31 @@ function _renderPropostaPDF(p, lead) {
   var html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/>' +
     '<title>Proposta ' + esc(p.numero) + '</title><style>' +
     '*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}' +
-    'body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;background:#fff;font-size:13px;line-height:1.55}' +
-    '.page{max-width:800px;margin:0 auto;padding:40px 48px}' +
-    '.prop-header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;border-bottom:4px solid #2563eb;margin-bottom:28px}' +
+    'body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;background:#fff;font-size:11px;line-height:1.4}' +
+    '.page{max-width:800px;margin:0 auto;padding:24px 32px}' +
+    '.prop-header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:12px;border-bottom:4px solid #2563eb;margin-bottom:14px}' +
     '.prop-meta{text-align:right}' +
-    '.prop-num{font-size:24px;font-weight:900;color:#2563eb;letter-spacing:-0.5px}' +
-    '.prop-type{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}' +
-    '.meta-row{margin-top:5px}.meta-label{font-size:10px;color:#94a3b8;text-transform:uppercase;display:block}' +
-    '.meta-value{font-size:13px;font-weight:700}' +
-    '.section{margin-bottom:24px}' +
-    '.sec-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#2563eb;border-bottom:2px solid #dbeafe;padding-bottom:5px;margin-bottom:12px}' +
-    '.client-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 20px}' +
-    '.cf label{font-size:10px;color:#94a3b8;text-transform:uppercase;display:block;margin-bottom:1px}' +
-    '.cf span{font-size:13px;font-weight:600}' +
+    '.prop-num{font-size:20px;font-weight:900;color:#2563eb;letter-spacing:-0.5px}' +
+    '.prop-type{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}' +
+    '.meta-row{margin-top:3px}.meta-label{font-size:9px;color:#94a3b8;text-transform:uppercase;display:block}' +
+    '.meta-value{font-size:11px;font-weight:700}' +
+    '.section{margin-bottom:14px}' +
+    '.sec-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#2563eb;border-bottom:2px solid #dbeafe;padding-bottom:3px;margin-bottom:8px}' +
+    '.client-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 16px}' +
+    '.cf label{font-size:9px;color:#94a3b8;text-transform:uppercase;display:block;margin-bottom:1px}' +
+    '.cf span{font-size:11px;font-weight:600}' +
     'table{width:100%;border-collapse:collapse}' +
-    'thead th{background:#1e3a8a;color:#fff;padding:9px 11px;font-size:11px;font-weight:700;text-transform:uppercase}' +
+    'thead th{background:#1e3a8a;color:#fff;padding:5px 8px;font-size:9px;font-weight:700;text-transform:uppercase}' +
     'tbody tr:nth-child(even){background:#f8fafc}' +
-    'tbody td{padding:9px 11px;border-bottom:1px solid #e2e8f0;font-size:13px}' +
-    'tfoot td{padding:10px 11px;font-weight:700;background:#f1f5f9;border-top:2px solid #1e3a8a}' +
-    '.total-bar{background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;border-radius:10px;display:flex;justify-content:space-between;align-items:center;padding:12px 18px;margin-top:12px}' +
-    '.total-bar .tbl{font-size:13px;font-weight:600;opacity:.9}' +
-    '.total-bar .tbv{font-size:17px;font-weight:800}' +
-    '.obs-block{background:#f8fafc;border-left:4px solid #2563eb;padding:12px 16px;border-radius:0 8px 8px 0;font-size:12px;color:#475569;white-space:pre-wrap}' +
-    '.footer{margin-top:36px;padding-top:12px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:11px;color:#94a3b8}' +
-    '@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.page{padding:20px 32px}}' +
+    'tbody td{padding:4px 8px;border-bottom:1px solid #e2e8f0;font-size:10px}' +
+    'tfoot td{padding:5px 8px;font-weight:700;background:#f1f5f9;border-top:2px solid #1e3a8a;font-size:10px}' +
+    '.total-bar{background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;border-radius:8px;display:flex;justify-content:space-between;align-items:center;padding:7px 14px;margin-top:8px}' +
+    '.total-bar .tbl{font-size:11px;font-weight:600;opacity:.9}' +
+    '.total-bar .tbv{font-size:14px;font-weight:800}' +
+    '.obs-block{background:#f8fafc;border-left:4px solid #2563eb;padding:7px 12px;border-radius:0 6px 6px 0;font-size:10px;color:#475569;white-space:pre-wrap}' +
+    '.footer{margin-top:16px;padding-top:8px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:9px;color:#94a3b8}' +
+    '@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.page{padding:0}}' +
+    '@page{margin:14mm 16mm}' +
     '</style></head><body><div class="page">' +
 
     '<div class="prop-header">' +
@@ -4987,6 +5062,16 @@ function _renderPropostaPDF(p, lead) {
         '<div class="meta-row"><span class="meta-label">Válida até</span><span class="meta-value">' + fmtDate(p.validade) + '</span></div>' +
       '</div>' +
     '</div>' +
+
+    (emitente && (emitente.razao || emitente.cnpj)
+      ? '<div class="section">' +
+          '<div class="sec-title">Dados do Emitente</div>' +
+          '<div class="client-grid">' +
+            '<div class="cf"><label>Razão Social</label><span>' + esc(emitente.razao || '—') + '</span></div>' +
+            '<div class="cf"><label>CNPJ</label><span>' + esc(emitente.cnpj || '—') + '</span></div>' +
+          '</div>' +
+        '</div>'
+      : '') +
 
     '<div class="section">' +
       '<div class="sec-title">Dados do Cliente</div>' +
@@ -5052,18 +5137,25 @@ function _renderPropostaPDF(p, lead) {
   else   { alert('Bloqueio de pop-up detectado. Permita pop-ups para este site para gerar o PDF.'); }
 }
 
+function _resolveEmitente(p) {
+  var emitentes = loadEmitentes();
+  var idx = parseInt(p.emitenteIdx);
+  if (!isNaN(idx) && emitentes[idx]) return emitentes[idx];
+  return null;
+}
+
 function gerarPropostaPDF() {
   var p    = coletarPropostaData();
   salvarProposta(p);
   var lead = leads.find(function(l){ return l.id === propostaLeadId; }) || {};
-  _renderPropostaPDF(p, lead);
+  _renderPropostaPDF(p, lead, _resolveEmitente(p));
 }
 
 function gerarPropostaPDFById(propostaId) {
   var p    = loadPropostas().find(function(x){ return x.id === propostaId; });
   if (!p) { alert('Proposta não encontrada.'); return; }
   var lead = leads.find(function(l){ return l.id === p.leadId; }) || {};
-  _renderPropostaPDF(p, lead);
+  _renderPropostaPDF(p, lead, _resolveEmitente(p));
 }
 
 window.openPropostaModal      = openPropostaModal;
