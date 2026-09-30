@@ -2699,6 +2699,7 @@
           <div class="form-group" style="flex:0 0 auto">
             <label>Número de Parcelas</label>
             <select id="propostaNParcelas" onchange="updatePropostaParcelas()" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;min-width:170px">
+              <option value="combinar">A combinar</option>
               <option value="1">1x — À vista</option>
               <option value="2">2x</option><option value="3">3x</option>
               <option value="4">4x</option><option value="5">5x</option>
@@ -4759,7 +4760,7 @@ function editarProposta(propostaId) {
   document.getElementById('propostaNumero').value    = p.numero;
   document.getElementById('propostaData').value      = p.data || '';
   document.getElementById('propostaValidade').value  = p.validade || '';
-  document.getElementById('propostaNParcelas').value    = p.parcelas || 1;
+  document.getElementById('propostaNParcelas').value    = p.parcelas === 'combinar' ? 'combinar' : (p.parcelas || 1);
   document.getElementById('propostaObs').value           = p.obs || '';
   document.getElementById('propostaValidadeDias').value  = p.validadeDias || '';
   document.getElementById('propostaAcrescimoPct').value  = p.acrescimoPct || '';
@@ -4853,11 +4854,18 @@ function calcPropostaTotal() {
 
 function updatePropostaParcelas() {
   var total    = calcPropostaTotal();
-  var n        = parseInt(document.getElementById('propostaNParcelas').value) || 1;
+  var sel      = document.getElementById('propostaNParcelas').value;
+  var tbody    = document.getElementById('propostaParcBody');
+  var valParc  = document.getElementById('propostaValParc');
+  if (sel === 'combinar') {
+    valParc.value = '— A combinar —';
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:10px;font-style:italic;font-size:13px">Forma de pagamento a combinar com o cliente.</td></tr>';
+    return;
+  }
+  var n        = parseInt(sel) || 1;
   var vParcela = n > 0 ? total / n : total;
-  document.getElementById('propostaValParc').value = fmtMoney(vParcela);
+  valParc.value = fmtMoney(vParcela);
   var hoje  = new Date();
-  var tbody = document.getElementById('propostaParcBody');
   tbody.innerHTML = Array.from({ length: n }, function(_, i) {
     var venc = new Date(hoje);
     venc.setMonth(venc.getMonth() + i + 1);
@@ -4896,7 +4904,9 @@ function renderPropostaLinhas() {
 }
 
 function coletarPropostaData() {
-  var n = parseInt(document.getElementById('propostaNParcelas').value) || 1;
+  var selVal = document.getElementById('propostaNParcelas').value;
+  var isCombinar = selVal === 'combinar';
+  var n = isCombinar ? 0 : (parseInt(selVal) || 1);
   var total = propostaLinhas.reduce(function(acc, l){ return acc + (l.total || 0); }, 0);
   var vencimentos = Array.from(
     document.querySelectorAll('#propostaParcBody input[type="date"]')
@@ -4909,7 +4919,7 @@ function coletarPropostaData() {
     validade:    document.getElementById('propostaValidade').value,
     linhas:      propostaLinhas.slice().map(function(l){ return Object.assign({}, l); }),
     total:       total,
-    parcelas:    n,
+    parcelas:    isCombinar ? 'combinar' : n,
     valorParcela: n > 0 ? total / n : total,
     vencimentos: vencimentos,
     obs:          document.getElementById('propostaObs').value,
@@ -4993,7 +5003,7 @@ function _renderPropostaPDF(p, lead, emitente) {
     '</tr>';
   }).join('') : '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:16px">Sem itens</td></tr>';
 
-  var parcelasHTML = p.vencimentos.map(function(v, i) {
+  var parcelasHTML = (p.vencimentos || []).map(function(v, i) {
     return '<tr>' +
       '<td style="text-align:center;font-weight:700">' + (i+1) + '/' + p.parcelas + '</td>' +
       '<td style="text-align:center">' + fmtDate(v) + '</td>' +
@@ -5058,8 +5068,6 @@ function _renderPropostaPDF(p, lead, emitente) {
       '<div class="prop-meta">' +
         '<div class="prop-type">Proposta Comercial</div>' +
         '<div class="prop-num">' + esc(p.numero) + '</div>' +
-        '<div class="meta-row"><span class="meta-label">Data</span><span class="meta-value">' + fmtDate(p.data) + '</span></div>' +
-        '<div class="meta-row"><span class="meta-label">Válida até</span><span class="meta-value">' + fmtDate(p.validade) + '</span></div>' +
       '</div>' +
     '</div>' +
 
@@ -5101,27 +5109,31 @@ function _renderPropostaPDF(p, lead, emitente) {
 
     '<div class="section">' +
       '<div class="sec-title">Condições de Pagamento — Boleto Bancário</div>' +
-      '<p style="font-size:12px;color:#475569;margin-bottom:10px">Parcelado em <strong>' + p.parcelas + 'x</strong> de <strong>' + fmtMoney(p.valorParcela) + '</strong></p>' +
-      '<table><thead><tr>' +
-        '<th style="width:90px;text-align:center">Parcela</th>' +
-        '<th style="text-align:center">Vencimento</th>' +
-        '<th style="text-align:right">Valor</th>' +
-      '</tr></thead><tbody>' + parcelasHTML + '</tbody></table>' +
+      (p.parcelas === 'combinar'
+        ? '<p style="font-size:11px;color:#475569;font-style:italic;padding:6px 0">Forma de pagamento a combinar.</p>'
+        : '<p style="font-size:10px;color:#475569;margin-bottom:8px">Parcelado em <strong>' + p.parcelas + 'x</strong> de <strong>' + fmtMoney(p.valorParcela) + '</strong></p>' +
+          '<table><thead><tr>' +
+            '<th style="width:90px;text-align:center">Parcela</th>' +
+            '<th style="text-align:center">Vencimento</th>' +
+            '<th style="text-align:right">Valor</th>' +
+          '</tr></thead><tbody>' + parcelasHTML + '</tbody></table>'
+      ) +
     '</div>' +
 
-    ((p.validadeDias > 0 || p.acrescimoPct > 0)
-      ? '<div class="section"><div class="sec-title">Condições Gerais</div>' +
-        '<table><tbody>' +
-        (p.validadeDias > 0
-          ? '<tr><td style="padding:7px 11px;font-size:12px;border-bottom:1px solid #e2e8f0;width:220px;color:#475569">Validade da proposta</td>' +
-            '<td style="padding:7px 11px;font-size:12px;border-bottom:1px solid #e2e8f0;font-weight:600">' + p.validadeDias + ' dias (até ' + fmtDate(p.validade) + ')</td></tr>'
-          : '') +
-        (p.acrescimoPct > 0
-          ? '<tr><td style="padding:7px 11px;font-size:12px;color:#475569">Acréscimo após vencimento</td>' +
-            '<td style="padding:7px 11px;font-size:12px;font-weight:600">' + p.acrescimoPct + '% sobre o valor total</td></tr>'
-          : '') +
-        '</tbody></table></div>'
-      : '') +
+    (function() {
+      var rows = '';
+      var tdL = 'style="padding:5px 8px;font-size:10px;border-bottom:1px solid #e2e8f0;width:220px;color:#475569"';
+      var tdR = 'style="padding:5px 8px;font-size:10px;border-bottom:1px solid #e2e8f0;font-weight:600"';
+      var tdLlast = 'style="padding:5px 8px;font-size:10px;color:#475569"';
+      var tdRlast = 'style="padding:5px 8px;font-size:10px;font-weight:600"';
+      rows += '<tr><td '+tdL+'>Data de emissão</td><td '+tdR+'>' + fmtDate(p.data) + '</td></tr>';
+      rows += '<tr><td '+tdL+'>Validade da proposta</td><td '+tdR+'>' +
+        (p.validadeDias > 0 ? p.validadeDias + ' dias (até ' + fmtDate(p.validade) + ')' : fmtDate(p.validade) || '—') +
+        '</td></tr>';
+      if (p.acrescimoPct > 0)
+        rows += '<tr><td '+tdLlast+'>Acréscimo após vencimento</td><td '+tdRlast+'>' + p.acrescimoPct + '% sobre o valor total</td></tr>';
+      return '<div class="section"><div class="sec-title">Condições Gerais</div><table><tbody>' + rows + '</tbody></table></div>';
+    })() +
 
     (p.obs ? '<div class="section"><div class="sec-title">Observações</div><div class="obs-block">' + esc(p.obs) + '</div></div>' : '') +
 
