@@ -3119,9 +3119,7 @@ function openDetail(id, negId) {
     : '<p class="detail-nota-vazia">Nenhuma anotação registrada.</p>';
   document.getElementById('detailEditBtn').onclick     = function(){ closeDetail(); openEdit(id); };
   document.getElementById('detailPropostaBtn').onclick = function(){
-    var _neg = loadNegocios().filter(function(x){ return x.leadId === id; });
-    var _n   = negId ? _neg.find(function(x){ return x.id === negId; }) : _neg[0];
-    openPropostaModal(id, _n ? (_n.ano || new Date().getFullYear()) : new Date().getFullYear());
+    openPropostaModal(id, negId);
   };
   renderDetailPropostas(id);
   renderLeadInteracoes(id);
@@ -4156,16 +4154,9 @@ function renderKanban() {
           var _allLeadNegs = negocios.filter(function(x){ return x.leadId === n.leadId; });
           var props = loadPropostas().filter(function(p){
             if (p.leadId !== n.leadId) return false;
-            if (p.negocioAno) return p.negocioAno === negAno;
-            var pAno = (p.data ? parseInt(p.data.slice(0,4)) : null)
-                     || new Date(p.criadoEm || 0).getFullYear();
+            if (p.negocioId) return p.negocioId === n.id;
             if (_allLeadNegs.length <= 1) return true;
-            var closest = _allLeadNegs.reduce(function(best, x){
-              var xA = x.ano || new Date().getFullYear();
-              var bA = best.ano || new Date().getFullYear();
-              return Math.abs(xA - pAno) < Math.abs(bA - pAno) ? x : best;
-            });
-            return (closest.ano || new Date().getFullYear()) === negAno;
+            return (p.negocioAno || new Date(p.criadoEm || 0).getFullYear()) === negAno;
           });
           var nProps = props.length;
           var propTotal = props.reduce(function(acc, p){ return acc + (+p.total || 0); }, 0);
@@ -4220,16 +4211,9 @@ function renderKanban() {
           var _allLNeg = negocios.filter(function(x){ return x.leadId === n.leadId; });
           var props = loadPropostas().filter(function(p){
             if (p.leadId !== n.leadId) return false;
-            if (p.negocioAno) return p.negocioAno === nAno;
-            var pAno = (p.data ? parseInt(p.data.slice(0,4)) : null)
-                     || new Date(p.criadoEm || 0).getFullYear();
+            if (p.negocioId) return p.negocioId === n.id;
             if (_allLNeg.length <= 1) return true;
-            var closest = _allLNeg.reduce(function(best, x){
-              var xA = x.ano || new Date().getFullYear();
-              var bA = best.ano || new Date().getFullYear();
-              return Math.abs(xA - pAno) < Math.abs(bA - pAno) ? x : best;
-            });
-            return (closest.ano || new Date().getFullYear()) === nAno;
+            return (p.negocioAno || new Date(p.criadoEm || 0).getFullYear()) === nAno;
           });
           var totalProps = props.reduce(function(s, p){ return s + (+p.total || 0); }, 0);
           return sum + totalProps;
@@ -4717,7 +4701,7 @@ var PROPOSTAS_KEY    = 'crm_propostas';
 var propostaLeadId    = null;
 var propostaLinhas    = [];  // [{servId, nome, qty, valorUnit, descontoR, descontoPct, total}]
 var propostaEditingId = null;
-var propostaNegocioAno = null;
+var propostaNegocioId = null;
 
 function loadPropostas()      { return _cfgCache[PROPOSTAS_KEY] || []; }
 function savePropostas(arr)   { saveConfigBg(PROPOSTAS_KEY, arr); }
@@ -4753,10 +4737,10 @@ function _populatePropostaEmitente(selected) {
     }).join('');
 }
 
-function openPropostaModal(leadId, negocioAno) {
-  propostaLeadId     = leadId;
-  propostaEditingId  = null;  // sempre limpa modo edição ao criar nova
-  propostaNegocioAno = negocioAno || new Date().getFullYear();
+function openPropostaModal(leadId, negocioId) {
+  propostaLeadId    = leadId;
+  propostaEditingId = null;
+  propostaNegocioId = negocioId || null;
   propostaLinhas    = [];
   var lead = leads.find(function(l){ return l.id === leadId; });
   document.getElementById('propostaLeadName').textContent = lead
@@ -4959,7 +4943,7 @@ function coletarPropostaData() {
     acrescimoPct: parseFloat(document.getElementById('propostaAcrescimoPct').value) || 0,
     notaFiscal:   document.getElementById('propostaNotaFiscal').checked,
     emitenteIdx:  document.getElementById('propostaEmitente').value,
-    negocioAno:  propostaNegocioAno || new Date().getFullYear(),
+    negocioId:   propostaNegocioId || null,
     criadoEm:    Date.now(),
     geradoPor:   (function(){ var s = getSession(); return s ? s.nome : '—'; })(),
   };
