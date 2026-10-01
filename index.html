@@ -1490,6 +1490,7 @@
             <label>Tipo</label>
             <select id="metaTipo" class="form-control" onchange="updateMetaTipoUI()">
               <option value="faturamento">💰 Faturamento (Receita Prevista)</option>
+              <option value="patrocinio">🎯 Cotas de Patrocínio</option>
               <option value="leads">👥 Leads captados</option>
               <option value="negocios">🤝 Negócios fechados</option>
               <option value="despesa_max">💸 Despesa máxima</option>
@@ -2117,6 +2118,14 @@
         <label for="servPreco">Preço (R$) <span class="required">*</span></label>
         <input type="number" id="servPreco" min="0" step="0.01" placeholder="0,00" />
         <span class="field-error" id="servPrecoError"></span>
+      </div>
+      <div class="form-group" style="max-width:280px">
+        <label for="servTipo">Tipo de serviço</label>
+        <select id="servTipo" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px">
+          <option value="exposicao">🏢 Exposição</option>
+          <option value="patrocinio">🎯 Cota de Patrocínio</option>
+          <option value="outro">📦 Outro</option>
+        </select>
       </div>
       <!-- campos mantidos ocultos para compatibilidade com código existente -->
       <input type="hidden" id="servDescR" value="0" />
@@ -4392,8 +4401,12 @@ function renderServicos() {
     var toggleBtn = ativo
       ? '<button class="btn-icon" onclick="toggleServAtivo(\'' + s.id + '\')" title="Desativar serviço" style="color:#16a34a;font-size:13px">✅</button> '
       : '<button class="btn-icon" onclick="toggleServAtivo(\'' + s.id + '\')" title="Ativar serviço" style="color:#dc2626;font-size:13px">⛔</button> ';
+    var tipoBadge = '';
+    if (s.tipo === 'patrocinio') tipoBadge = ' <span style="font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;background:#fef3c7;color:#d97706">🎯 Patrocínio</span>';
+    else if (s.tipo === 'outro') tipoBadge = ' <span style="font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;background:#f1f5f9;color:#64748b">📦 Outro</span>';
+    else tipoBadge = ' <span style="font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;background:#eff6ff;color:#2563eb">🏢 Exposição</span>';
     return '<tr style="' + rowStyle + '">' +
-      '<td><strong>' + esc(s.nome) + '</strong>' + evLabel + '</td>' +
+      '<td><strong>' + esc(s.nome) + '</strong>' + tipoBadge + evLabel + '</td>' +
       '<td style="max-width:180px;color:#64748b;white-space:pre-wrap">' + esc(s.descricao || '—') + '</td>' +
       '<td class="serv-preco">' + fmtMoney(s.preco) + '</td>' +
       '<td class="serv-desconto">' + (descInfo || '—') + '</td>' +
@@ -4456,6 +4469,7 @@ function openNewServModal() {
   document.getElementById('servPrecoFinal').value = '';
   document.getElementById('servNomeError').textContent  = '';
   document.getElementById('servPrecoError').textContent = '';
+  document.getElementById('servTipo').value = 'exposicao';
   _populateServEventosCheck([], false);
   document.getElementById('servModal').classList.add('open');
   document.getElementById('servNome').focus();
@@ -4475,6 +4489,7 @@ function editServico(id) {
   document.getElementById('servPrecoFinal').value = fmtMoney(s.precoFinal);
   document.getElementById('servNomeError').textContent  = '';
   document.getElementById('servPrecoError').textContent = '';
+  document.getElementById('servTipo').value = s.tipo || 'exposicao';
   var ids = _getServEventoIds(s);
   var isTodos = ids.length === 1 && ids[0] === '*';
   _populateServEventosCheck(isTodos ? [] : ids, isTodos);
@@ -4504,12 +4519,14 @@ function saveServ() {
   else                  precoFinal = preco;
 
   var eventoIdsServ = _getServEventoIdsFromForm();
+  var servTipoVal   = document.getElementById('servTipo').value || 'exposicao';
   var servicos = loadServicos();
   if (editingServId) {
     var idx = servicos.findIndex(function(x){ return x.id === editingServId; });
     if (idx !== -1) servicos[idx] = Object.assign(servicos[idx], {
       nome: nome, descricao: document.getElementById('servDescricao').value.trim(),
       preco: preco, descontoR: descR, descontoPct: descPct, precoFinal: precoFinal,
+      tipo: servTipoVal,
       eventoIds: eventoIdsServ, eventoId: eventoIdsServ.length === 1 && eventoIdsServ[0] !== '*' ? eventoIdsServ[0] : '',
     });
   } else {
@@ -4517,6 +4534,7 @@ function saveServ() {
       id: generateId(), nome: nome,
       descricao: document.getElementById('servDescricao').value.trim(),
       preco: preco, descontoR: descR, descontoPct: descPct, precoFinal: precoFinal,
+      tipo: servTipoVal,
       eventoIds: eventoIdsServ, eventoId: eventoIdsServ.length === 1 && eventoIdsServ[0] !== '*' ? eventoIdsServ[0] : '',
     });
   }
@@ -4826,11 +4844,11 @@ function onPropostaServSelect(idx, servId) {
   if (s) {
     propostaLinhas[idx] = Object.assign(propostaLinhas[idx], {
       servId: s.id, nome: s.nome, valorUnit: s.precoFinal,
-      descontoR: 0, descontoPct: 0,
+      descontoR: 0, descontoPct: 0, servTipo: s.tipo || 'exposicao',
     });
   } else {
     propostaLinhas[idx] = Object.assign(propostaLinhas[idx], {
-      servId:'', nome:'', valorUnit:0, descontoR:0, descontoPct:0,
+      servId:'', nome:'', valorUnit:0, descontoR:0, descontoPct:0, servTipo:'',
     });
   }
   calcPropostaLinha(idx);
@@ -6394,6 +6412,14 @@ function _confirmarLancarProposta(p, negId) {
   var empresa = strToTitleCase(lead.empresa || 'Lead');
   var desc    = empresa + ' — ' + p.numero;
 
+  // Determine dominant servTipo across all lines (patrocinio wins if any line is patrocinio)
+  var dominantTipo = 'exposicao';
+  if (linhas.some(function(l){ return (l.servTipo === 'patrocinio') || (servicos.find(function(x){ return x.id === l.servId && x.tipo === 'patrocinio'; })); })) {
+    dominantTipo = 'patrocinio';
+  } else if (linhas.every(function(l){ return (l.servTipo === 'outro') || (servicos.find(function(x){ return x.id === l.servId && x.tipo === 'outro'; })); })) {
+    dominantTipo = 'outro';
+  }
+
   // 1. Receitas (fluxo de caixa): total dividido pelas parcelas nas datas informadas
   if (p.parcelas <= 1) {
     lista.push({
@@ -6402,7 +6428,7 @@ function _confirmarLancarProposta(p, negId) {
       vencimento: (p.vencimentos && p.vencimentos[0]) || '',
       dataRecebimento: '', leadId: p.leadId, eventoId: '',
       observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
-      notaFiscal: !!p.notaFiscal,
+      notaFiscal: !!p.notaFiscal, servTipo: dominantTipo,
       criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
     });
   } else {
@@ -6417,7 +6443,7 @@ function _confirmarLancarProposta(p, negId) {
         dataRecebimento: '', leadId: p.leadId, eventoId: '',
         observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
         parcelaGrupoId: grupoIdParcelas, parcelaSeq: i + 1, parcelas: p.parcelas,
-        notaFiscal: !!p.notaFiscal,
+        notaFiscal: !!p.notaFiscal, servTipo: dominantTipo,
         criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
       });
     }
@@ -7296,7 +7322,7 @@ function closeMetaModal() { document.getElementById('metaModalOverlay').classLis
 
 function updateMetaTipoUI() {
   var tipo = document.getElementById('metaTipo').value;
-  var label = { faturamento:'Valor alvo (R$)', leads:'Qtd. de leads', negocios:'Qtd. de negócios', despesa_max:'Limite de despesa (R$)' }[tipo] || 'Valor alvo';
+  var label = { faturamento:'Valor alvo (R$)', patrocinio:'Valor alvo (R$)', leads:'Qtd. de leads', negocios:'Qtd. de negócios', despesa_max:'Limite de despesa (R$)' }[tipo] || 'Valor alvo';
   document.getElementById('metaValorLabel').textContent = label;
 }
 
@@ -7332,6 +7358,9 @@ function _calcMetaProgress(m) {
   var atual = 0;
   if (m.tipo === 'faturamento') {
     atual = receitas.filter(function(i){ return (i.vencimento||'') >= m.ini && (i.vencimento||'') <= m.fim; })
+                    .reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+  } else if (m.tipo === 'patrocinio') {
+    atual = receitas.filter(function(i){ return i.servTipo === 'patrocinio' && (i.vencimento||'') >= m.ini && (i.vencimento||'') <= m.fim; })
                     .reduce(function(s,i){ return s + (+i.valor||0); }, 0);
   } else if (m.tipo === 'despesa_max') {
     atual = despesas.filter(function(i){ return (i.vencimento||'') >= m.ini && (i.vencimento||'') <= m.fim; })
@@ -7369,13 +7398,13 @@ function renderMetas() {
     else if (emRisco)   { status = '🔴 Em risco';     statusColor = '#dc2626'; }
     else                { status = '🟡 Em andamento'; statusColor = '#d97706'; }
     var barColor = atingida ? '#059669' : (emRisco || m.tipo === 'despesa_max' && pct > 80) ? '#dc2626' : '#2563eb';
-    var isMoney  = m.tipo === 'faturamento' || m.tipo === 'despesa_max';
+    var isMoney  = m.tipo === 'faturamento' || m.tipo === 'patrocinio' || m.tipo === 'despesa_max';
     var atualStr = isMoney ? fmtMoney(atual) : atual + (m.tipo === 'leads' ? ' leads' : ' negócios');
     var alvoStr  = isMoney ? fmtMoney(m.valor) : m.valor + (m.tipo === 'leads' ? ' leads' : ' negócios');
     var faltaVal = m.valor - atual;
     var faltaStr = faltaVal > 0 ? (isMoney ? 'Faltam ' + fmtMoney(faltaVal) : 'Faltam ' + faltaVal) : 'Meta atingida!';
     var diasRest = Math.max(0, Math.round((new Date(m.fim+'T12:00:00') - new Date()) / 86400000));
-    var tipoLabel= { faturamento:'💰 Faturamento', leads:'👥 Leads', negocios:'🤝 Negócios fechados', despesa_max:'💸 Despesa máxima' }[m.tipo] || m.tipo;
+    var tipoLabel= { faturamento:'💰 Faturamento', patrocinio:'🎯 Cotas de Patrocínio', leads:'👥 Leads', negocios:'🤝 Negócios fechados', despesa_max:'💸 Despesa máxima' }[m.tipo] || m.tipo;
     return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;position:relative">' +
       '<button onclick="deleteMeta(\'' + m.id + '\')" title="Excluir" style="position:absolute;top:10px;right:10px;background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:14px">✕</button>' +
       '<button onclick="openMetaModal(\'' + m.id + '\')" title="Editar" style="position:absolute;top:10px;right:30px;background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:13px">✏️</button>' +
