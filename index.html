@@ -1190,6 +1190,7 @@
       </svg>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
+      <span id="saveStatusPill" style="display:none;align-items:center;font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;transition:opacity 1s ease;white-space:nowrap"></span>
       <span class="stat-badge" id="totalLeads">0 leads</span>
       <div class="notif-wrap" id="notifWrap">
         <button class="notif-btn" id="notifBtn" onclick="toggleNotifDropdown()" title="Notificações">
@@ -2817,12 +2818,71 @@ let pendingDeleteId = null;
 //   ALTER TABLE configs ENABLE ROW LEVEL SECURITY;
 //   CREATE POLICY "Public read/write" ON configs FOR ALL USING (true) WITH CHECK (true);
 var _cfgCache = {};
+var _cfgSaveTs = {};     // timestamp do último save local por key
+var _saveInflight = 0;  // contador de saves em andamento
+
+function _showSaveStatus(state) {
+  var el = document.getElementById('saveStatusPill');
+  if (!el) return;
+  if (state === 'saving') {
+    el.textContent = '💾 Salvando...';
+    el.style.background = '#eff6ff';
+    el.style.color = '#2563eb';
+    el.style.border = '1px solid #bfdbfe';
+    el.style.display = 'inline-flex';
+    el.style.opacity = '1';
+  } else if (state === 'ok') {
+    el.textContent = '✓ Salvo';
+    el.style.background = '#f0fdf4';
+    el.style.color = '#16a34a';
+    el.style.border = '1px solid #bbf7d0';
+    el.style.display = 'inline-flex';
+    el.style.opacity = '1';
+    setTimeout(function(){ el.style.opacity = '0'; }, 2000);
+  } else if (state === 'error') {
+    el.textContent = '⚠️ Falha ao salvar — verifique a conexão';
+    el.style.background = '#fef2f2';
+    el.style.color = '#dc2626';
+    el.style.border = '1px solid #fecaca';
+    el.style.display = 'inline-flex';
+    el.style.opacity = '1';
+  }
+}
 
 function saveConfigBg(key, value) {
+  var ts = Date.now();
   _cfgCache[key] = value;
-  db.from('configs').upsert({ id: key, value: value, updated_at: new Date().toISOString() })
-    .then(function(r){ if (r.error) console.error('saveConfig', key, r.error); })
-    .catch(function(e){ console.error('saveConfig', key, e); });
+  _cfgSaveTs[key] = ts;
+  _saveInflight++;
+  _showSaveStatus('saving');
+  _doSaveBg(key, value, ts, 1);
+}
+
+function _doSaveBg(key, value, ts, attempt) {
+  db.from('configs').upsert({ id: key, value: value, updated_at: new Date(ts).toISOString() })
+    .then(function(r) {
+      if (r.error) {
+        if (attempt < 3) {
+          setTimeout(function(){ _doSaveBg(key, value, ts, attempt + 1); }, attempt * 1500);
+        } else {
+          _saveInflight = Math.max(0, _saveInflight - 1);
+          console.error('saveConfig falhou após 3 tentativas', key, r.error);
+          _showSaveStatus('error');
+        }
+      } else {
+        _saveInflight = Math.max(0, _saveInflight - 1);
+        if (_saveInflight === 0) _showSaveStatus('ok');
+      }
+    })
+    .catch(function(e) {
+      if (attempt < 3) {
+        setTimeout(function(){ _doSaveBg(key, value, ts, attempt + 1); }, attempt * 1500);
+      } else {
+        _saveInflight = Math.max(0, _saveInflight - 1);
+        console.error('saveConfig erro rede', key, e);
+        _showSaveStatus('error');
+      }
+    });
 }
 
 // ── Lead extra (tipo/segmento) ───────────────────────────────────────────────
@@ -7497,7 +7557,12 @@ async function boot() {
   db.channel('crm-configs')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'configs' }, function(payload) {
       if (!payload.new || !payload.new.id) return;
+      // Only accept realtime update if DB version is newer than our last local save
+      var dbTs    = new Date(payload.new.updated_at || 0).getTime();
+      var localTs = _cfgSaveTs[payload.new.id] || 0;
+      if (dbTs < localTs) return; // ignore stale realtime: we have a newer unsaved/in-flight version
       _cfgCache[payload.new.id] = payload.new.value;
+      _cfgSaveTs[payload.new.id] = dbTs;
       renderServicos();
       var cv = document.getElementById('crmView');
       if (cv && cv.style.display !== 'none') renderKanban();
