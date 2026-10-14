@@ -7505,7 +7505,7 @@ window.renderMetas     = renderMetas;
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
   // Preload all configs from Supabase into memory (single query)
-  var cfgKeys = [STAGES_KEY, NEGOCIOS_KEY, SERVICOS_KEY, LEAD_SERVS_KEY, LEAD_EXTRA_KEY, PROPOSTAS_KEY, TAREFAS_KEY, CONTAS_PAGAR_KEY, RECEITA_KEY, EVENTOS_KEY, INTERACOES_KEY, METAS_KEY];
+  var cfgKeys = [STAGES_KEY, NEGOCIOS_KEY, SERVICOS_KEY, LEAD_SERVS_KEY, LEAD_EXTRA_KEY, PROPOSTAS_KEY, TAREFAS_KEY, CONTAS_PAGAR_KEY, RECEITA_KEY, EVENTOS_KEY, INTERACOES_KEY, METAS_KEY, EMITENTES_KEY, CAT_PAGAR_KEY, CAT_RECEITA_KEY];
   try {
     var { data: cfgRows } = await db.from('configs').select('id,value').in('id', cfgKeys);
     if (cfgRows) cfgRows.forEach(function(row){ _cfgCache[row.id] = row.value; });
