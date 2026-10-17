@@ -518,25 +518,34 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: #1e293b;
+      background: #0f172a;
       z-index: 999;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
     }
     .login-overlay.open { display: flex; }
-    .login-box {
-      background: #fff;
-      border-radius: 16px;
-      padding: 40px;
+    .login-bg-canvas {
+      position: absolute;
+      inset: 0;
       width: 100%;
-      max-width: 380px;
-      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+      height: 100%;
     }
-    .login-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
-    .login-logo span { font-size: 18px; font-weight: 700; color: #0f172a; }
-    .login-box h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
-    .login-box p  { font-size: 13px; color: #64748b; margin-bottom: 24px; }
-    .login-error  { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .login-box {
+      position: relative;
+      z-index: 2;
+      background: rgba(255,255,255,0.97);
+      border-radius: 20px;
+      padding: 44px 40px 40px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 32px 80px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08);
+      text-align: center;
+    }
+    .login-logo { display: flex; justify-content: center; margin-bottom: 32px; }
+    .login-box h2 { font-size: 22px; font-weight: 800; margin-bottom: 28px; color: #0f172a; }
+    .login-box .form-group { text-align: left; }
+    .login-error  { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; display: none; text-align:left; }
     .login-error.visible { display: block; }
 
     /* ── Admin panel ── */
@@ -1033,9 +1042,10 @@
 
 <!-- Login -->
 <div class="login-overlay open" id="loginOverlay">
+  <canvas class="login-bg-canvas" id="loginCanvas"></canvas>
   <div class="login-box">
     <div class="login-logo">
-      <svg height="48" viewBox="0 0 280 80" xmlns="http://www.w3.org/2000/svg">
+      <svg height="72" viewBox="0 0 280 80" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="lg2" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stop-color="#7C3AED"/>
@@ -1065,8 +1075,7 @@
         <text x="86" y="53" font-family="'Arial Black','Arial',sans-serif" font-weight="900" font-size="35" fill="#0f172a" letter-spacing="-0.5">INTER'ISP</text>
       </svg>
     </div>
-    <h2>Bem-vindo de volta</h2>
-    <p>Entre com seu usuário e senha para acessar.</p>
+    <h2>Bem-vindo e bom trabalho.</h2>
     <div class="login-error" id="loginError">Usuário ou senha incorretos.</div>
     <form id="loginForm" novalidate>
       <div class="form-group" style="margin-bottom:14px">
@@ -7614,5 +7623,105 @@ boot();
     </div>
   </div>
 </div>
+
+<script>
+(function() {
+  var canvas = document.getElementById('loginCanvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W, H, nodes = [], RAF;
+  var COLORS = ['#7C3AED','#4338CA','#6D28D9','#2563eb','#0ea5e9'];
+  var N = 60, CONN_DIST = 140;
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function makeNode() {
+    return {
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      r: Math.random() * 2.5 + 1.2,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+    };
+  }
+
+  function init() {
+    resize();
+    nodes = [];
+    for (var i = 0; i < N; i++) nodes.push(makeNode());
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    // gradient background
+    var grad = ctx.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, '#0f172a');
+    grad.addColorStop(0.5, '#1e1b4b');
+    grad.addColorStop(1, '#0f172a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // connections
+    for (var i = 0; i < nodes.length; i++) {
+      for (var j = i + 1; j < nodes.length; j++) {
+        var dx = nodes[i].x - nodes[j].x;
+        var dy = nodes[i].y - nodes[j].y;
+        var dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < CONN_DIST) {
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.strokeStyle = 'rgba(124,58,237,' + (1 - dist / CONN_DIST) * 0.25 + ')';
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+        }
+      }
+    }
+
+    // nodes
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fillStyle = n.color;
+      ctx.globalAlpha = 0.7;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      n.x += n.vx; n.y += n.vy;
+      if (n.x < 0 || n.x > W) n.vx *= -1;
+      if (n.y < 0 || n.y > H) n.vy *= -1;
+    }
+
+    RAF = requestAnimationFrame(draw);
+  }
+
+  function start() {
+    if (RAF) cancelAnimationFrame(RAF);
+    init();
+    draw();
+  }
+
+  function stop() {
+    if (RAF) { cancelAnimationFrame(RAF); RAF = null; }
+  }
+
+  window.addEventListener('resize', function() { resize(); });
+
+  // Start when login overlay is visible, stop when hidden
+  var loginOverlay = document.getElementById('loginOverlay');
+  var observer = new MutationObserver(function() {
+    if (loginOverlay.classList.contains('open')) start();
+    else stop();
+  });
+  observer.observe(loginOverlay, { attributes: true, attributeFilter: ['class'] });
+
+  if (loginOverlay.classList.contains('open')) start();
+})();
+</script>
 </body>
 </html>
