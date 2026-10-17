@@ -7629,9 +7629,18 @@ boot();
   var canvas = document.getElementById('loginCanvas');
   if (!canvas) return;
   var ctx = canvas.getContext('2d');
-  var W, H, nodes = [], RAF;
+  var W, H, nodes = [], phrases = [], RAF;
   var COLORS = ['#7C3AED','#4338CA','#6D28D9','#2563eb','#0ea5e9'];
   var N = 60, CONN_DIST = 140;
+  var FRASES = [
+    'No final dá certo!',
+    'Tu é o bichão mesmo!',
+    'A corda só tem duas pontas!',
+    'Vai melhorar!',
+    'Confia!',
+    'Pensei nisso!',
+    'Acredita!',
+  ];
 
   function resize() {
     W = canvas.width  = window.innerWidth;
@@ -7649,10 +7658,25 @@ boot();
     };
   }
 
+  function makePhrase(i) {
+    return {
+      text: FRASES[i % FRASES.length],
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.22,
+      vy: (Math.random() - 0.5) * 0.22,
+      alpha: Math.random() * 0.12 + 0.06,
+      size: Math.floor(Math.random() * 8) + 13,
+      angle: (Math.random() - 0.5) * 0.3,
+    };
+  }
+
   function init() {
     resize();
     nodes = [];
+    phrases = [];
     for (var i = 0; i < N; i++) nodes.push(makeNode());
+    for (var j = 0; j < FRASES.length; j++) phrases.push(makePhrase(j));
   }
 
   function draw() {
@@ -7664,6 +7688,22 @@ boot();
     grad.addColorStop(1, '#0f172a');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
+
+    // floating phrases
+    for (var k = 0; k < phrases.length; k++) {
+      var ph = phrases[k];
+      ctx.save();
+      ctx.translate(ph.x, ph.y);
+      ctx.rotate(ph.angle);
+      ctx.globalAlpha = ph.alpha;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold ' + ph.size + 'px -apple-system, sans-serif';
+      ctx.fillText(ph.text, 0, 0);
+      ctx.restore();
+      ph.x += ph.vx; ph.y += ph.vy;
+      if (ph.x < -200 || ph.x > W + 200) ph.vx *= -1;
+      if (ph.y < -40  || ph.y > H + 40)  ph.vy *= -1;
+    }
 
     // connections
     for (var i = 0; i < nodes.length; i++) {
