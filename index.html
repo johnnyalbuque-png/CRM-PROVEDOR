@@ -4242,15 +4242,17 @@ function renderKanban() {
           var _d3 = new Date(_hoje + 'T12:00:00'); _d3.setDate(_d3.getDate() + 3);
           var _in3 = _d3.toISOString().slice(0,10);
           var propAlerta = null;
-          props.forEach(function(p) {
-            if (!p.validade) return;
-            if (p.validade < _hoje) {
-              propAlerta = { tipo: 'expirada' };
-            } else if (p.validade <= _in3 && propAlerta === null) {
-              var dias = Math.round((new Date(p.validade+'T12:00:00') - new Date(_hoje+'T12:00:00')) / 86400000);
-              propAlerta = { tipo: 'vencendo', dias: dias };
-            }
-          });
+          if (!n.lancadoPropostaId) {
+            props.forEach(function(p) {
+              if (!p.validade) return;
+              if (p.validade < _hoje) {
+                propAlerta = { tipo: 'expirada' };
+              } else if (p.validade <= _in3 && propAlerta === null) {
+                var dias = Math.round((new Date(p.validade+'T12:00:00') - new Date(_hoje+'T12:00:00')) / 86400000);
+                propAlerta = { tipo: 'vencendo', dias: dias };
+              }
+            });
+          }
           var badgeColor = (stage.cor || '#64748b');
           var badgeBg = badgeColor + '22';
           return '<div class="kanban-card" draggable="true"' +
