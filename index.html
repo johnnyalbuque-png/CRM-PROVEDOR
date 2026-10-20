@@ -4234,6 +4234,11 @@ function renderKanban() {
             if (p.leadId !== n.leadId) return false;
             if (p.negocioId) return p.negocioId === n.id;
             if (_allLeadNegs.length <= 1) return true;
+            // Exclude proposals already consumed by a different negotiation
+            var consumedByOther = _allLeadNegs.some(function(other){
+              return other.id !== n.id && other.lancadoPropostaId === p.id;
+            });
+            if (consumedByOther) return false;
             return (p.negocioAno || new Date(p.criadoEm || 0).getFullYear()) === negAno;
           });
           var nProps = props.length;
@@ -4293,6 +4298,10 @@ function renderKanban() {
             if (p.leadId !== n.leadId) return false;
             if (p.negocioId) return p.negocioId === n.id;
             if (_allLNeg.length <= 1) return true;
+            var consumedByOther = _allLNeg.some(function(other){
+              return other.id !== n.id && other.lancadoPropostaId === p.id;
+            });
+            if (consumedByOther) return false;
             return (p.negocioAno || new Date(p.criadoEm || 0).getFullYear()) === nAno;
           });
           var totalProps = props.reduce(function(s, p){ return s + (+p.total || 0); }, 0);
