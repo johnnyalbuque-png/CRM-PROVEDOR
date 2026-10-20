@@ -6408,9 +6408,17 @@ function onReceitaParceladoCalc() {
 
 // ── Lançar Proposta no Financeiro ─────────────────────────────────────────
 function lancarPropostaFinanceiro(leadId, negId) {
-  var props = loadPropostas().filter(function(p){ return p.leadId === leadId; });
+  var allLeadNegs = loadNegocios().filter(function(x){ return x.leadId === leadId; });
+  var neg    = allLeadNegs.find(function(x){ return x.id === negId; });
+  var negAno = neg ? (neg.ano || new Date().getFullYear()) : new Date().getFullYear();
+  var props  = loadPropostas().filter(function(p){
+    if (p.leadId !== leadId) return false;
+    if (p.negocioId) return p.negocioId === negId;
+    if (allLeadNegs.length <= 1) return true;
+    return (p.negocioAno || new Date(p.criadoEm || 0).getFullYear()) === negAno;
+  });
   if (!props.length) {
-    alert('Nenhuma proposta encontrada para este lead.\nCrie uma proposta antes de lançar no financeiro.');
+    alert('Nenhuma proposta encontrada para este negócio.\nCrie uma proposta antes de lançar no financeiro.');
     return;
   }
   if (props.length === 1) {
@@ -6539,6 +6547,13 @@ function _confirmarLancarProposta(p, negId) {
   var negocios = loadNegocios();
   var nIdx = negocios.findIndex(function(x){ return x.id === negId; });
   if (nIdx !== -1) { negocios[nIdx].lancadoPropostaId = p.id; saveNegocios(negocios); }
+  // Gravar negocioId na proposta para que ela não apareça em negociações futuras do mesmo lead
+  var propostas = loadPropostas();
+  var pIdx = propostas.findIndex(function(x){ return x.id === p.id; });
+  if (pIdx !== -1 && !propostas[pIdx].negocioId) {
+    propostas[pIdx].negocioId = negId;
+    savePropostas(propostas);
+  }
   closePropostaPickerModal();
   renderKanban();
   alert('✅ Receita lançada com sucesso no Financeiro!');
