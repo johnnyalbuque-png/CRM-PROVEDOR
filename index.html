@@ -2726,11 +2726,27 @@
               <option value="8">8x</option><option value="9">9x</option>
               <option value="10">10x</option><option value="11">11x</option>
               <option value="12">12x</option>
+              <option value="entrada">💰 Entrada + Parcelas</option>
             </select>
           </div>
           <div class="form-group" style="flex:1;min-width:160px">
             <label>Valor por parcela</label>
             <input type="text" id="propostaValParc" readonly style="background:#f8fafc;font-weight:700;color:#2563eb;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;width:100%" />
+          </div>
+        </div>
+        <div id="propostaEntradaControls" style="display:none;gap:12px;margin-bottom:12px;align-items:flex-end;flex-wrap:wrap">
+          <div class="form-group" style="flex:1;min-width:160px">
+            <label>Valor da entrada (R$)</label>
+            <input type="number" id="propostaEntradaValor" min="0" step="0.01" placeholder="0,00" oninput="updatePropostaParcelas()" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;width:100%" />
+          </div>
+          <div class="form-group" style="flex:0 0 auto">
+            <label>Parcelas do restante</label>
+            <select id="propostaEntradaNParcelas" onchange="updatePropostaParcelas()" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px">
+              <option value="1">1x</option><option value="2">2x</option><option value="3">3x</option>
+              <option value="4">4x</option><option value="5">5x</option><option value="6">6x</option>
+              <option value="7">7x</option><option value="8">8x</option><option value="9">9x</option>
+              <option value="10">10x</option><option value="11">11x</option><option value="12">12x</option>
+            </select>
           </div>
         </div>
         <table class="prop-parc-table">
@@ -4874,7 +4890,7 @@ function editarProposta(propostaId) {
   document.getElementById('propostaNumero').value    = p.numero;
   document.getElementById('propostaData').value      = p.data || '';
   document.getElementById('propostaValidade').value  = p.validade || '';
-  document.getElementById('propostaNParcelas').value    = p.parcelas === 'combinar' ? 'combinar' : (p.parcelas || 1);
+  document.getElementById('propostaNParcelas').value    = p.entrada ? 'entrada' : (p.parcelas === 'combinar' ? 'combinar' : (p.parcelas || 1));
   document.getElementById('propostaObs').value           = p.obs || '';
   document.getElementById('propostaValidadeDias').value  = p.validadeDias || '';
   document.getElementById('propostaAcrescimoPct').value  = p.acrescimoPct || '';
@@ -4882,6 +4898,10 @@ function editarProposta(propostaId) {
   _populatePropostaEmitente(p.emitenteIdx != null ? p.emitenteIdx : '');
   renderPropostaLinhas();
   calcPropostaTotal();
+  if (p.entrada) {
+    document.getElementById('propostaEntradaValor').value    = p.entrada;
+    document.getElementById('propostaEntradaNParcelas').value = p.entradaNParcelas || 1;
+  }
   updatePropostaParcelas();
   var dateInputs = document.querySelectorAll('#propostaParcBody input[type="date"]');
   if (p.vencimentos) {
@@ -4971,15 +4991,44 @@ function updatePropostaParcelas() {
   var sel      = document.getElementById('propostaNParcelas').value;
   var tbody    = document.getElementById('propostaParcBody');
   var valParc  = document.getElementById('propostaValParc');
+  var entradaCtrl = document.getElementById('propostaEntradaControls');
+  entradaCtrl.style.display = 'none';
   if (sel === 'combinar') {
     valParc.value = '— A combinar —';
     tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:10px;font-style:italic;font-size:13px">Forma de pagamento a combinar com o cliente.</td></tr>';
     return;
   }
+  var hoje = new Date();
+  if (sel === 'entrada') {
+    entradaCtrl.style.display = 'flex';
+    var entradaValor = parseFloat(document.getElementById('propostaEntradaValor').value) || 0;
+    var nParc = parseInt(document.getElementById('propostaEntradaNParcelas').value) || 1;
+    var restante = Math.max(0, total - entradaValor);
+    var vParcela = nParc > 0 ? restante / nParc : restante;
+    valParc.value = fmtMoney(vParcela);
+    var vencEntrada = new Date(hoje); vencEntrada.setDate(vencEntrada.getDate() + 7);
+    var vencEntradaStr = vencEntrada.toISOString().split('T')[0];
+    var rows = ['<tr style="background:#faf5ff">' +
+      '<td style="text-align:center;font-weight:800;color:#7c3aed;font-size:12px">ENTRADA</td>' +
+      '<td><input type="date" class="prop-input-sm" value="' + vencEntradaStr + '" style="max-width:170px" /></td>' +
+      '<td style="text-align:right;font-weight:800;color:#7c3aed">' + fmtMoney(entradaValor) + '</td>' +
+    '</tr>'];
+    for (var i = 0; i < nParc; i++) {
+      var venc = new Date(hoje); venc.setMonth(venc.getMonth() + i + 1);
+      var vencStr = venc.toISOString().split('T')[0];
+      rows.push('<tr>' +
+        '<td style="text-align:center;font-weight:600;color:#64748b">' + (i+1) + '/' + nParc + '</td>' +
+        '<td><input type="date" class="prop-input-sm" value="' + vencStr + '" style="max-width:170px"' +
+          (i === 0 ? ' onchange="autoFillParcDates(this)"' : '') + ' /></td>' +
+        '<td style="text-align:right;font-weight:700;color:#0f172a">' + fmtMoney(vParcela) + '</td>' +
+      '</tr>');
+    }
+    tbody.innerHTML = rows.join('');
+    return;
+  }
   var n        = parseInt(sel) || 1;
   var vParcela = n > 0 ? total / n : total;
   valParc.value = fmtMoney(vParcela);
-  var hoje  = new Date();
   tbody.innerHTML = Array.from({ length: n }, function(_, i) {
     var venc = new Date(hoje);
     venc.setMonth(venc.getMonth() + i + 1);
@@ -4993,15 +5042,17 @@ function updatePropostaParcelas() {
   }).join('');
 }
 
-function autoFillParcDates(firstInput) {
-  var val = firstInput.value;
+function autoFillParcDates(triggerInput) {
+  var val = triggerInput.value;
   if (!val) return;
   var base = new Date(val + 'T12:00:00');
-  var inputs = document.querySelectorAll('#propostaParcBody input[type="date"]');
+  var inputs = Array.from(document.querySelectorAll('#propostaParcBody input[type="date"]'));
+  var startIdx = inputs.indexOf(triggerInput);
+  if (startIdx === -1) return;
   inputs.forEach(function(inp, i) {
-    if (i === 0) return;
+    if (i <= startIdx) return;
     var d = new Date(base);
-    d.setMonth(d.getMonth() + i);
+    d.setMonth(d.getMonth() + (i - startIdx));
     inp.value = d.toISOString().slice(0, 10);
   });
 }
@@ -5034,11 +5085,17 @@ function renderPropostaLinhas() {
 function coletarPropostaData() {
   var selVal = document.getElementById('propostaNParcelas').value;
   var isCombinar = selVal === 'combinar';
-  var n = isCombinar ? 0 : (parseInt(selVal) || 1);
+  var isEntrada  = selVal === 'entrada';
+  var entradaValor = isEntrada ? (parseFloat(document.getElementById('propostaEntradaValor').value) || 0) : 0;
+  var entradaNParc = isEntrada ? (parseInt(document.getElementById('propostaEntradaNParcelas').value) || 1) : 0;
+  var n = isCombinar ? 0 : isEntrada ? (1 + entradaNParc) : (parseInt(selVal) || 1);
   var total = propostaLinhas.reduce(function(acc, l){ return acc + (l.total || 0); }, 0);
   var vencimentos = Array.from(
     document.querySelectorAll('#propostaParcBody input[type="date"]')
   ).map(function(el){ return el.value; });
+  var valorParcela = isEntrada
+    ? (entradaNParc > 0 ? Math.max(0, total - entradaValor) / entradaNParc : 0)
+    : (n > 0 ? total / n : total);
   return {
     id:          propostaEditingId || generateId(),
     numero:      document.getElementById('propostaNumero').value,
@@ -5048,7 +5105,9 @@ function coletarPropostaData() {
     linhas:      propostaLinhas.slice().map(function(l){ return Object.assign({}, l); }),
     total:       total,
     parcelas:    isCombinar ? 'combinar' : n,
-    valorParcela: n > 0 ? total / n : total,
+    entrada:     entradaValor || 0,
+    entradaNParcelas: entradaNParc || 0,
+    valorParcela: valorParcela,
     vencimentos: vencimentos,
     obs:          document.getElementById('propostaObs').value,
     validadeDias: parseInt(document.getElementById('propostaValidadeDias').value) || 0,
@@ -6496,17 +6555,22 @@ function _confirmarLancarProposta(p, negId) {
   }
 
   var grupoList = Object.keys(gruposMap).map(function(k){ return { evId: k, subtotal: gruposMap[k] }; });
-  var parcStr   = (p.parcelas > 1) ? p.parcelas + 'x de ' + fmtMoney(p.valorParcela) : 'à vista';
+  var parcStr = p.entrada
+    ? 'Entrada de ' + fmtMoney(p.entrada) + ' + ' + p.entradaNParcelas + 'x de ' + fmtMoney(p.valorParcela)
+    : (p.parcelas > 1 ? p.parcelas + 'x de ' + fmtMoney(p.valorParcela) : 'à vista');
   var evLines   = grupoList.map(function(g) {
     var ev = eventos.find(function(e){ return e.id === g.evId; });
     return '  • ' + (ev ? ev.nome : g.evId) + ': ' + fmtMoney(g.subtotal);
   });
+  var receitasStr = p.entrada
+    ? 'Entrada de ' + fmtMoney(p.entrada) + ' + ' + p.entradaNParcelas + ' parcelas de ' + fmtMoney(p.valorParcela)
+    : (p.parcelas > 1 ? p.parcelas + ' parcelas de ' + fmtMoney(p.valorParcela) : '1 entrada de ' + fmtMoney(p.total));
 
   var msg = 'Lançar no Financeiro — Receita?\n\n' +
     'Proposta: ' + p.numero + '\n' +
     'Total: ' + fmtMoney(p.total) + '  (' + parcStr + ')\n' +
     (evLines.length ? '\nEventos (P&L):\n' + evLines.join('\n') + '\n' : '') + '\n' +
-    'Receitas: ' + (p.parcelas > 1 ? p.parcelas + ' parcelas de ' + fmtMoney(p.valorParcela) : '1 entrada de ' + fmtMoney(p.total));
+    'Receitas: ' + receitasStr;
   if (!confirm(msg)) return;
 
   var session = getSession();
@@ -6522,32 +6586,44 @@ function _confirmarLancarProposta(p, negId) {
     dominantTipo = 'outro';
   }
 
-  // 1. Receitas (fluxo de caixa): total dividido pelas parcelas nas datas informadas
-  if (p.parcelas <= 1) {
-    lista.push({
-      id: generateId(), descricao: desc, categoria: 'Eventos',
-      status: 'Pendente', valor: p.total,
+  // 1. Receitas (fluxo de caixa)
+  var _base = { categoria: 'Eventos', status: 'Pendente', dataRecebimento: '', leadId: p.leadId, eventoId: '',
+    observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
+    notaFiscal: !!p.notaFiscal, servTipo: dominantTipo,
+    criadoPor: session ? session.nome : '—', criadoEm: Date.now() };
+  if (p.entrada) {
+    var grupoIdEntrada = generateId();
+    var nTotal = 1 + (p.entradaNParcelas || 0);
+    lista.push(Object.assign({}, _base, {
+      id: generateId(), descricao: desc + ' (Entrada)',
+      valor: p.entrada,
       vencimento: (p.vencimentos && p.vencimentos[0]) || '',
-      dataRecebimento: '', leadId: p.leadId, eventoId: '',
-      observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
-      notaFiscal: !!p.notaFiscal, servTipo: dominantTipo,
-      criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
-    });
+      parcelaGrupoId: grupoIdEntrada, parcelaSeq: 1, parcelas: nTotal,
+    }));
+    for (var i = 0; i < (p.entradaNParcelas || 0); i++) {
+      lista.push(Object.assign({}, _base, {
+        id: generateId(),
+        descricao: desc + ' (' + (i+1) + '/' + p.entradaNParcelas + ')',
+        valor: p.valorParcela,
+        vencimento: (p.vencimentos && p.vencimentos[i+1]) || '',
+        parcelaGrupoId: grupoIdEntrada, parcelaSeq: i + 2, parcelas: nTotal,
+      }));
+    }
+  } else if (p.parcelas <= 1) {
+    lista.push(Object.assign({}, _base, {
+      id: generateId(), descricao: desc, valor: p.total,
+      vencimento: (p.vencimentos && p.vencimentos[0]) || '',
+    }));
   } else {
     var grupoIdParcelas = generateId();
     for (var i = 0; i < p.parcelas; i++) {
-      lista.push({
+      lista.push(Object.assign({}, _base, {
         id: generateId(),
         descricao: desc + ' (' + (i+1) + '/' + p.parcelas + ')',
-        categoria: 'Eventos', status: 'Pendente',
         valor: p.valorParcela,
         vencimento: (p.vencimentos && p.vencimentos[i]) || '',
-        dataRecebimento: '', leadId: p.leadId, eventoId: '',
-        observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
         parcelaGrupoId: grupoIdParcelas, parcelaSeq: i + 1, parcelas: p.parcelas,
-        notaFiscal: !!p.notaFiscal, servTipo: dominantTipo,
-        criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
-      });
+      }));
     }
   }
 
