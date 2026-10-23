@@ -4986,10 +4986,24 @@ function updatePropostaParcelas() {
     var vencStr = venc.toISOString().split('T')[0];
     return '<tr>' +
       '<td style="text-align:center;font-weight:600;color:#64748b">' + (i+1) + '/' + n + '</td>' +
-      '<td><input type="date" class="prop-input-sm" value="' + vencStr + '" style="max-width:170px" /></td>' +
+      '<td><input type="date" class="prop-input-sm" value="' + vencStr + '" style="max-width:170px"' +
+        (i === 0 ? ' onchange="autoFillParcDates(this)"' : '') + ' /></td>' +
       '<td style="text-align:right;font-weight:700;color:#0f172a">' + fmtMoney(vParcela) + '</td>' +
     '</tr>';
   }).join('');
+}
+
+function autoFillParcDates(firstInput) {
+  var val = firstInput.value;
+  if (!val) return;
+  var base = new Date(val + 'T12:00:00');
+  var inputs = document.querySelectorAll('#propostaParcBody input[type="date"]');
+  inputs.forEach(function(inp, i) {
+    if (i === 0) return;
+    var d = new Date(base);
+    d.setMonth(d.getMonth() + i);
+    inp.value = d.toISOString().slice(0, 10);
+  });
 }
 
 function renderPropostaLinhas() {
