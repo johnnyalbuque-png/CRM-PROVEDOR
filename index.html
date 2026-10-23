@@ -4308,9 +4308,7 @@ function renderKanban() {
             (fuStr ? '<div class="kcard-followup-badge" style="margin-top:5px;font-size:10px">📅 ' + fuStr + '</div>' : '') +
             (stage.id === 'Fechado'
               ? (n.lancadoPropostaId
-                  ? '<div class="kcard-financeiro-btn lancado">✅ Lançado no Financeiro' +
-                    ' <button style="margin-left:6px;background:none;border:none;cursor:pointer;font-size:10px;color:#6366f1;text-decoration:underline;padding:0" onclick="event.stopPropagation();abrirCorrigirPL(\'' + n.id + '\')" title="Corrigir atribuição P&L de eventos">🔄 P&L</button>' +
-                    '</div>'
+                  ? '<div class="kcard-financeiro-btn lancado">✅ Lançado no Financeiro</div>'
                   : '<button class="kcard-financeiro-btn" onclick="event.stopPropagation();lancarPropostaFinanceiro(\'' + n.leadId + '\',\'' + n.id + '\')">💰 Lançar no Financeiro</button>')
               : '') +
           '</div>';
