@@ -1898,6 +1898,7 @@
     </button>
     <span class="detail-title" id="detailEmpresa"></span>
     <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost btn-sm" id="detailCorrigirPLBtn" style="display:none;font-size:12px;color:#6366f1" title="Reprocessar atribuição P&L de eventos">🔄 Corrigir P&L</button>
       <button class="btn btn-outline" id="detailPropostaBtn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -3224,6 +3225,17 @@ function openDetail(id, negId) {
   var negs = loadNegocios().filter(function(x){ return x.leadId === id; });
   var neg  = negId ? negs.find(function(x){ return x.id === negId; }) : negs[0];
   renderDetailComments(neg || null);
+
+  // Botão Corrigir P&L: só aparece quando o negócio já foi lançado no financeiro
+  var plBtn = document.getElementById('detailCorrigirPLBtn');
+  if (plBtn) {
+    if (neg && neg.lancadoPropostaId) {
+      plBtn.style.display = '';
+      plBtn.onclick = function(){ abrirCorrigirPL(neg.id); };
+    } else {
+      plBtn.style.display = 'none';
+    }
+  }
 
   document.getElementById('detailOverlay').classList.add('open');
 }
