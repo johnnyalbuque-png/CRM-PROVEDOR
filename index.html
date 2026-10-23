@@ -4296,7 +4296,9 @@ function renderKanban() {
             (fuStr ? '<div class="kcard-followup-badge" style="margin-top:5px;font-size:10px">📅 ' + fuStr + '</div>' : '') +
             (stage.id === 'Fechado'
               ? (n.lancadoPropostaId
-                  ? '<div class="kcard-financeiro-btn lancado">✅ Lançado no Financeiro</div>'
+                  ? '<div class="kcard-financeiro-btn lancado">✅ Lançado no Financeiro' +
+                    ' <button style="margin-left:6px;background:none;border:none;cursor:pointer;font-size:10px;color:#6366f1;text-decoration:underline;padding:0" onclick="event.stopPropagation();abrirCorrigirPL(\'' + n.id + '\')" title="Corrigir atribuição P&L de eventos">🔄 P&L</button>' +
+                    '</div>'
                   : '<button class="kcard-financeiro-btn" onclick="event.stopPropagation();lancarPropostaFinanceiro(\'' + n.leadId + '\',\'' + n.id + '\')">💰 Lançar no Financeiro</button>')
               : '') +
           '</div>';
@@ -7732,6 +7734,121 @@ async function boot() {
 }
 boot();
 </script>
+
+<!-- Funções: Corrigir P&L de Eventos -->
+<script>
+var _corrigirPLNegId = null;
+var _corrigirPLProps = null;
+
+function abrirCorrigirPL(negId) {
+  var negocios  = loadNegocios();
+  var neg       = negocios.find(function(x){ return x.id === negId; });
+  if (!neg || !neg.lancadoPropostaId) return;
+  var propostas = loadPropostas();
+  var p = propostas.find(function(x){ return x.id === neg.lancadoPropostaId; });
+  if (!p) return;
+  _corrigirPLNegId = negId;
+  _corrigirPLProps = p;
+
+  var servicos = loadServicos();
+  var eventos  = loadEventos();
+  var evOptsBase = '<option value="">— Nenhum —</option>' +
+    eventos.map(function(e){ return '<option value="' + esc(e.id) + '">' + esc(e.nome) + '</option>'; }).join('');
+
+  var linhas = (p.linhas || []).filter(function(l){ return l.total > 0 || (l.valorUnit || 0) > 0; });
+  document.getElementById('corrigirPLLinhas').innerHTML = linhas.map(function(l, i) {
+    var s     = servicos.find(function(x){ return x.id === l.servId; });
+    var nome  = l.nome || (s ? s.nome : '—');
+    var val   = +(l.total) || (+(l.valorUnit || 0) * +(l.qty || 1));
+    var evId  = l.eventoId || (s && s.eventoId) || '';
+    var opts  = evOptsBase.replace('value="' + esc(evId) + '"', 'value="' + esc(evId) + '" selected');
+    return '<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:6px 8px">' + esc(nome) + '</td>' +
+      '<td style="padding:6px 8px;text-align:right;white-space:nowrap">' + fmtMoney(val) + '</td>' +
+      '<td style="padding:6px 8px"><select class="prop-input-sm" style="width:100%" data-idx="' + i + '">' + opts + '</select></td></tr>';
+  }).join('');
+
+  document.getElementById('corrigirPLModal').classList.add('open');
+}
+
+function fecharCorrigirPL() {
+  document.getElementById('corrigirPLModal').classList.remove('open');
+  _corrigirPLNegId = null;
+  _corrigirPLProps = null;
+}
+
+function confirmarCorrigirPL() {
+  if (!_corrigirPLProps) return;
+  var p       = _corrigirPLProps;
+  var eventos = loadEventos();
+  var session = getSession();
+
+  // Ler eventos selecionados por linha
+  var selects = document.querySelectorAll('#corrigirPLLinhas select');
+  var linhas  = (p.linhas || []).filter(function(l){ return l.total > 0 || (l.valorUnit || 0) > 0; });
+
+  // Construir gruposMap
+  var gruposMap = {};
+  selects.forEach(function(sel, i) {
+    var evId = sel.value;
+    if (!evId) return;
+    var l   = linhas[i];
+    var val = +(l && l.total) || (+(l && l.valorUnit || 0) * +(l && l.qty || 1));
+    gruposMap[evId] = (gruposMap[evId] || 0) + val;
+  });
+
+  // Remover eventoOnly antigos desta proposta
+  var receita = loadReceita();
+  var obs     = 'Proposta ' + p.numero;
+  receita = receita.filter(function(r){
+    return !(r.eventoOnly && r.observacao === obs && r.leadId === p.leadId);
+  });
+
+  // Criar novos registros eventoOnly
+  Object.keys(gruposMap).forEach(function(evId) {
+    var ev = eventos.find(function(e){ return e.id === evId; });
+    receita.push({
+      id: generateId(),
+      descricao: (p.numero ? 'Prop. ' + p.numero : 'Proposta') + (ev ? ' / ' + ev.nome : ''),
+      categoria: 'Eventos', status: 'Pendente',
+      valor: gruposMap[evId],
+      vencimento: (p.vencimentos && p.vencimentos[0]) || '',
+      dataRecebimento: '', leadId: p.leadId, eventoId: evId,
+      observacao: obs, recorrencia: 'nenhuma',
+      eventoOnly: true,
+      criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
+    });
+  });
+
+  saveReceita2(receita);
+  fecharCorrigirPL();
+  alert('✅ P&L de eventos atualizado!');
+}
+</script>
+
+<!-- Modal: Corrigir P&L de Eventos -->
+<div class="modal-overlay" id="corrigirPLModal" style="z-index:710">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h2>🔄 Corrigir Atribuição P&L de Eventos</h2>
+      <button class="modal-close" onclick="fecharCorrigirPL()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:#64748b;margin:0 0 14px">Selecione o evento correspondente a cada linha da proposta. Os registros P&L antigos serão substituídos.</p>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#f1f5f9">
+          <th style="padding:6px 8px;text-align:left">Serviço</th>
+          <th style="padding:6px 8px;text-align:right;white-space:nowrap">Valor</th>
+          <th style="padding:6px 8px;text-align:left;min-width:140px">Evento P&L</th>
+        </tr></thead>
+        <tbody id="corrigirPLLinhas"></tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharCorrigirPL()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarCorrigirPL()">✅ Reprocessar P&L</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal: Selecionar Proposta para lançar no Financeiro -->
 <div class="modal-overlay" id="propostaPickerModal" style="z-index:700">
