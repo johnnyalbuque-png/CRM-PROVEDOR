@@ -2685,6 +2685,7 @@
             <thead>
               <tr>
                 <th>Serviço / Produto</th>
+                <th style="width:130px">Evento</th>
                 <th style="width:64px;text-align:center">Qtd</th>
                 <th style="width:120px">Valor Unit. (R$)</th>
                 <th style="width:110px">Desc. (R$)</th>
@@ -2694,11 +2695,11 @@
               </tr>
             </thead>
             <tbody id="propostaLinhasBody">
-              <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:24px 0;font-size:13px">Clique em "+ Adicionar item" para começar</td></tr>
+              <tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:24px 0;font-size:13px">Clique em "+ Adicionar item" para começar</td></tr>
             </tbody>
             <tfoot>
               <tr>
-                <td colspan="5" style="text-align:right;font-weight:700;padding:10px 8px;color:#0f172a">Total dos serviços:</td>
+                <td colspan="6" style="text-align:right;font-weight:700;padding:10px 8px;color:#0f172a">Total dos serviços:</td>
                 <td style="text-align:right;font-weight:700;padding:10px 8px;color:#15803d" id="propostaTotalServs">R$ 0,00</td>
                 <td></td>
               </tr>
@@ -2726,11 +2727,27 @@
               <option value="8">8x</option><option value="9">9x</option>
               <option value="10">10x</option><option value="11">11x</option>
               <option value="12">12x</option>
+              <option value="entrada">💰 Entrada + Parcelas</option>
             </select>
           </div>
           <div class="form-group" style="flex:1;min-width:160px">
             <label>Valor por parcela</label>
             <input type="text" id="propostaValParc" readonly style="background:#f8fafc;font-weight:700;color:#2563eb;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;width:100%" />
+          </div>
+        </div>
+        <div id="propostaEntradaControls" style="display:none;gap:12px;margin-bottom:12px;align-items:flex-end;flex-wrap:wrap">
+          <div class="form-group" style="flex:1;min-width:160px">
+            <label>Valor da entrada (R$)</label>
+            <input type="number" id="propostaEntradaValor" min="0" step="0.01" placeholder="0,00" oninput="updatePropostaParcelas()" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;width:100%" />
+          </div>
+          <div class="form-group" style="flex:0 0 auto">
+            <label>Parcelas do restante</label>
+            <select id="propostaEntradaNParcelas" onchange="updatePropostaParcelas()" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px">
+              <option value="1">1x</option><option value="2">2x</option><option value="3">3x</option>
+              <option value="4">4x</option><option value="5">5x</option><option value="6">6x</option>
+              <option value="7">7x</option><option value="8">8x</option><option value="9">9x</option>
+              <option value="10">10x</option><option value="11">11x</option><option value="12">12x</option>
+            </select>
           </div>
         </div>
         <table class="prop-parc-table">
@@ -4234,6 +4251,11 @@ function renderKanban() {
             if (p.leadId !== n.leadId) return false;
             if (p.negocioId) return p.negocioId === n.id;
             if (_allLeadNegs.length <= 1) return true;
+            // Exclude proposals already consumed by a different negotiation
+            var consumedByOther = _allLeadNegs.some(function(other){
+              return other.id !== n.id && other.lancadoPropostaId === p.id;
+            });
+            if (consumedByOther) return false;
             return (p.negocioAno || new Date(p.criadoEm || 0).getFullYear()) === negAno;
           });
           var nProps = props.length;
@@ -4242,15 +4264,17 @@ function renderKanban() {
           var _d3 = new Date(_hoje + 'T12:00:00'); _d3.setDate(_d3.getDate() + 3);
           var _in3 = _d3.toISOString().slice(0,10);
           var propAlerta = null;
-          props.forEach(function(p) {
-            if (!p.validade) return;
-            if (p.validade < _hoje) {
-              propAlerta = { tipo: 'expirada' };
-            } else if (p.validade <= _in3 && propAlerta === null) {
-              var dias = Math.round((new Date(p.validade+'T12:00:00') - new Date(_hoje+'T12:00:00')) / 86400000);
-              propAlerta = { tipo: 'vencendo', dias: dias };
-            }
-          });
+          if (!n.lancadoPropostaId) {
+            props.forEach(function(p) {
+              if (!p.validade) return;
+              if (p.validade < _hoje) {
+                propAlerta = { tipo: 'expirada' };
+              } else if (p.validade <= _in3 && propAlerta === null) {
+                var dias = Math.round((new Date(p.validade+'T12:00:00') - new Date(_hoje+'T12:00:00')) / 86400000);
+                propAlerta = { tipo: 'vencendo', dias: dias };
+              }
+            });
+          }
           var badgeColor = (stage.cor || '#64748b');
           var badgeBg = badgeColor + '22';
           return '<div class="kanban-card" draggable="true"' +
@@ -4291,6 +4315,10 @@ function renderKanban() {
             if (p.leadId !== n.leadId) return false;
             if (p.negocioId) return p.negocioId === n.id;
             if (_allLNeg.length <= 1) return true;
+            var consumedByOther = _allLNeg.some(function(other){
+              return other.id !== n.id && other.lancadoPropostaId === p.id;
+            });
+            if (consumedByOther) return false;
             return (p.negocioAno || new Date(p.criadoEm || 0).getFullYear()) === nAno;
           });
           var totalProps = props.reduce(function(s, p){ return s + (+p.total || 0); }, 0);
@@ -4863,7 +4891,7 @@ function editarProposta(propostaId) {
   document.getElementById('propostaNumero').value    = p.numero;
   document.getElementById('propostaData').value      = p.data || '';
   document.getElementById('propostaValidade').value  = p.validade || '';
-  document.getElementById('propostaNParcelas').value    = p.parcelas === 'combinar' ? 'combinar' : (p.parcelas || 1);
+  document.getElementById('propostaNParcelas').value    = p.entrada ? 'entrada' : (p.parcelas === 'combinar' ? 'combinar' : (p.parcelas || 1));
   document.getElementById('propostaObs').value           = p.obs || '';
   document.getElementById('propostaValidadeDias').value  = p.validadeDias || '';
   document.getElementById('propostaAcrescimoPct').value  = p.acrescimoPct || '';
@@ -4871,6 +4899,10 @@ function editarProposta(propostaId) {
   _populatePropostaEmitente(p.emitenteIdx != null ? p.emitenteIdx : '');
   renderPropostaLinhas();
   calcPropostaTotal();
+  if (p.entrada) {
+    document.getElementById('propostaEntradaValor').value    = p.entrada;
+    document.getElementById('propostaEntradaNParcelas').value = p.entradaNParcelas || 1;
+  }
   updatePropostaParcelas();
   var dateInputs = document.querySelectorAll('#propostaParcBody input[type="date"]');
   if (p.vencimentos) {
@@ -4897,7 +4929,7 @@ function closePropostaModal() {
 }
 
 function addPropostaLinha() {
-  propostaLinhas.push({ servId:'', nome:'', qty:1, valorUnit:0, descontoR:0, descontoPct:0, total:0 });
+  propostaLinhas.push({ servId:'', nome:'', qty:1, valorUnit:0, descontoR:0, descontoPct:0, total:0, eventoId:'' });
   renderPropostaLinhas();
 }
 
@@ -4911,9 +4943,11 @@ function removePropostaLinha(idx) {
 function onPropostaServSelect(idx, servId) {
   var s = loadServicos().find(function(x){ return x.id === servId; });
   if (s) {
+    var evId = s.eventoId || (s.eventoIds && s.eventoIds.length === 1 ? s.eventoIds[0] : '');
     propostaLinhas[idx] = Object.assign(propostaLinhas[idx], {
       servId: s.id, nome: s.nome, valorUnit: s.precoFinal,
       descontoR: 0, descontoPct: 0, servTipo: s.tipo || 'exposicao',
+      eventoId: propostaLinhas[idx].eventoId || evId || '',
     });
   } else {
     propostaLinhas[idx] = Object.assign(propostaLinhas[idx], {
@@ -4928,6 +4962,7 @@ function onPropostaServSelect(idx, servId) {
 
 function onPropostaFieldChange(idx, field, value) {
   var l = propostaLinhas[idx];
+  if (field === 'eventoId')  { l.eventoId = value; return; }
   if (field === 'qty')       l.qty       = Math.max(0.01, parseFloat(value) || 1);
   if (field === 'valorUnit') l.valorUnit = Math.max(0, parseFloat(value) || 0);
   if (field === 'descontoR')   { l.descontoR   = Math.max(0, parseFloat(value) || 0); l.descontoPct = 0; }
@@ -4960,42 +4995,94 @@ function updatePropostaParcelas() {
   var sel      = document.getElementById('propostaNParcelas').value;
   var tbody    = document.getElementById('propostaParcBody');
   var valParc  = document.getElementById('propostaValParc');
+  var entradaCtrl = document.getElementById('propostaEntradaControls');
+  entradaCtrl.style.display = 'none';
   if (sel === 'combinar') {
     valParc.value = '— A combinar —';
     tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:10px;font-style:italic;font-size:13px">Forma de pagamento a combinar com o cliente.</td></tr>';
     return;
   }
+  var hoje = new Date();
+  if (sel === 'entrada') {
+    entradaCtrl.style.display = 'flex';
+    var entradaValor = parseFloat(document.getElementById('propostaEntradaValor').value) || 0;
+    var nParc = parseInt(document.getElementById('propostaEntradaNParcelas').value) || 1;
+    var restante = Math.max(0, total - entradaValor);
+    var vParcela = nParc > 0 ? restante / nParc : restante;
+    valParc.value = fmtMoney(vParcela);
+    var vencEntrada = new Date(hoje); vencEntrada.setDate(vencEntrada.getDate() + 7);
+    var vencEntradaStr = vencEntrada.toISOString().split('T')[0];
+    var rows = ['<tr style="background:#faf5ff">' +
+      '<td style="text-align:center;font-weight:800;color:#7c3aed;font-size:12px">ENTRADA</td>' +
+      '<td><input type="date" class="prop-input-sm" value="' + vencEntradaStr + '" style="max-width:170px" /></td>' +
+      '<td style="text-align:right;font-weight:800;color:#7c3aed">' + fmtMoney(entradaValor) + '</td>' +
+    '</tr>'];
+    for (var i = 0; i < nParc; i++) {
+      var venc = new Date(hoje); venc.setMonth(venc.getMonth() + i + 1);
+      var vencStr = venc.toISOString().split('T')[0];
+      rows.push('<tr>' +
+        '<td style="text-align:center;font-weight:600;color:#64748b">' + (i+1) + '/' + nParc + '</td>' +
+        '<td><input type="date" class="prop-input-sm" value="' + vencStr + '" style="max-width:170px"' +
+          (i === 0 ? ' onchange="autoFillParcDates(this)"' : '') + ' /></td>' +
+        '<td style="text-align:right;font-weight:700;color:#0f172a">' + fmtMoney(vParcela) + '</td>' +
+      '</tr>');
+    }
+    tbody.innerHTML = rows.join('');
+    return;
+  }
   var n        = parseInt(sel) || 1;
   var vParcela = n > 0 ? total / n : total;
   valParc.value = fmtMoney(vParcela);
-  var hoje  = new Date();
   tbody.innerHTML = Array.from({ length: n }, function(_, i) {
     var venc = new Date(hoje);
     venc.setMonth(venc.getMonth() + i + 1);
     var vencStr = venc.toISOString().split('T')[0];
     return '<tr>' +
       '<td style="text-align:center;font-weight:600;color:#64748b">' + (i+1) + '/' + n + '</td>' +
-      '<td><input type="date" class="prop-input-sm" value="' + vencStr + '" style="max-width:170px" /></td>' +
+      '<td><input type="date" class="prop-input-sm" value="' + vencStr + '" style="max-width:170px"' +
+        (i === 0 ? ' onchange="autoFillParcDates(this)"' : '') + ' /></td>' +
       '<td style="text-align:right;font-weight:700;color:#0f172a">' + fmtMoney(vParcela) + '</td>' +
     '</tr>';
   }).join('');
 }
 
+function autoFillParcDates(triggerInput) {
+  var val = triggerInput.value;
+  if (!val) return;
+  var base = new Date(val + 'T12:00:00');
+  var inputs = Array.from(document.querySelectorAll('#propostaParcBody input[type="date"]'));
+  var startIdx = inputs.indexOf(triggerInput);
+  if (startIdx === -1) return;
+  inputs.forEach(function(inp, i) {
+    if (i <= startIdx) return;
+    var d = new Date(base);
+    d.setMonth(d.getMonth() + (i - startIdx));
+    inp.value = d.toISOString().slice(0, 10);
+  });
+}
+
 function renderPropostaLinhas() {
   var servicos = loadServicos().filter(function(s){ return s.ativo !== false; });
+  var eventos  = loadEventos();
   var tbody = document.getElementById('propostaLinhasBody');
   if (!propostaLinhas.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:24px 0;font-size:13px">Clique em "+ Adicionar item" para começar</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:24px 0;font-size:13px">Clique em "+ Adicionar item" para começar</td></tr>';
     return;
   }
   var optsBase = '<option value="">— Selecione ou descreva abaixo —</option>' +
     servicos.map(function(s) {
       return '<option value="' + esc(s.id) + '">' + esc(s.nome) + ' (' + fmtMoney(s.precoFinal) + ')</option>';
     }).join('');
+  var evOptsBase = '<option value="">— Nenhum —</option>' +
+    eventos.map(function(e) {
+      return '<option value="' + esc(e.id) + '">' + esc(e.nome) + '</option>';
+    }).join('');
   tbody.innerHTML = propostaLinhas.map(function(l, idx) {
-    var opts = optsBase.replace('value="' + esc(l.servId) + '"', 'value="' + esc(l.servId) + '" selected');
+    var opts   = optsBase.replace('value="' + esc(l.servId) + '"', 'value="' + esc(l.servId) + '" selected');
+    var evOpts = evOptsBase.replace('value="' + esc(l.eventoId || '') + '"', 'value="' + esc(l.eventoId || '') + '" selected');
     return '<tr data-idx="' + idx + '">' +
       '<td><select class="prop-select-serv" onchange="onPropostaServSelect(' + idx + ',this.value)">' + opts + '</select></td>' +
+      '<td><select class="prop-input-sm" style="min-width:0;width:100%" onchange="onPropostaFieldChange(' + idx + ',\'eventoId\',this.value)">' + evOpts + '</select></td>' +
       '<td><input type="number" class="prop-input-sm" min="0.01" step="0.01" value="' + l.qty + '" style="text-align:center" onchange="onPropostaFieldChange(' + idx + ',\'qty\',this.value)" /></td>' +
       '<td><input type="number" class="prop-input-sm" min="0" step="0.01" value="' + (l.valorUnit || '') + '" placeholder="0,00" onchange="onPropostaFieldChange(' + idx + ',\'valorUnit\',this.value)" /></td>' +
       '<td><input type="number" class="prop-input-sm" min="0" step="0.01" value="' + (l.descontoR  || '') + '" placeholder="0,00" onchange="onPropostaFieldChange(' + idx + ',\'descontoR\',this.value)" /></td>' +
@@ -5009,11 +5096,17 @@ function renderPropostaLinhas() {
 function coletarPropostaData() {
   var selVal = document.getElementById('propostaNParcelas').value;
   var isCombinar = selVal === 'combinar';
-  var n = isCombinar ? 0 : (parseInt(selVal) || 1);
+  var isEntrada  = selVal === 'entrada';
+  var entradaValor = isEntrada ? (parseFloat(document.getElementById('propostaEntradaValor').value) || 0) : 0;
+  var entradaNParc = isEntrada ? (parseInt(document.getElementById('propostaEntradaNParcelas').value) || 1) : 0;
+  var n = isCombinar ? 0 : isEntrada ? (1 + entradaNParc) : (parseInt(selVal) || 1);
   var total = propostaLinhas.reduce(function(acc, l){ return acc + (l.total || 0); }, 0);
   var vencimentos = Array.from(
     document.querySelectorAll('#propostaParcBody input[type="date"]')
   ).map(function(el){ return el.value; });
+  var valorParcela = isEntrada
+    ? (entradaNParc > 0 ? Math.max(0, total - entradaValor) / entradaNParc : 0)
+    : (n > 0 ? total / n : total);
   return {
     id:          propostaEditingId || generateId(),
     numero:      document.getElementById('propostaNumero').value,
@@ -5023,7 +5116,9 @@ function coletarPropostaData() {
     linhas:      propostaLinhas.slice().map(function(l){ return Object.assign({}, l); }),
     total:       total,
     parcelas:    isCombinar ? 'combinar' : n,
-    valorParcela: n > 0 ? total / n : total,
+    entrada:     entradaValor || 0,
+    entradaNParcelas: entradaNParc || 0,
+    valorParcela: valorParcela,
     vencimentos: vencimentos,
     obs:          document.getElementById('propostaObs').value,
     validadeDias: parseInt(document.getElementById('propostaValidadeDias').value) || 0,
@@ -6408,9 +6503,17 @@ function onReceitaParceladoCalc() {
 
 // ── Lançar Proposta no Financeiro ─────────────────────────────────────────
 function lancarPropostaFinanceiro(leadId, negId) {
-  var props = loadPropostas().filter(function(p){ return p.leadId === leadId; });
+  var allLeadNegs = loadNegocios().filter(function(x){ return x.leadId === leadId; });
+  var neg    = allLeadNegs.find(function(x){ return x.id === negId; });
+  var negAno = neg ? (neg.ano || new Date().getFullYear()) : new Date().getFullYear();
+  var props  = loadPropostas().filter(function(p){
+    if (p.leadId !== leadId) return false;
+    if (p.negocioId) return p.negocioId === negId;
+    if (allLeadNegs.length <= 1) return true;
+    return (p.negocioAno || new Date(p.criadoEm || 0).getFullYear()) === negAno;
+  });
   if (!props.length) {
-    alert('Nenhuma proposta encontrada para este lead.\nCrie uma proposta antes de lançar no financeiro.');
+    alert('Nenhuma proposta encontrada para este negócio.\nCrie uma proposta antes de lançar no financeiro.');
     return;
   }
   if (props.length === 1) {
@@ -6437,10 +6540,11 @@ function _confirmarLancarProposta(p, negId) {
   var linhas   = p.linhas || [];
 
   // Resolve each line's event and subtotal
+  // Priority: linha.eventoId (user-selected per line) > s.eventoId (from service catalog)
   var gruposMap = {};
   linhas.forEach(function(linha) {
     var s    = servicos.find(function(x){ return x.id === linha.servId; });
-    var evId = (s && s.eventoId) ? s.eventoId : '';
+    var evId = linha.eventoId || (s && s.eventoId) || '';
     var val  = +(linha.total) || (+(linha.valorUnit || 0) * +(linha.qty || 1));
     if (evId) gruposMap[evId] = (gruposMap[evId] || 0) + val;
   });
@@ -6450,30 +6554,35 @@ function _confirmarLancarProposta(p, negId) {
   if (somaGrupos === 0 && p.total > 0 && linhas.length > 0) {
     var evLinhas = linhas.filter(function(l){
       var s = servicos.find(function(x){ return x.id === l.servId; });
-      return s && s.eventoId;
+      return l.eventoId || (s && s.eventoId);
     });
     var nEv = evLinhas.length || linhas.length;
     var vpl = p.total / nEv;
     gruposMap = {};
     (evLinhas.length ? evLinhas : linhas).forEach(function(linha) {
       var s    = servicos.find(function(x){ return x.id === linha.servId; });
-      var evId = (s && s.eventoId) ? s.eventoId : '';
+      var evId = linha.eventoId || (s && s.eventoId) || '';
       if (evId) gruposMap[evId] = (gruposMap[evId] || 0) + vpl;
     });
   }
 
   var grupoList = Object.keys(gruposMap).map(function(k){ return { evId: k, subtotal: gruposMap[k] }; });
-  var parcStr   = (p.parcelas > 1) ? p.parcelas + 'x de ' + fmtMoney(p.valorParcela) : 'à vista';
+  var parcStr = p.entrada
+    ? 'Entrada de ' + fmtMoney(p.entrada) + ' + ' + p.entradaNParcelas + 'x de ' + fmtMoney(p.valorParcela)
+    : (p.parcelas > 1 ? p.parcelas + 'x de ' + fmtMoney(p.valorParcela) : 'à vista');
   var evLines   = grupoList.map(function(g) {
     var ev = eventos.find(function(e){ return e.id === g.evId; });
     return '  • ' + (ev ? ev.nome : g.evId) + ': ' + fmtMoney(g.subtotal);
   });
+  var receitasStr = p.entrada
+    ? 'Entrada de ' + fmtMoney(p.entrada) + ' + ' + p.entradaNParcelas + ' parcelas de ' + fmtMoney(p.valorParcela)
+    : (p.parcelas > 1 ? p.parcelas + ' parcelas de ' + fmtMoney(p.valorParcela) : '1 entrada de ' + fmtMoney(p.total));
 
   var msg = 'Lançar no Financeiro — Receita?\n\n' +
     'Proposta: ' + p.numero + '\n' +
     'Total: ' + fmtMoney(p.total) + '  (' + parcStr + ')\n' +
     (evLines.length ? '\nEventos (P&L):\n' + evLines.join('\n') + '\n' : '') + '\n' +
-    'Receitas: ' + (p.parcelas > 1 ? p.parcelas + ' parcelas de ' + fmtMoney(p.valorParcela) : '1 entrada de ' + fmtMoney(p.total));
+    'Receitas: ' + receitasStr;
   if (!confirm(msg)) return;
 
   var session = getSession();
@@ -6489,32 +6598,44 @@ function _confirmarLancarProposta(p, negId) {
     dominantTipo = 'outro';
   }
 
-  // 1. Receitas (fluxo de caixa): total dividido pelas parcelas nas datas informadas
-  if (p.parcelas <= 1) {
-    lista.push({
-      id: generateId(), descricao: desc, categoria: 'Eventos',
-      status: 'Pendente', valor: p.total,
+  // 1. Receitas (fluxo de caixa)
+  var _base = { categoria: 'Eventos', status: 'Pendente', dataRecebimento: '', leadId: p.leadId, eventoId: '',
+    observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
+    notaFiscal: !!p.notaFiscal, servTipo: dominantTipo,
+    criadoPor: session ? session.nome : '—', criadoEm: Date.now() };
+  if (p.entrada) {
+    var grupoIdEntrada = generateId();
+    var nTotal = 1 + (p.entradaNParcelas || 0);
+    lista.push(Object.assign({}, _base, {
+      id: generateId(), descricao: desc + ' (Entrada)',
+      valor: p.entrada,
       vencimento: (p.vencimentos && p.vencimentos[0]) || '',
-      dataRecebimento: '', leadId: p.leadId, eventoId: '',
-      observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
-      notaFiscal: !!p.notaFiscal, servTipo: dominantTipo,
-      criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
-    });
+      parcelaGrupoId: grupoIdEntrada, parcelaSeq: 1, parcelas: nTotal,
+    }));
+    for (var i = 0; i < (p.entradaNParcelas || 0); i++) {
+      lista.push(Object.assign({}, _base, {
+        id: generateId(),
+        descricao: desc + ' (' + (i+1) + '/' + p.entradaNParcelas + ')',
+        valor: p.valorParcela,
+        vencimento: (p.vencimentos && p.vencimentos[i+1]) || '',
+        parcelaGrupoId: grupoIdEntrada, parcelaSeq: i + 2, parcelas: nTotal,
+      }));
+    }
+  } else if (p.parcelas <= 1) {
+    lista.push(Object.assign({}, _base, {
+      id: generateId(), descricao: desc, valor: p.total,
+      vencimento: (p.vencimentos && p.vencimentos[0]) || '',
+    }));
   } else {
     var grupoIdParcelas = generateId();
     for (var i = 0; i < p.parcelas; i++) {
-      lista.push({
+      lista.push(Object.assign({}, _base, {
         id: generateId(),
         descricao: desc + ' (' + (i+1) + '/' + p.parcelas + ')',
-        categoria: 'Eventos', status: 'Pendente',
         valor: p.valorParcela,
         vencimento: (p.vencimentos && p.vencimentos[i]) || '',
-        dataRecebimento: '', leadId: p.leadId, eventoId: '',
-        observacao: 'Proposta ' + p.numero, recorrencia: 'nenhuma',
         parcelaGrupoId: grupoIdParcelas, parcelaSeq: i + 1, parcelas: p.parcelas,
-        notaFiscal: !!p.notaFiscal, servTipo: dominantTipo,
-        criadoPor: session ? session.nome : '—', criadoEm: Date.now(),
-      });
+      }));
     }
   }
 
@@ -6539,6 +6660,13 @@ function _confirmarLancarProposta(p, negId) {
   var negocios = loadNegocios();
   var nIdx = negocios.findIndex(function(x){ return x.id === negId; });
   if (nIdx !== -1) { negocios[nIdx].lancadoPropostaId = p.id; saveNegocios(negocios); }
+  // Gravar negocioId na proposta para que ela não apareça em negociações futuras do mesmo lead
+  var propostas = loadPropostas();
+  var pIdx = propostas.findIndex(function(x){ return x.id === p.id; });
+  if (pIdx !== -1 && !propostas[pIdx].negocioId) {
+    propostas[pIdx].negocioId = negId;
+    savePropostas(propostas);
+  }
   closePropostaPickerModal();
   renderKanban();
   alert('✅ Receita lançada com sucesso no Financeiro!');
