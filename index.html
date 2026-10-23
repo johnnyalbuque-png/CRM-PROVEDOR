@@ -2685,6 +2685,7 @@
             <thead>
               <tr>
                 <th>Serviço / Produto</th>
+                <th style="width:130px">Evento</th>
                 <th style="width:64px;text-align:center">Qtd</th>
                 <th style="width:120px">Valor Unit. (R$)</th>
                 <th style="width:110px">Desc. (R$)</th>
@@ -2694,11 +2695,11 @@
               </tr>
             </thead>
             <tbody id="propostaLinhasBody">
-              <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:24px 0;font-size:13px">Clique em "+ Adicionar item" para começar</td></tr>
+              <tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:24px 0;font-size:13px">Clique em "+ Adicionar item" para começar</td></tr>
             </tbody>
             <tfoot>
               <tr>
-                <td colspan="5" style="text-align:right;font-weight:700;padding:10px 8px;color:#0f172a">Total dos serviços:</td>
+                <td colspan="6" style="text-align:right;font-weight:700;padding:10px 8px;color:#0f172a">Total dos serviços:</td>
                 <td style="text-align:right;font-weight:700;padding:10px 8px;color:#15803d" id="propostaTotalServs">R$ 0,00</td>
                 <td></td>
               </tr>
@@ -4928,7 +4929,7 @@ function closePropostaModal() {
 }
 
 function addPropostaLinha() {
-  propostaLinhas.push({ servId:'', nome:'', qty:1, valorUnit:0, descontoR:0, descontoPct:0, total:0 });
+  propostaLinhas.push({ servId:'', nome:'', qty:1, valorUnit:0, descontoR:0, descontoPct:0, total:0, eventoId:'' });
   renderPropostaLinhas();
 }
 
@@ -4942,9 +4943,11 @@ function removePropostaLinha(idx) {
 function onPropostaServSelect(idx, servId) {
   var s = loadServicos().find(function(x){ return x.id === servId; });
   if (s) {
+    var evId = s.eventoId || (s.eventoIds && s.eventoIds.length === 1 ? s.eventoIds[0] : '');
     propostaLinhas[idx] = Object.assign(propostaLinhas[idx], {
       servId: s.id, nome: s.nome, valorUnit: s.precoFinal,
       descontoR: 0, descontoPct: 0, servTipo: s.tipo || 'exposicao',
+      eventoId: propostaLinhas[idx].eventoId || evId || '',
     });
   } else {
     propostaLinhas[idx] = Object.assign(propostaLinhas[idx], {
@@ -4959,6 +4962,7 @@ function onPropostaServSelect(idx, servId) {
 
 function onPropostaFieldChange(idx, field, value) {
   var l = propostaLinhas[idx];
+  if (field === 'eventoId')  { l.eventoId = value; return; }
   if (field === 'qty')       l.qty       = Math.max(0.01, parseFloat(value) || 1);
   if (field === 'valorUnit') l.valorUnit = Math.max(0, parseFloat(value) || 0);
   if (field === 'descontoR')   { l.descontoR   = Math.max(0, parseFloat(value) || 0); l.descontoPct = 0; }
@@ -5059,19 +5063,26 @@ function autoFillParcDates(triggerInput) {
 
 function renderPropostaLinhas() {
   var servicos = loadServicos().filter(function(s){ return s.ativo !== false; });
+  var eventos  = loadEventos();
   var tbody = document.getElementById('propostaLinhasBody');
   if (!propostaLinhas.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:24px 0;font-size:13px">Clique em "+ Adicionar item" para começar</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:24px 0;font-size:13px">Clique em "+ Adicionar item" para começar</td></tr>';
     return;
   }
   var optsBase = '<option value="">— Selecione ou descreva abaixo —</option>' +
     servicos.map(function(s) {
       return '<option value="' + esc(s.id) + '">' + esc(s.nome) + ' (' + fmtMoney(s.precoFinal) + ')</option>';
     }).join('');
+  var evOptsBase = '<option value="">— Nenhum —</option>' +
+    eventos.map(function(e) {
+      return '<option value="' + esc(e.id) + '">' + esc(e.nome) + '</option>';
+    }).join('');
   tbody.innerHTML = propostaLinhas.map(function(l, idx) {
-    var opts = optsBase.replace('value="' + esc(l.servId) + '"', 'value="' + esc(l.servId) + '" selected');
+    var opts   = optsBase.replace('value="' + esc(l.servId) + '"', 'value="' + esc(l.servId) + '" selected');
+    var evOpts = evOptsBase.replace('value="' + esc(l.eventoId || '') + '"', 'value="' + esc(l.eventoId || '') + '" selected');
     return '<tr data-idx="' + idx + '">' +
       '<td><select class="prop-select-serv" onchange="onPropostaServSelect(' + idx + ',this.value)">' + opts + '</select></td>' +
+      '<td><select class="prop-input-sm" style="min-width:0;width:100%" onchange="onPropostaFieldChange(' + idx + ',\'eventoId\',this.value)">' + evOpts + '</select></td>' +
       '<td><input type="number" class="prop-input-sm" min="0.01" step="0.01" value="' + l.qty + '" style="text-align:center" onchange="onPropostaFieldChange(' + idx + ',\'qty\',this.value)" /></td>' +
       '<td><input type="number" class="prop-input-sm" min="0" step="0.01" value="' + (l.valorUnit || '') + '" placeholder="0,00" onchange="onPropostaFieldChange(' + idx + ',\'valorUnit\',this.value)" /></td>' +
       '<td><input type="number" class="prop-input-sm" min="0" step="0.01" value="' + (l.descontoR  || '') + '" placeholder="0,00" onchange="onPropostaFieldChange(' + idx + ',\'descontoR\',this.value)" /></td>' +
@@ -6529,10 +6540,11 @@ function _confirmarLancarProposta(p, negId) {
   var linhas   = p.linhas || [];
 
   // Resolve each line's event and subtotal
+  // Priority: linha.eventoId (user-selected per line) > s.eventoId (from service catalog)
   var gruposMap = {};
   linhas.forEach(function(linha) {
     var s    = servicos.find(function(x){ return x.id === linha.servId; });
-    var evId = (s && s.eventoId) ? s.eventoId : '';
+    var evId = linha.eventoId || (s && s.eventoId) || '';
     var val  = +(linha.total) || (+(linha.valorUnit || 0) * +(linha.qty || 1));
     if (evId) gruposMap[evId] = (gruposMap[evId] || 0) + val;
   });
@@ -6542,14 +6554,14 @@ function _confirmarLancarProposta(p, negId) {
   if (somaGrupos === 0 && p.total > 0 && linhas.length > 0) {
     var evLinhas = linhas.filter(function(l){
       var s = servicos.find(function(x){ return x.id === l.servId; });
-      return s && s.eventoId;
+      return l.eventoId || (s && s.eventoId);
     });
     var nEv = evLinhas.length || linhas.length;
     var vpl = p.total / nEv;
     gruposMap = {};
     (evLinhas.length ? evLinhas : linhas).forEach(function(linha) {
       var s    = servicos.find(function(x){ return x.id === linha.servId; });
-      var evId = (s && s.eventoId) ? s.eventoId : '';
+      var evId = linha.eventoId || (s && s.eventoId) || '';
       if (evId) gruposMap[evId] = (gruposMap[evId] || 0) + vpl;
     });
   }
