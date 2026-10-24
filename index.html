@@ -7588,11 +7588,11 @@ function _calcMetaProgress(m) {
   } else if (m.tipo === 'patrocinio') {
     if (m.anoEvento) {
       var eventosP = loadEventos();
-      atual = todasReceitas.filter(function(i) {
-        if (!i.eventoOnly) return false;
+      // Usa receitas normais (não eventoOnly) com servTipo patrocinio + eventoId do ano correto
+      atual = receitas.filter(function(i) {
         if (i.servTipo !== 'patrocinio') return false;
         if ((i.vencimento||'') < m.ini || (i.vencimento||'') > m.fim) return false;
-        var ev = eventosP.find(function(e){ return e.id === i.eventoId; });
+        var ev = i.eventoId ? eventosP.find(function(e){ return e.id === i.eventoId; }) : null;
         return ev && ev.data && new Date(ev.data+'T12:00:00').getFullYear() === m.anoEvento;
       }).reduce(function(s,i){ return s + (+i.valor||0); }, 0);
     } else {
