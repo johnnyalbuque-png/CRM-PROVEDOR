@@ -7586,8 +7586,19 @@ function _calcMetaProgress(m) {
                       .reduce(function(s,i){ return s + (+i.valor||0); }, 0);
     }
   } else if (m.tipo === 'patrocinio') {
-    atual = receitas.filter(function(i){ return i.servTipo === 'patrocinio' && (i.vencimento||'') >= m.ini && (i.vencimento||'') <= m.fim; })
-                    .reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+    if (m.anoEvento) {
+      var eventosP = loadEventos();
+      atual = todasReceitas.filter(function(i) {
+        if (!i.eventoOnly) return false;
+        if (i.servTipo !== 'patrocinio') return false;
+        if ((i.vencimento||'') < m.ini || (i.vencimento||'') > m.fim) return false;
+        var ev = eventosP.find(function(e){ return e.id === i.eventoId; });
+        return ev && ev.data && new Date(ev.data+'T12:00:00').getFullYear() === m.anoEvento;
+      }).reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+    } else {
+      atual = receitas.filter(function(i){ return i.servTipo === 'patrocinio' && (i.vencimento||'') >= m.ini && (i.vencimento||'') <= m.fim; })
+                      .reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+    }
   } else if (m.tipo === 'despesa_max') {
     atual = despesas.filter(function(i){ return (i.vencimento||'') >= m.ini && (i.vencimento||'') <= m.fim; })
                     .reduce(function(s,i){ return s + (+i.valor||0); }, 0);
