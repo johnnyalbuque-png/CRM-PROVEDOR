@@ -1526,6 +1526,10 @@
               <input type="date" id="metaFim" class="form-control" />
             </div>
           </div>
+          <div class="form-group" style="margin:0">
+            <label>Filtrar por ano do evento <span style="font-weight:400;color:#94a3b8">(opcional — conta só receitas de eventos neste ano)</span></label>
+            <input type="number" id="metaAnoEvento" class="form-control" placeholder="Ex: 2027" min="2020" max="2040" style="max-width:160px" />
+          </div>
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
             <button class="btn btn-ghost" onclick="closeMetaModal()">Cancelar</button>
             <button class="btn btn-primary" onclick="saveMeta()">Salvar Meta</button>
@@ -7523,6 +7527,7 @@ function openMetaModal(id) {
   document.getElementById('metaResponsavel').value  = m ? (m.responsavel || '') : '';
   document.getElementById('metaIni').value          = m ? m.ini : '';
   document.getElementById('metaFim').value          = m ? m.fim : '';
+  document.getElementById('metaAnoEvento').value    = m ? (m.anoEvento || '') : '';
   document.getElementById('metaModalTitle').textContent = m ? 'Editar Meta' : 'Nova Meta';
   updateMetaTipoUI();
   document.getElementById('metaModalOverlay').classList.add('open');
@@ -7545,8 +7550,9 @@ function saveMeta() {
   if (!ini || !fim) { alert('Informe o período da meta.'); return; }
   var metas = loadMetas();
   var id    = document.getElementById('metaId').value;
+  var anoEvento = parseInt(document.getElementById('metaAnoEvento').value) || 0;
   var obj   = { id: id || generateId(), nome: nome, tipo: document.getElementById('metaTipo').value,
-    valor: valor, ini: ini, fim: fim,
+    valor: valor, ini: ini, fim: fim, anoEvento: anoEvento || 0,
     responsavel: document.getElementById('metaResponsavel').value.trim(), criadoEm: Date.now() };
   if (id) { var idx = metas.findIndex(function(x){ return x.id === id; }); if (idx !== -1) metas[idx] = obj; }
   else metas.push(obj);
@@ -7562,12 +7568,23 @@ function deleteMeta(id) {
 }
 
 function _calcMetaProgress(m) {
-  var receitas = loadReceita().filter(function(i){ return !i.eventoOnly; });
+  var todasReceitas = loadReceita();
+  var receitas = todasReceitas.filter(function(i){ return !i.eventoOnly; });
   var despesas = loadContasPagar();
   var atual = 0;
   if (m.tipo === 'faturamento') {
-    atual = receitas.filter(function(i){ return (i.vencimento||'') >= m.ini && (i.vencimento||'') <= m.fim; })
-                    .reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+    if (m.anoEvento) {
+      var eventos = loadEventos();
+      atual = todasReceitas.filter(function(i) {
+        if (!i.eventoOnly) return false;
+        if ((i.vencimento||'') < m.ini || (i.vencimento||'') > m.fim) return false;
+        var ev = eventos.find(function(e){ return e.id === i.eventoId; });
+        return ev && ev.data && new Date(ev.data+'T12:00:00').getFullYear() === m.anoEvento;
+      }).reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+    } else {
+      atual = receitas.filter(function(i){ return (i.vencimento||'') >= m.ini && (i.vencimento||'') <= m.fim; })
+                      .reduce(function(s,i){ return s + (+i.valor||0); }, 0);
+    }
   } else if (m.tipo === 'patrocinio') {
     atual = receitas.filter(function(i){ return i.servTipo === 'patrocinio' && (i.vencimento||'') >= m.ini && (i.vencimento||'') <= m.fim; })
                     .reduce(function(s,i){ return s + (+i.valor||0); }, 0);
